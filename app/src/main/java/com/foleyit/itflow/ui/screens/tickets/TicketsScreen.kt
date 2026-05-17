@@ -1,4 +1,3 @@
-import com.foleyit.itflow.ui.util.fmtDate
 package com.foleyit.itflow.ui.screens.tickets
 
 import androidx.compose.foundation.horizontalScroll
@@ -24,6 +23,7 @@ import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
 import kotlinx.coroutines.launch
+import com.foleyit.itflow.ui.util.fmtDate
 
 private fun ticketStatusColor(hex: String?): Color = try {
     Color(android.graphics.Color.parseColor(if (hex?.startsWith("#") == true) hex else "#${hex}"))
