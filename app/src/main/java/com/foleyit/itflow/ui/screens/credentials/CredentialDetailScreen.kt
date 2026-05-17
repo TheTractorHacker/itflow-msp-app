@@ -1,5 +1,8 @@
 package com.foleyit.itflow.ui.screens.credentials
 
+import android.content.Intent
+import android.net.Uri
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -13,8 +16,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import android.content.Intent
-import android.net.Uri
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.CredentialDetail
 import com.foleyit.itflow.ui.components.ErrorScreen
@@ -24,6 +27,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CredentialDetailScreen(id: Int) {
+    var authenticated by remember { mutableStateOf(false) }
     var state by remember { mutableStateOf<Result<CredentialDetail>?>(null) }
     var showPassword by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -31,11 +35,52 @@ fun CredentialDetailScreen(id: Int) {
     val context = LocalContext.current
     val snackbarHost = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getCredential(id) } } }
+    fun authenticate() {
+        val activity = context as? FragmentActivity ?: return
+        val executor = ContextCompat.getMainExecutor(context)
+        val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                authenticated = true
+            }
+        })
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Verify identity")
+            .setSubtitle("Access credential details")
+            .setNegativeButtonText("Cancel")
+            .build()
+        prompt.authenticate(info)
+    }
+
+    LaunchedEffect(authenticated) {
+        if (authenticated) {
+            scope.launch { state = runCatching { ApiClient.service().getCredential(id) } }
+        }
+    }
 
     fun copy(value: String, label: String) {
         clipboard.setText(AnnotatedString(value))
         scope.launch { snackbarHost.showSnackbar("$label copied") }
+    }
+
+    if (!authenticated) {
+        Scaffold { padding ->
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Outlined.Fingerprint, null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(24.dp))
+                    Text("Authentication Required", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Verify your identity to view this credential", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(24.dp))
+                    Button(onClick = ::authenticate) {
+                        Icon(Icons.Outlined.Fingerprint, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Authenticate")
+                    }
+                }
+            }
+        }
+        return
     }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }) { padding ->

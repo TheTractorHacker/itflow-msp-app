@@ -19,9 +19,25 @@ import com.foleyit.itflow.ui.theme.ITFlowTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
+import java.io.File
+
 class MainActivity : FragmentActivity() {
+
+    private fun isRooted(): Boolean {
+        val paths = arrayOf(
+            "/system/app/Superuser.apk", "/sbin/su", "/system/bin/su", "/system/xbin/su",
+            "/data/local/xbin/su", "/data/local/bin/su", "/system/sd/xbin/su",
+            "/system/bin/failsafe/su", "/data/local/su"
+        )
+        return paths.any { File(it).exists() }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (isRooted()) {
+            android.util.Log.w("ITFlow", "Device is rooted. Use with caution.")
+        }
+        window.setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE)
         enableEdgeToEdge()
 
         val prefs = (application as ITFlowApplication).prefs
