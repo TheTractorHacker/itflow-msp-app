@@ -26,7 +26,7 @@ class TicketCountWidget : GlanceAppWidget() {
             Box(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .background(ColorProvider(Color(0xFFFFFFFF), Color(0xFF1C1B1F)))
+                    .background(ColorProvider(Color.White))
                     .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
                     .padding(12.dp),
                 contentAlignment = Alignment.TopStart
@@ -35,7 +35,7 @@ class TicketCountWidget : GlanceAppWidget() {
                     Text(
                         "ITFlow MSP",
                         style = TextStyle(
-                            color = ColorProvider(Color(0xFF6650A4), Color(0xFFD0BCFF)),
+                            color = ColorProvider(Color(0xFF6650A4)),
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
                         )
@@ -46,14 +46,14 @@ class TicketCountWidget : GlanceAppWidget() {
                             Text(
                                 "Open",
                                 style = TextStyle(
-                                    color = ColorProvider(Color(0xFF49454F), Color(0xFFCAC4D0)),
+                                    color = ColorProvider(Color(0xFF49454F)),
                                     fontSize = 11.sp
                                 )
                             )
                             Text(
                                 open.toString(),
                                 style = TextStyle(
-                                    color = ColorProvider(Color(0xFF1C1B1F), Color(0xFFE6E1E5)),
+                                    color = ColorProvider(Color(0xFF1C1B1F)),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 28.sp
                                 )
@@ -64,14 +64,14 @@ class TicketCountWidget : GlanceAppWidget() {
                                 Text(
                                     "Overdue",
                                     style = TextStyle(
-                                        color = ColorProvider(Color(0xFF49454F), Color(0xFFCAC4D0)),
+                                        color = ColorProvider(Color(0xFF49454F)),
                                         fontSize = 11.sp
                                     )
                                 )
                                 Text(
                                     overdue.toString(),
                                     style = TextStyle(
-                                        color = ColorProvider(Color(0xFFB3261E), Color(0xFFF2B8B5)),
+                                        color = ColorProvider(Color(0xFFB3261E)),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 28.sp
                                     )
