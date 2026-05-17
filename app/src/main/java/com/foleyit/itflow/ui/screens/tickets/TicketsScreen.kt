@@ -63,33 +63,35 @@ fun TicketsScreen(navController: NavController) {
             }
         }
     ) { scaffoldPadding ->
-    Column(Modifier.fillMaxSize().padding(scaffoldPadding)) {
-        // Search + Mine filter
+    // Only use bottom padding — top is handled by the outer MainScreen Scaffold
+    Column(Modifier.fillMaxSize().padding(bottom = scaffoldPadding.calculateBottomPadding())) {
+        // Compact search + Mine filter
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedTextField(
                 value = search,
                 onValueChange = { search = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Search tickets…") },
-                leadingIcon = { Icon(Icons.Outlined.Search, null) },
+                modifier = Modifier.weight(1f).height(48.dp),
+                placeholder = { Text("Search tickets…", style = MaterialTheme.typography.bodyMedium) },
+                leadingIcon = { Icon(Icons.Outlined.Search, null, Modifier.size(18.dp)) },
                 trailingIcon = {
                     if (search.isNotEmpty()) {
-                        IconButton(onClick = { search = ""; load() }) {
-                            Icon(Icons.Outlined.Clear, "Clear")
+                        IconButton(onClick = { search = ""; load() }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Outlined.Clear, "Clear", Modifier.size(16.dp))
                         }
                     }
                 },
                 singleLine = true,
                 shape = MaterialTheme.shapes.extraLarge,
+                textStyle = MaterialTheme.typography.bodyMedium
             )
-            Spacer(Modifier.width(8.dp))
             FilterChip(
                 selected = mineOnly,
                 onClick = { mineOnly = !mineOnly },
-                label = { Text("Mine") }
+                label = { Text("Mine", style = MaterialTheme.typography.labelMedium) }
             )
         }
 

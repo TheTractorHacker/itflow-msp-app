@@ -40,22 +40,23 @@ fun AssetsScreen(navController: NavController) {
             }
         }
     ) { scaffoldPadding ->
-        Column(Modifier.fillMaxSize().padding(scaffoldPadding)) {
+        Column(Modifier.fillMaxSize().padding(bottom = scaffoldPadding.calculateBottomPadding())) {
             OutlinedTextField(
                 value = search,
                 onValueChange = { search = it },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Search assets…") },
-                leadingIcon = { Icon(Icons.Outlined.Search, null) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).height(48.dp),
+                placeholder = { Text("Search assets…", style = MaterialTheme.typography.bodyMedium) },
+                leadingIcon = { Icon(Icons.Outlined.Search, null, Modifier.size(18.dp)) },
                 trailingIcon = {
                     if (search.isNotEmpty()) {
-                        IconButton(onClick = { search = ""; load() }) {
-                            Icon(Icons.Outlined.Clear, "Clear")
+                        IconButton(onClick = { search = ""; load() }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Outlined.Clear, "Clear", Modifier.size(16.dp))
                         }
                     }
                 },
                 singleLine = true,
                 shape = MaterialTheme.shapes.extraLarge,
+                textStyle = MaterialTheme.typography.bodyMedium
             )
             when {
                 state == null -> LoadingScreen()

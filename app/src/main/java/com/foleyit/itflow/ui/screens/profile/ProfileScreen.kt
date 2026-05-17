@@ -264,38 +264,87 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                 // ── App Settings card ───────────────────────────────────────
                 val biometricEnabled by prefs.biometricLock.collectAsState(initial = false)
                 Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("App Settings", style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold)
-                        HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Fingerprint, null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text("Biometric Lock", style = MaterialTheme.typography.bodyMedium)
-                                Text("Require fingerprint after 5 min in background",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline)
-                            }
-                            Switch(checked = biometricEnabled,
-                                onCheckedChange = { scope.launch { prefs.setBiometricLock(it) } })
-                        }
-                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                        Surface(modifier = Modifier.fillMaxWidth(),
-                            onClick = { navController.navigate(Screen.TimeReport.route) }) {
-                            Row(Modifier.padding(vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Outlined.Timer, null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp))
+                    Column(Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)) {
+                        Text("App Settings",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(bottom = 12.dp))
+
+                        // Biometric Lock row
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = MaterialTheme.shapes.small,
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Outlined.Fingerprint, null,
+                                            Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                                    }
+                                }
                                 Spacer(Modifier.width(12.dp))
-                                Text("Time Summary Report", Modifier.weight(1f))
+                                Column(Modifier.weight(1f)) {
+                                    Text("Biometric Lock",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium)
+                                    Text("Lock after 5 min in background",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline)
+                                }
+                                Switch(
+                                    checked = biometricEnabled,
+                                    onCheckedChange = { scope.launch { prefs.setBiometricLock(it) } }
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        // Time Report row
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { navController.navigate(Screen.TimeReport.route) }
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = MaterialTheme.shapes.small,
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Outlined.Timer, null,
+                                            Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                    }
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("Time Summary",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium)
+                                    Text("Hours logged by client",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline)
+                                }
                                 Icon(Icons.Outlined.ChevronRight, null,
                                     tint = MaterialTheme.colorScheme.outline)
                             }
                         }
+                        Spacer(Modifier.height(8.dp))
                     }
                 }
 
