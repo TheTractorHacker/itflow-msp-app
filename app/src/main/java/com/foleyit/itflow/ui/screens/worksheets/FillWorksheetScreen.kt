@@ -37,7 +37,7 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
         loading = false
     }
 
-    fun saveAndSign() {
+    fun saveResponses(thenNavigate: (() -> Unit)? = null) {
         saving = true
         scope.launch {
             try {
@@ -45,9 +45,9 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
                 withContext(Dispatchers.IO) {
                     ApiClient.service().saveResponses(worksheetId, SaveResponsesRequest(responses))
                 }
-                // Navigate to sign screen
-                navController.navigate(Screen.SignWorksheet.go(worksheetId)) {
-                    popUpTo(Screen.FillWorksheet.go(worksheetId)) { inclusive = true }
+                thenNavigate?.invoke() ?: run {
+                    snackbar.showSnackbar("Worksheet saved")
+                    navController.popBackStack()
                 }
             } catch (e: Exception) {
                 snackbar.showSnackbar("Failed: ${e.message}")
@@ -57,33 +57,31 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
         }
     }
 
-    fun saveOnly() {
-        saving = true
-        scope.launch {
-            try {
-                val responses = fieldValues.map { (fid, v) -> FieldResponse(fid, v) }
-                withContext(Dispatchers.IO) {
-                    ApiClient.service().saveResponses(worksheetId, SaveResponsesRequest(responses))
-                }
-                snackbar.showSnackbar("Worksheet saved")
-                navController.popBackStack()
-            } catch (e: Exception) { snackbar.showSnackbar("Failed: ${e.message}") } finally { saving = false }
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(worksheet?.templateName ?: "Fill Worksheet") },
-                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) } }
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Outlined.ArrowBack, null)
+                    }
+                }
             )
         },
         bottomBar = {
             Surface(shadowElevation = 4.dp) {
-                Row(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = ::saveOnly, modifier = Modifier.weight(1f), enabled = !saving) { Text("Save") }
-                    Button(onClick = ::saveAndSign, modifier = Modifier.weight(1f), enabled = !saving) {
-                        Icon(Icons.Outlined.Draw, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Save & Sign")
+                Row(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(onClick = { saveResponses() }, modifier = Modifier.weight(1f), enabled = !saving) {
+                        Text("Save")
+                    }
+                    Button(
+                        onClick = { saveResponses { navController.navigate(Screen.SignWorksheet.go(worksheetId)) } },
+                        modifier = Modifier.weight(1f), enabled = !saving
+                    ) {
+                        Icon(Icons.Outlined.Draw, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Save & Sign")
                     }
                 }
             }
@@ -91,14 +89,23 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
         snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
         if (loading) { LoadingScreen(); return@Scaffold }
-        LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             worksheet?.fields?.let { fields ->
                 items(fields) { field ->
                     when (field.type) {
-                        "heading" -> Text(field.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        "heading" -> Text(field.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 4.dp))
                         "checkbox" -> Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = fieldValues[field.id] == "true",
-                                onCheckedChange = { fieldValues = fieldValues + (field.id to it.toString()) })
+                            Checkbox(
+                                checked = fieldValues[field.id] == "true",
+                                onCheckedChange = { fieldValues = fieldValues + (field.id to it.toString()) }
+                            )
                             Spacer(Modifier.width(8.dp))
                             Text(field.name)
                         }
@@ -117,7 +124,8 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
                                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                     options.forEach { opt ->
                                         DropdownMenuItem(text = { Text(opt) }, onClick = {
-                                            fieldValues = fieldValues + (field.id to opt); expanded = false
+                                            fieldValues = fieldValues + (field.id to opt)
+                                            expanded = false
                                         })
                                     }
                                 }
@@ -127,19 +135,24 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
                             value = fieldValues[field.id] ?: "",
                             onValueChange = { fieldValues = fieldValues + (field.id to it) },
                             label = { Text(field.name) },
-                            modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 6
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3, maxLines = 6
                         )
                         "signature" -> Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(12.dp)) {
-                                Text("${field.name} — will be captured on the Sign screen",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.Draw, null, tint = MaterialTheme.colorScheme.outline)
+                                Spacer(Modifier.width(8.dp))
+                                Text("${field.name} — tap \"Save & Sign\" to draw signature",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline)
                             }
                         }
                         else -> OutlinedTextField(
                             value = fieldValues[field.id] ?: "",
                             onValueChange = { fieldValues = fieldValues + (field.id to it) },
                             label = { Text(field.name) },
-                            modifier = Modifier.fillMaxWidth(), singleLine = true
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
                         )
                     }
                 }

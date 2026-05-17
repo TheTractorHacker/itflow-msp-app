@@ -174,7 +174,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                 title = { state?.getOrNull()?.let { Text("#${it.number}") } ?: Text("Ticket") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
+                        Icon(Icons.Outlined.ArrowBack, "Back")
                     }
                 },
                 actions = {
@@ -208,14 +208,14 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                         onClick = { replyType = "note"; showReply = true },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.AutoMirrored.Outlined.StickyNote2, null, Modifier.size(18.dp))
+                        Icon(Icons.Outlined.StickyNote2, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp)); Text("Note")
                     }
                     Button(
                         onClick = { replyType = "reply"; showReply = true },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.AutoMirrored.Outlined.Reply, null, Modifier.size(18.dp))
+                        Icon(Icons.Outlined.Reply, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp)); Text("Reply")
                     }
                 }
@@ -550,7 +550,7 @@ private fun WorksheetsCard(worksheets: List<WorksheetSummary>, navController: Na
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        if (ws.signed) Icons.Outlined.CheckCircle else Icons.AutoMirrored.Outlined.Assignment,
+                        if (ws.signed) Icons.Outlined.CheckCircle else Icons.Outlined.Assignment,
                         null, modifier = Modifier.size(20.dp),
                         tint = if (ws.signed) MaterialTheme.colorScheme.primary
                                else MaterialTheme.colorScheme.outline

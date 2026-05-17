@@ -39,7 +39,7 @@ fun AssetsScreen(navController: NavController) {
                 title = { Text("Assets") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, null)
+                        Icon(Icons.Outlined.ArrowBack, null)
                     }
                 }
             )

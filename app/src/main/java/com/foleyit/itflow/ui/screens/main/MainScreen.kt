@@ -121,7 +121,7 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
                                             onLoggedOut()
                                         }
                                     },
-                                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Logout, null) }
+                                    leadingIcon = { Icon(Icons.Outlined.Logout, null) }
                                 )
                             }
                         }
