@@ -111,3 +111,7 @@ interface ApiService {
     @POST("notifications/read-all")
     suspend fun markAllRead()
 }
+
+// Extension helpers
+suspend fun ApiService.addReply(id: Int, reply: String, type: String = "reply", timeWorked: String? = null) =
+    addReply(id, AddReplyRequest(reply, type, timeWorked))
