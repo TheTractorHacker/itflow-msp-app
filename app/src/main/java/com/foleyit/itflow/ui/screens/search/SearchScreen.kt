@@ -56,14 +56,16 @@ fun SearchScreen(navController: NavController) {
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it; search(it) },
-                        modifier = Modifier.fillMaxWidth().focusRequester(focus),
-                        placeholder = { Text("Search tickets, clients, assets…") },
+                        modifier = Modifier.fillMaxWidth().height(46.dp).focusRequester(focus),
+                        placeholder = { Text("Search…", style = MaterialTheme.typography.bodyMedium) },
+                        textStyle = MaterialTheme.typography.bodyMedium,
                         singleLine = true,
                         shape = MaterialTheme.shapes.extraLarge,
                         trailingIcon = {
                             if (query.isNotEmpty()) {
-                                IconButton(onClick = { query = ""; result = null; error = null }) {
-                                    Icon(Icons.Outlined.Clear, null)
+                                IconButton(onClick = { query = ""; result = null; error = null },
+                                    modifier = Modifier.size(36.dp)) {
+                                    Icon(Icons.Outlined.Clear, null, Modifier.size(16.dp))
                                 }
                             }
                         }
