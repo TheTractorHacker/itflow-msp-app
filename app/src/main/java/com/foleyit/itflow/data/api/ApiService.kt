@@ -112,6 +112,28 @@ interface ApiService {
     @GET("notifications")
     suspend fun getNotifications(@Query("page") page: Int = 1): NotificationsResponse
 
+    @GET("appointments")
+    suspend fun getAppointments(
+        @Query("when") when_: String = "future",
+        @Query("mine") mine: Int = 0
+    ): List<Appointment>
+
+    @GET("clients/{id}/tickets")
+    suspend fun getClientTickets(@Path("id") id: Int): List<TicketSummary>
+
+    @GET("clients/{id}/assets")
+    suspend fun getClientAssets(@Path("id") id: Int): List<AssetSummary>
+
+    @GET("clients/{id}/locations")
+    suspend fun getClientLocations(@Path("id") id: Int): List<ClientLocation>
+
+    @GET("clients/{id}/credentials")
+    suspend fun getClientCredentials(@Path("id") id: Int): List<CredentialSummary>
+
+    @GET("clients/{id}/contracts")
+    suspend fun getClientContracts(@Path("id") id: Int): List<ClientContract>
+
+
     @POST("notifications/{id}/read")
     suspend fun markRead(@Path("id") id: Int)
 
@@ -123,3 +145,13 @@ interface ApiService {
 suspend fun ApiService.addReply(id: Int, reply: String, type: String = "reply", timeWorked: String? = null) =
     addReply(id, AddReplyRequest(reply, type, timeWorked))
 
+
+// ── Appointments ─────────────────────────────────────────────────────────────
+data class Appointment(
+    val id: Int, val number: Int, val subject: String,
+    val schedule: String?, @com.google.gson.annotations.SerializedName("schedule_end") val scheduleEnd: String?,
+    val onsite: Boolean, val notes: String?,
+    val priority: String?, val status: String?,
+    @com.google.gson.annotations.SerializedName("status_color") val statusColor: String?,
+    val client: String?, @com.google.gson.annotations.SerializedName("assigned_to") val assignedTo: String?
+)

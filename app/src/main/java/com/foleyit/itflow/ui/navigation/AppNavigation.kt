@@ -29,6 +29,7 @@ sealed class Screen(val route: String) {
     object Expenses    : Screen("expenses")
     object AddExpense  : Screen("expenses/add")
     object Notifications: Screen("notifications")
+    object Appointments: Screen("appointments")
 }
 
 data class BottomNavItem(

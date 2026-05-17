@@ -186,3 +186,14 @@ data class Notification(
     val id: Int, val type: String, val message: String,
     val action: String?, val timestamp: String?
 )
+
+// ── Client Tabs ──────────────────────────────────────────────────────────────
+data class ClientLocation(
+    val id: Int, val name: String?, val address: String?,
+    val city: String?, val state: String?, val zip: String?,
+    val phone: String?, val primary: Boolean
+)
+
+data class ClientContract(
+    val id: Int, val name: String?, val status: String?, val type: String?
+)

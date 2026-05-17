@@ -14,6 +14,7 @@ import androidx.navigation.compose.*
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.local.AppPreferences
 import com.foleyit.itflow.ui.navigation.*
+import com.foleyit.itflow.ui.screens.appointments.AppointmentsScreen
 import com.foleyit.itflow.ui.screens.assets.*
 import com.foleyit.itflow.ui.screens.clients.*
 import com.foleyit.itflow.ui.screens.credentials.*
@@ -28,6 +29,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+// Routes that are "root" tabs — show the main AppBar
+private val ROOT_ROUTES = setOf(
+    Screen.Dashboard.route, Screen.Tickets.route, Screen.Clients.route,
+    Screen.Assets.route, Screen.Credentials.route, Screen.Quotes.route,
+    Screen.Invoices.route, Screen.Expenses.route, Screen.Notifications.route,
+    Screen.Appointments.route
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
@@ -40,14 +49,14 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
     LaunchedEffect(Unit) { userName = prefs.userName.first() ?: "" }
 
     val currentDest by navController.currentBackStackEntryAsState()
+    val currentRoute = currentDest?.destination?.route
+
+    // Only show main AppBar on root/list screens, not detail screens
+    val isRootScreen = currentRoute in ROOT_ROUTES
 
     fun navigateToTab(route: String) {
         navController.navigate(route) {
-            // Always pop back to the root so tapping a tab always clears detail screens
-            popUpTo(navController.graph.findStartDestination().id) {
-                saveState = true
-                inclusive = false
-            }
+            popUpTo(Screen.Dashboard.route) { saveState = true; inclusive = false }
             launchSingleTop = true
             restoreState = true
         }
@@ -55,79 +64,79 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Outlined.SyncAlt, null,
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(18.dp))
+            // Only show main app bar on root screens — detail screens have their own
+            if (isRootScreen) {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Outlined.SyncAlt, null,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(18.dp))
+                                }
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text("ITFlow MSP", style = MaterialTheme.typography.titleLarge)
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { navController.navigate(Screen.Notifications.route) }) {
+                            Icon(Icons.Outlined.Notifications, "Notifications")
+                        }
+                        Box {
+                            IconButton(onClick = { showUserMenu = true }) {
+                                Icon(Icons.Outlined.AccountCircle, "Account")
+                            }
+                            DropdownMenu(expanded = showUserMenu, onDismissRequest = { showUserMenu = false }) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(userName, style = MaterialTheme.typography.labelLarge)
+                                            Text("Signed in", style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.outline)
+                                        }
+                                    },
+                                    onClick = {},
+                                    leadingIcon = { Icon(Icons.Outlined.Person, null) }
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text("Sign out") },
+                                    onClick = {
+                                        showUserMenu = false
+                                        scope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                try { ApiClient.service().logout() } catch (_: Exception) {}
+                                            }
+                                            prefs.clearAuth()
+                                            ApiClient.clearToken()
+                                            onLoggedOut()
+                                        }
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.Logout, null) }
+                                )
                             }
                         }
-                        Spacer(Modifier.width(10.dp))
-                        Text("ITFlow MSP", style = MaterialTheme.typography.titleLarge)
                     }
-                },
-                actions = {
-                    IconButton(onClick = { navController.navigate(Screen.Notifications.route) }) {
-                        Icon(Icons.Outlined.Notifications, "Notifications")
-                    }
-                    // Profile menu — NOT instant logout
-                    Box {
-                        IconButton(onClick = { showUserMenu = true }) {
-                            Icon(Icons.Outlined.AccountCircle, "Account")
-                        }
-                        DropdownMenu(
-                            expanded = showUserMenu,
-                            onDismissRequest = { showUserMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Column {
-                                        Text(userName, style = MaterialTheme.typography.labelLarge)
-                                        Text("Signed in", style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.outline)
-                                    }
-                                },
-                                onClick = {},
-                                leadingIcon = { Icon(Icons.Outlined.Person, null) }
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("Sign out") },
-                                onClick = {
-                                    showUserMenu = false
-                                    scope.launch {
-                                        withContext(Dispatchers.IO) {
-                                            try { ApiClient.service().logout() } catch (_: Exception) {}
-                                        }
-                                        prefs.clearAuth()
-                                        ApiClient.clearToken()
-                                        onLoggedOut()
-                                    }
-                                },
-                                leadingIcon = { Icon(Icons.Outlined.Logout, null) }
-                            )
-                        }
-                    }
-                }
-            )
+                )
+            }
         },
         bottomBar = {
             NavigationBar {
                 val hierarchy = currentDest?.destination?.hierarchy
                 bottomNavItems.forEach { item ->
-                    val selected = hierarchy?.any { it.route == item.screen.route } == true
+                    val selected = hierarchy?.any { it.route == item.screen.route } == true ||
+                                   (currentRoute == item.screen.route)
                     NavigationBarItem(
                         selected = selected,
                         onClick = {
-                            if (selected) {
-                                // Already on this tab root — pop back to it to clear any detail screens
+                            if (currentRoute == item.screen.route) {
+                                // Already on this exact route — do nothing (already here)
+                            } else if (selected) {
+                                // On a detail screen within this tab — pop back to tab root
                                 navController.popBackStack(item.screen.route, inclusive = false)
                             } else {
                                 navigateToTab(item.screen.route)
@@ -147,8 +156,10 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
         }
     ) { padding ->
         NavHost(
-            navController, startDestination = Screen.Dashboard.route,
-            modifier = Modifier.padding(padding)
+            navController,
+            startDestination = Screen.Dashboard.route,
+            // Detail screens manage their own padding; root screens use outer padding
+            modifier = if (isRootScreen) Modifier.padding(padding) else Modifier.padding(bottom = padding.calculateBottomPadding())
         ) {
             composable(Screen.Dashboard.route) { DashboardScreen(navController) }
             composable(Screen.Tickets.route) { TicketsScreen(navController) }
@@ -178,6 +189,7 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
             composable(Screen.Expenses.route) { ExpensesScreen(navController) }
             composable(Screen.AddExpense.route) { AddExpenseScreen { navController.popBackStack() } }
             composable(Screen.Notifications.route) { NotificationsScreen() }
+            composable(Screen.Appointments.route) { AppointmentsScreen(navController) }
         }
     }
 
@@ -196,6 +208,7 @@ private fun MoreSheetContent(onNavigate: (String) -> Unit) {
     val items = listOf(
         Triple(Icons.Outlined.Devices, "Assets", Screen.Assets.route),
         Triple(Icons.Outlined.Lock, "Credentials", Screen.Credentials.route),
+        Triple(Icons.Outlined.CalendarMonth, "Appointments", Screen.Appointments.route),
         Triple(Icons.Outlined.RequestQuote, "Quotes", Screen.Quotes.route),
         Triple(Icons.Outlined.ReceiptLong, "Invoices", Screen.Invoices.route),
         Triple(Icons.Outlined.Receipt, "Expenses", Screen.Expenses.route),
@@ -207,16 +220,10 @@ private fun MoreSheetContent(onNavigate: (String) -> Unit) {
         items.chunked(3).forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { (icon, label, route) ->
-                    Surface(
-                        onClick = { onNavigate(route) },
-                        shape = MaterialTheme.shapes.large,
+                    Surface(onClick = { onNavigate(route) }, shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.secondaryContainer,
-                        modifier = Modifier.weight(1f).padding(vertical = 4.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                        modifier = Modifier.weight(1f).padding(vertical = 4.dp)) {
+                        Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(icon, label, tint = MaterialTheme.colorScheme.onSecondaryContainer)
                             Spacer(Modifier.height(8.dp))
                             Text(label, style = MaterialTheme.typography.labelMedium,
