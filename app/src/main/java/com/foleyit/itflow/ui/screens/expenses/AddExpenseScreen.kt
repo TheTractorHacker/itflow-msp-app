@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -86,7 +87,7 @@ fun AddExpenseScreen(onDone: () -> Unit) {
                 }
             }
             item { OutlinedTextField(value = paymentMethod, onValueChange = { paymentMethod = it }, label = { Text("Payment Method") }, leadingIcon = { Icon(Icons.Outlined.CreditCard, null) }, modifier = Modifier.fillMaxWidth()) }
-            item { OutlinedTextField(value = reference, onValueChange = { reference = it }, label = { Text("Reference") }, leadingIcon = { Icon(Icons.Outlined.Notes, null) }, modifier = Modifier.fillMaxWidth()) }
+            item { OutlinedTextField(value = reference, onValueChange = { reference = it }, label = { Text("Reference") }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Notes, null) }, modifier = Modifier.fillMaxWidth()) }
             item {
                 Text("Receipt", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))

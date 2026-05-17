@@ -11,7 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -31,7 +31,7 @@ fun CredentialDetailScreen(id: Int) {
     var state by remember { mutableStateOf<Result<CredentialDetail>?>(null) }
     var showPassword by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val context = LocalContext.current
     val snackbarHost = remember { SnackbarHostState() }
 
@@ -58,8 +58,10 @@ fun CredentialDetailScreen(id: Int) {
     }
 
     fun copy(value: String, label: String) {
-        clipboard.setText(AnnotatedString(value))
-        scope.launch { snackbarHost.showSnackbar("$label copied") }
+        scope.launch {
+            clipboard.setText(AnnotatedString(value))
+            snackbarHost.showSnackbar("$label copied")
+        }
     }
 
     if (!authenticated) {

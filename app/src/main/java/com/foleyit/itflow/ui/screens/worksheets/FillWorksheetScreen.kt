@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -71,7 +72,7 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
                 title = { Text(worksheet?.templateName ?: "Fill Worksheet") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Outlined.ArrowBack, null)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, null)
                     }
                 }
             )
@@ -128,7 +129,7 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
                                     readOnly = true,
                                     label = { Text(field.name) },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
                                 )
                                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                     options.forEach { opt ->

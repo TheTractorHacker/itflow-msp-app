@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -82,7 +83,7 @@ private fun NotifItem(n: Notification, onMarkRead: () -> Unit) {
                 Box(contentAlignment = Alignment.Center) {
                     val icon = when {
                         n.type.contains("ticket") -> Icons.Outlined.ConfirmationNumber
-                        n.type.contains("invoice") -> Icons.Outlined.ReceiptLong
+                        n.type.contains("invoice") -> Icons.AutoMirrored.Outlined.ReceiptLong
                         else -> Icons.Outlined.Notifications
                     }
                     Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))

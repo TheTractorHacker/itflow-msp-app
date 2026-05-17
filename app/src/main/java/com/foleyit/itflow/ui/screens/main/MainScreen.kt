@@ -2,6 +2,7 @@ package com.foleyit.itflow.ui.screens.main
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -115,7 +116,7 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
                                             onLoggedOut()
                                         }
                                     },
-                                    leadingIcon = { Icon(Icons.Outlined.Logout, null) }
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Logout, null) }
                                 )
                             }
                         }

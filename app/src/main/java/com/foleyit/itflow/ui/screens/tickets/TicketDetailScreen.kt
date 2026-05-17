@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -196,7 +197,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                 title = { state?.getOrNull()?.let { Text("#${it.number}") } ?: Text("Ticket") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Outlined.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
                     }
                 },
                 actions = {
@@ -228,14 +229,14 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                         onClick = { replyType = "note"; showReply = true },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Outlined.StickyNote2, null, Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Outlined.StickyNote2, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp)); Text("Note")
                     }
                     Button(
                         onClick = { replyType = "reply"; showReply = true },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Outlined.Reply, null, Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Outlined.Reply, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp)); Text("Reply")
                     }
                 }
@@ -701,7 +702,7 @@ private fun WorksheetItems(
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                if (ws.signed) Icons.Outlined.CheckCircle else Icons.Outlined.Assignment,
+                if (ws.signed) Icons.Outlined.CheckCircle else Icons.AutoMirrored.Outlined.Assignment,
                 null, modifier = Modifier.size(20.dp),
                 tint = if (ws.signed) MaterialTheme.colorScheme.primary
                        else MaterialTheme.colorScheme.outline

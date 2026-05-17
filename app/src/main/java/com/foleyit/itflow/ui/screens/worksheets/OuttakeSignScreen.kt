@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -109,7 +110,7 @@ fun OuttakeSignScreen(outtakeId: Int, navController: NavController) {
                 title = { Text("Outtake Form") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Outlined.ArrowBack, null)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, null)
                     }
                 }
             )
@@ -130,7 +131,7 @@ fun OuttakeSignScreen(outtakeId: Int, navController: NavController) {
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Outlined.Assignment, null,
+                                    Icon(Icons.AutoMirrored.Outlined.Assignment, null,
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp))
                                     Spacer(Modifier.width(8.dp))

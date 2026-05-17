@@ -8,7 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 fun AssetDetailScreen(id: Int) {
     var state by remember { mutableStateOf<Result<AssetDetail>?>(null) }
     val scope = rememberCoroutineScope()
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getAsset(id) } } }
@@ -113,8 +113,10 @@ fun AssetDetailScreen(id: Int) {
                                             fontWeight = FontWeight.Medium)
                                     }
                                     IconButton(onClick = {
-                                        clipboard.setText(AnnotatedString(a.serial))
-                                        scope.launch { snackbar.showSnackbar("Serial copied") }
+                                        scope.launch {
+                                            clipboard.setText(AnnotatedString(a.serial))
+                                            snackbar.showSnackbar("Serial copied")
+                                        }
                                     }) {
                                         Icon(Icons.Outlined.ContentCopy, "Copy", Modifier.size(18.dp))
                                     }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,7 +30,7 @@ fun ExpensesScreen(navController: NavController) {
     LaunchedEffect(Unit) { load() }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Expenses") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.Outlined.ArrowBack, null) } }) },
+        topBar = { TopAppBar(title = { Text("Expenses") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) } }) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { navController.navigate(Screen.AddExpense.route) },
@@ -52,7 +53,7 @@ fun ExpensesScreen(navController: NavController) {
                                 supportingContent = { Text("${e.date ?: ""} · ${e.paymentMethod ?: ""}") },
                                 leadingContent = {
                                     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.size(40.dp)) {
-                                        Box(contentAlignment = Alignment.Center) { Icon(if (e.hasReceipt) Icons.Outlined.ReceiptLong else Icons.Outlined.Receipt, null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(22.dp)) }
+                                        Box(contentAlignment = Alignment.Center) { Icon(if (e.hasReceipt) Icons.AutoMirrored.Outlined.ReceiptLong else Icons.Outlined.Receipt, null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(22.dp)) }
                                     }
                                 },
                                 trailingContent = {
