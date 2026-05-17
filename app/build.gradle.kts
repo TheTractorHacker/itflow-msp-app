@@ -39,6 +39,14 @@ android {
         buildConfig = true
         resValues = true
     }
+
+    packaging {
+        jniLibs {
+            // Store native libraries uncompressed so Android 15's 16KB page-size
+            // dynamic linker can map them directly with correct alignment.
+            useLegacyPackaging = false
+        }
+    }
 }
 
 dependencies {
