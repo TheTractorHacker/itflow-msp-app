@@ -3,8 +3,12 @@ package com.foleyit.itflow.data.api
 import com.google.gson.annotations.SerializedName
 
 // ── Auth ────────────────────────────────────────────────────────────────────
-data class LoginRequest(val username: String, val password: String, val device_name: String)
-data class LoginResponse(val token: String, val user: UserInfo)
+data class LoginRequest(val username: String, val password: String, val device_name: String, val totp_code: String? = null)
+data class LoginResponse(
+    val token: String? = null,
+    val user: UserInfo? = null,
+    @SerializedName("requires_2fa") val requires2fa: Boolean? = null
+)
 data class UserInfo(val id: Int, val name: String, val email: String, val type: Int)
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
