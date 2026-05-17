@@ -40,6 +40,20 @@ class MainActivity : FragmentActivity() {
             ITFlowTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
+
+                    // Wire 401 auto-logout: clear stored credentials and send to login
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        ApiClient.onUnauthorized = {
+                            kotlinx.coroutines.MainScope().launch {
+                                prefs.clearAuth()
+                                ApiClient.clearToken()
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    }
+
                     NavHost(navController, startDestination = startDestination) {
                         composable(Screen.Setup.route) {
                             ServerSetupScreen(

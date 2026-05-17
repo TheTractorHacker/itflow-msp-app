@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.*
+import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
@@ -23,19 +24,26 @@ import kotlinx.coroutines.withContext
 @Composable
 fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
     var worksheet by remember { mutableStateOf<WorksheetDetail?>(null) }
+    var loadError by remember { mutableStateOf<String?>(null) }
     var fieldValues by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var loading by remember { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) {
-        worksheet = runCatching { ApiClient.service().getWorksheet(worksheetId) }.getOrNull()
-        worksheet?.fields?.forEach { f ->
-            if (!f.value.isNullOrEmpty()) fieldValues = fieldValues + (f.id to f.value)
+    fun load() {
+        loading = true; loadError = null
+        scope.launch {
+            val result = runCatching { ApiClient.service().getWorksheet(worksheetId) }
+            worksheet = result.getOrNull()
+            loadError = if (result.isFailure) result.exceptionOrNull()?.message ?: "Failed to load" else null
+            worksheet?.fields?.forEach { f ->
+                if (!f.value.isNullOrEmpty()) fieldValues = fieldValues + (f.id to f.value)
+            }
+            loading = false
         }
-        loading = false
     }
+    LaunchedEffect(Unit) { load() }
 
     fun saveResponses(thenNavigate: (() -> Unit)? = null) {
         saving = true
@@ -89,6 +97,7 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
         snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
         if (loading) { LoadingScreen(); return@Scaffold }
+        if (loadError != null) { ErrorScreen(loadError!!, onRetry = ::load); return@Scaffold }
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),

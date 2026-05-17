@@ -13,9 +13,6 @@ interface ApiService {
     @DELETE("auth")
     suspend fun logout()
 
-    @POST("auth/fcm")
-    suspend fun updateFcmToken(@Body body: Map<String, String>)
-
     // Dashboard
     @GET("dashboard")
     suspend fun getDashboard(): DashboardResponse
@@ -27,8 +24,8 @@ interface ApiService {
         @Query("mine") mine: Int = 0,
         @Query("search") search: String = "",
         @Query("page") page: Int = 1,
-        @Query("priority") priority: String = "",
-        @Query("onsite") onsite: Int = -1
+        @Query("priority") priority: String? = null,
+        @Query("onsite") onsite: Int? = null
     ): TicketsResponse
 
     @GET("tickets/{id}")

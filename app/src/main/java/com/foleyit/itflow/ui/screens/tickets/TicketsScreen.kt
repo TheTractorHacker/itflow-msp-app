@@ -34,8 +34,8 @@ fun TicketsScreen(navController: NavController) {
     var search by remember { mutableStateOf("") }
     var mineOnly by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
-    var priorityFilter by remember { mutableStateOf("") }   // "", "critical", "high", "medium", "low"
-    var onsiteFilter by remember { mutableStateOf(-1) }     // -1=all, 1=onsite, 0=remote
+    var priorityFilter by remember { mutableStateOf<String?>(null) }
+    var onsiteFilter by remember { mutableStateOf<Int?>(null) }  // null=all, 1=onsite, 0=remote
     var state by remember { mutableStateOf<Result<TicketsResponse>?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -46,7 +46,7 @@ fun TicketsScreen(navController: NavController) {
                     status = if (selectedTab == 0) "open" else "closed",
                     mine = if (mineOnly) 1 else 0,
                     search = search,
-                    priority = priorityFilter,
+                    priority = priorityFilter?.takeIf { it.isNotBlank() },
                     onsite = onsiteFilter
                 )
             }
@@ -101,25 +101,24 @@ fun TicketsScreen(navController: NavController) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Priority filters
-            listOf("" to "All", "critical" to "Critical", "high" to "High",
+            listOf(null to "All", "critical" to "Critical", "high" to "High",
                    "medium" to "Medium", "low" to "Low").forEach { (value, label) ->
                 FilterChip(
                     selected = priorityFilter == value,
-                    onClick = { priorityFilter = if (priorityFilter == value && value != "") "" else value; load() },
+                    onClick = { priorityFilter = if (priorityFilter == value && value != null) null else value; load() },
                     label = { Text(label) }
                 )
             }
             VerticalDivider(modifier = Modifier.height(32.dp).padding(horizontal = 4.dp))
-            // On-site / Remote filters
             FilterChip(
                 selected = onsiteFilter == 1,
-                onClick = { onsiteFilter = if (onsiteFilter == 1) -1 else 1; load() },
+                onClick = { onsiteFilter = if (onsiteFilter == 1) null else 1; load() },
                 label = { Text("On-Site") },
                 leadingIcon = { Icon(Icons.Outlined.LocationOn, null, Modifier.size(14.dp)) }
             )
             FilterChip(
                 selected = onsiteFilter == 0,
-                onClick = { onsiteFilter = if (onsiteFilter == 0) -1 else 0; load() },
+                onClick = { onsiteFilter = if (onsiteFilter == 0) null else 0; load() },
                 label = { Text("Remote") },
                 leadingIcon = { Icon(Icons.Outlined.Wifi, null, Modifier.size(14.dp)) }
             )
