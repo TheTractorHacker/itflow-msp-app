@@ -299,7 +299,8 @@ data class OuttakeDetail(
     @SerializedName("signed_at") val signedAt: String?,
     val signed: Boolean,
     @SerializedName("ticket_subject") val ticketSubject: String?,
-    val client: String?
+    val client: String?,
+    @SerializedName("contact_name") val contactName: String?
 )
 
 // ── Products ─────────────────────────────────────────────────────────────────

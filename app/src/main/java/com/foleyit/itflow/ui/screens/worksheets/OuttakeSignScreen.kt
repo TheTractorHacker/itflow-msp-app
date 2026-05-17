@@ -42,7 +42,16 @@ fun OuttakeSignScreen(outtakeId: Int, navController: NavController) {
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        outtake = runCatching { ApiClient.service().getOuttake(outtakeId) }
+        val result = runCatching { ApiClient.service().getOuttake(outtakeId) }
+        outtake = result
+        // Pre-fill with the ticket contact name, falling back to client name
+        result.getOrNull()?.let { ot ->
+            if (signedName.isBlank()) {
+                signedName = ot.contactName?.takeIf { it.isNotBlank() }
+                    ?: ot.client?.takeIf { it.isNotBlank() }
+                    ?: ""
+            }
+        }
     }
 
     fun clearSignature() { paths = emptyList(); currentPath = emptyList() }
