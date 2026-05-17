@@ -99,7 +99,7 @@ fun ScanBarcodeScreen(navController: NavController) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(Icons.Outlined.QrCodeScanner, null, Modifier.size(64.dp),
+                        Icon(Icons.Outlined.Lock, null, Modifier.size(64.dp),
                             tint = MaterialTheme.colorScheme.outline)
                         Spacer(Modifier.height(16.dp))
                         Text("Camera Permission Required",

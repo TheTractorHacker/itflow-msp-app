@@ -36,7 +36,7 @@ fun AssetsScreen(navController: NavController) {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = { navController.navigate(Screen.ScanBarcode.route) }) {
-                Icon(Icons.Outlined.QrCodeScanner, "Scan Barcode")
+                Icon(Icons.Outlined.DocumentScanner, "Scan Barcode")
             }
         }
     ) { scaffoldPadding ->
