@@ -12,8 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -59,7 +59,9 @@ fun CredentialDetailScreen(id: Int) {
 
     fun copy(value: String, label: String) {
         scope.launch {
-            clipboard.setText(AnnotatedString(value))
+            clipboard.setClipEntry(
+                ClipEntry(android.content.ClipData.newPlainText(label, value))
+            )
             snackbarHost.showSnackbar("$label copied")
         }
     }

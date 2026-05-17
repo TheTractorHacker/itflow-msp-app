@@ -9,7 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -114,7 +114,9 @@ fun AssetDetailScreen(id: Int) {
                                     }
                                     IconButton(onClick = {
                                         scope.launch {
-                                            clipboard.setText(AnnotatedString(a.serial))
+                                            clipboard.setClipEntry(
+                                                ClipEntry(android.content.ClipData.newPlainText("Serial", a.serial))
+                                            )
                                             snackbar.showSnackbar("Serial copied")
                                         }
                                     }) {
