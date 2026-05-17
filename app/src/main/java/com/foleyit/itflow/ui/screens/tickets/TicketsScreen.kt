@@ -1,3 +1,4 @@
+import com.foleyit.itflow.ui.util.fmtDate
 package com.foleyit.itflow.ui.screens.tickets
 
 import androidx.compose.foundation.horizontalScroll
@@ -232,7 +233,7 @@ fun TicketCard(ticket: TicketSummary, onClick: () -> Unit) {
                             modifier = Modifier.size(13.dp),
                             tint = MaterialTheme.colorScheme.outline)
                         Spacer(Modifier.width(2.dp))
-                        Text(due, style = MaterialTheme.typography.labelSmall,
+                        Text(fmtDate(due), style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline)
                     }
                 }

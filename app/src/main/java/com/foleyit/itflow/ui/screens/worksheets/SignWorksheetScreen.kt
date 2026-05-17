@@ -26,6 +26,7 @@ import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.*
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
+import com.foleyit.itflow.ui.util.fmtDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -135,7 +136,7 @@ fun SignWorksheetScreen(worksheetId: Int, navController: NavController) {
                                             Icon(Icons.Outlined.CheckCircle, null, Modifier.size(16.dp),
                                                 tint = MaterialTheme.colorScheme.primary)
                                             Spacer(Modifier.width(6.dp))
-                                            Text("Signed by ${ws.signedName} on ${ws.signedAt?.take(10) ?: ""}",
+                                            Text("Signed by ${ws.signedName} on ${fmtDate(ws.signedAt)}",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer)
                                         }

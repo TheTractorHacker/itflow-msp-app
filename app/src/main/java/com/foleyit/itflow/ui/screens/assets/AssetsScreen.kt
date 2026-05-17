@@ -34,19 +34,7 @@ fun AssetsScreen(navController: NavController) {
 
     LaunchedEffect(Unit) { load() }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Assets") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, null)
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+    Column(Modifier.fillMaxSize()) {
             OutlinedTextField(
                 value = search,
                 onValueChange = { search = it },
@@ -97,6 +85,6 @@ fun AssetsScreen(navController: NavController) {
                     }
                 }
             }
-        }
     }
 }
+

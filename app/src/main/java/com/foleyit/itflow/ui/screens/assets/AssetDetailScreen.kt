@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.AssetDetail
+import com.foleyit.itflow.ui.util.fmtDate
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
 import kotlinx.coroutines.launch
@@ -92,8 +93,8 @@ fun AssetDetailScreen(id: Int) {
                                 AssetRow("Contact", a.contactName)
                                 if (!a.contactPhone.isNullOrBlank())
                                     AssetRow("Phone", a.contactPhone)
-                                AssetRow("Purchase Date", a.purchaseDate)
-                                AssetRow("Warranty Expires", a.warrantyExpire)
+                                AssetRow("Purchase Date", fmtDate(a.purchaseDate))
+                                AssetRow("Warranty Expires", fmtDate(a.warrantyExpire))
                             }
                         }
                     }

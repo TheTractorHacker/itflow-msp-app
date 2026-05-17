@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.foleyit.itflow.ui.util.fmtDate
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.Appointment
 import com.foleyit.itflow.ui.components.EmptyScreen
@@ -107,7 +108,7 @@ private fun AppointmentCard(appt: Appointment, onClick: () -> Unit) {
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            formatSchedule(schedule, appt.scheduleEnd),
+                            fmtDate(schedule) + (appt.scheduleEnd?.let { " – ${fmtDate(it)}" } ?: ""),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold
@@ -156,13 +157,3 @@ private fun AppointmentCard(appt: Appointment, onClick: () -> Unit) {
     }
 }
 
-private fun formatSchedule(schedule: String, end: String?): String {
-    return try {
-        val parts = schedule.split("T", " ")
-        val date = parts[0]
-        val time = parts.getOrNull(1)?.substring(0, 5) ?: ""
-        val endTime = end?.split("T", " ")?.getOrNull(1)?.substring(0, 5)
-        val timeStr = if (endTime != null) "$time – $endTime" else time
-        "$date  $timeStr"
-    } catch (_: Exception) { schedule }
-}

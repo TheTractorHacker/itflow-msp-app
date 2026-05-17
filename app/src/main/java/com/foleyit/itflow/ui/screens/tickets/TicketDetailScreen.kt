@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.*
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.util.fmtDate
 import java.text.NumberFormat
 import java.util.Locale
 import com.foleyit.itflow.ui.components.ErrorScreen
@@ -318,8 +319,8 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                                 ticket.assignedTo?.let { InfoRow(Icons.Outlined.PersonOutline, "Assigned: $it") }
                                 ticket.contactName?.let { InfoRow(Icons.Outlined.ContactPage, it) }
                                 ticket.contactPhone?.let { InfoRow(Icons.Outlined.Phone, it) }
-                                ticket.dueAt?.let { InfoRow(Icons.Outlined.Schedule, "Due: $it") }
-                                ticket.createdAt?.let { InfoRow(Icons.Outlined.CalendarToday, "Opened: $it") }
+                                ticket.dueAt?.let { InfoRow(Icons.Outlined.Schedule, "Due: ${fmtDate(it)}") }
+                                ticket.createdAt?.let { InfoRow(Icons.Outlined.CalendarToday, "Opened: ${fmtDate(it)}") }
                             }
                         }
                     }
@@ -497,7 +498,7 @@ private fun ReplyCard(reply: TicketReply) {
                 Column(Modifier.weight(1f)) {
                     Text(reply.by ?: "", style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold)
-                    Text(reply.createdAt ?: "", style = MaterialTheme.typography.bodySmall,
+                    Text(fmtDate(reply.createdAt), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline)
                 }
                 if (isNote) {
