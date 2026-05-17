@@ -1,25 +1,29 @@
 package com.foleyit.itflow.data.api
 
 import com.foleyit.itflow.BuildConfig
+import com.foleyit.itflow.data.ssl.FingerprintTrustManager
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
 
 object ApiClient {
     private var _serverUrl: String = ""
     private var _token: String? = null
+    private var _trustedCertSha: String? = null
     private var _service: ApiService? = null
 
     val serverUrl get() = _serverUrl
 
-    // Set this in MainActivity to auto-navigate to login on 401
+    // Set in MainActivity to auto-navigate to login on 401
     var onUnauthorized: (() -> Unit)? = null
 
-    fun init(serverUrl: String, token: String?) {
+    fun init(serverUrl: String, token: String?, trustedCertSha: String? = null) {
         _serverUrl = serverUrl.trimEnd('/')
         _token = token
+        _trustedCertSha = trustedCertSha
         _service = buildService()
     }
 
@@ -33,20 +37,31 @@ object ApiClient {
         _service = buildService()
     }
 
+    fun setTrustedCert(sha: String?) {
+        _trustedCertSha = sha
+        _service = buildService()
+    }
+
     fun service(): ApiService = _service ?: error("ApiClient not initialized")
 
     private fun buildService(): ApiService {
+        val trustManager = FingerprintTrustManager(_trustedCertSha)
+        val sslContext = SSLContext.getInstance("TLS").also {
+            it.init(null, arrayOf(trustManager), null)
+        }
+
         val client = OkHttpClient.Builder()
+            .sslSocketFactory(sslContext.socketFactory, trustManager)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
-            // Auth header
+            // Attach Bearer token
             .addInterceptor { chain ->
                 val req = chain.request().newBuilder().apply {
                     _token?.let { addHeader("Authorization", "Bearer $it") }
                 }.build()
                 chain.proceed(req)
             }
-            // 401 → fire onUnauthorized on main thread so the app navigates to login
+            // 401 → clear credentials + navigate to login
             .addInterceptor { chain ->
                 val response = chain.proceed(chain.request())
                 if (response.code == 401 && _token != null) {
@@ -56,7 +71,7 @@ object ApiClient {
                 }
                 response
             }
-            // Logging — debug builds only; never log in release (tokens/URLs stay private)
+            // Logging debug-only — never expose request URLs in release builds
             .apply {
                 if (BuildConfig.DEBUG) {
                     addInterceptor(HttpLoggingInterceptor().apply {

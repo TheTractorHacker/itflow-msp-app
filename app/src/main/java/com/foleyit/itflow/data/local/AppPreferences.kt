@@ -4,47 +4,77 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+import com.foleyit.itflow.data.api.UserInfo
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
-// Single DataStore instance keyed on applicationContext
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "itflow_prefs")
 
 class AppPreferences(context: Context) {
-    // Always use applicationContext — prevents multiple DataStore instances for the same file
     private val ctx = context.applicationContext
 
     companion object {
-        val SERVER_URL = stringPreferencesKey("server_url")
-        val AUTH_TOKEN = stringPreferencesKey("auth_token")
-        val USER_NAME  = stringPreferencesKey("user_name")
-        val USER_ID    = intPreferencesKey("user_id")
-        val USER_TYPE  = intPreferencesKey("user_type")
+        val SERVER_URL       = stringPreferencesKey("server_url")
+        val USER_NAME        = stringPreferencesKey("user_name")
+        val USER_ID          = intPreferencesKey("user_id")
+        val USER_TYPE        = intPreferencesKey("user_type")
+        val TRUSTED_CERT_SHA = stringPreferencesKey("trusted_cert_sha")
     }
 
-    val serverUrl: Flow<String>  = ctx.dataStore.data.map { it[SERVER_URL] ?: "" }
-    val authToken: Flow<String?> = ctx.dataStore.data.map { it[AUTH_TOKEN] }
-    val userName: Flow<String?>  = ctx.dataStore.data.map { it[USER_NAME] }
+    // AES256-GCM master key stored in Android Keystore (hardware-backed on Android 9+)
+    private val masterKey = MasterKey.Builder(ctx)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    // Auth token encrypted with AES256-GCM; key names encrypted with AES256-SIV
+    private val securePrefs = EncryptedSharedPreferences.create(
+        ctx,
+        "itflow_secure",
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+
+    // Non-sensitive: server URL, display name, trusted cert fingerprint — plain DataStore
+    val serverUrl: Flow<String>   = ctx.dataStore.data.map { it[SERVER_URL] ?: "" }
+    val userName: Flow<String?>   = ctx.dataStore.data.map { it[USER_NAME] }
+    val trustedCertSha: Flow<String?> = ctx.dataStore.data.map { it[TRUSTED_CERT_SHA] }
+
+    // Auth token from encrypted storage — one-shot Flow (callers use .first())
+    val authToken: Flow<String?> = flow {
+        emit(securePrefs.getString("auth_token", null))
+    }
 
     suspend fun saveServerUrl(url: String) {
         ctx.dataStore.edit { it[SERVER_URL] = url.trimEnd('/') }
     }
 
-    suspend fun saveAuthData(token: String, user: com.foleyit.itflow.data.api.UserInfo) {
+    suspend fun saveAuthData(token: String, user: UserInfo) {
+        securePrefs.edit().putString("auth_token", token).apply()
         ctx.dataStore.edit {
-            it[AUTH_TOKEN] = token
-            it[USER_NAME]  = user.name
-            it[USER_ID]    = user.id
-            it[USER_TYPE]  = user.type
+            it[USER_NAME] = user.name
+            it[USER_ID]   = user.id
+            it[USER_TYPE] = user.type
         }
     }
 
     suspend fun clearAuth() {
+        securePrefs.edit().remove("auth_token").apply()
         ctx.dataStore.edit {
-            it.remove(AUTH_TOKEN)
             it.remove(USER_NAME)
             it.remove(USER_ID)
             it.remove(USER_TYPE)
         }
+    }
+
+    suspend fun saveTrustedCert(sha256: String) {
+        ctx.dataStore.edit { it[TRUSTED_CERT_SHA] = sha256 }
+    }
+
+    suspend fun clearTrustedCert() {
+        ctx.dataStore.edit { it.remove(TRUSTED_CERT_SHA) }
     }
 }

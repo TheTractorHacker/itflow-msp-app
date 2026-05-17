@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.biometric)
+    implementation(libs.androidx.security.crypto)
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp.logging)

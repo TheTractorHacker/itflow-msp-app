@@ -7,50 +7,76 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.SyncAlt
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.local.AppPreferences
+import com.foleyit.itflow.data.ssl.FingerprintTrustManager
+import com.foleyit.itflow.data.ssl.probeCertificate
+import com.foleyit.itflow.data.ssl.sha256Fingerprint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLHandshakeException
 
 @Composable
 fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
     var url by remember { mutableStateOf("https://") }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var pendingCert by remember { mutableStateOf<X509Certificate?>(null) }
     val scope = rememberCoroutineScope()
 
-    fun connect() {
+    fun connect(trustedSha: String? = null) {
         if (!url.startsWith("http")) { error = "URL must start with https://"; return }
         loading = true; error = null
         scope.launch {
             try {
                 val cleanUrl = url.trimEnd('/')
+                val tm = FingerprintTrustManager(trustedSha)
+                val ssl = SSLContext.getInstance("TLS").also { it.init(null, arrayOf(tm), null) }
                 val responseCode = withContext(Dispatchers.IO) {
                     val client = OkHttpClient.Builder()
+                        .sslSocketFactory(ssl.socketFactory, tm)
                         .connectTimeout(10, TimeUnit.SECONDS)
                         .readTimeout(10, TimeUnit.SECONDS)
                         .build()
-                    val req = Request.Builder().url("$cleanUrl/api/v1/auth").build()
-                    client.newCall(req).execute().code
+                    client.newCall(Request.Builder().url("$cleanUrl/api/v1/auth").build())
+                        .execute().code
                 }
                 if (responseCode in 200..499) {
+                    if (trustedSha != null) prefs.saveTrustedCert(trustedSha)
                     prefs.saveServerUrl(cleanUrl)
-                    ApiClient.init(cleanUrl, null)
+                    ApiClient.init(cleanUrl, null, trustedSha)
                     onDone()
                 } else {
-                    error = "Server responded with error $responseCode"
+                    error = "Server responded with $responseCode — check the URL"
+                }
+            } catch (e: SSLHandshakeException) {
+                // Certificate not trusted by system — probe it and offer to accept
+                val cert = withContext(Dispatchers.IO) { probeCertificate("${url.trimEnd('/')}/api/v1/auth") }
+                if (cert != null) {
+                    pendingCert = cert
+                } else {
+                    error = "SSL error and could not retrieve certificate.\n${e.message}"
                 }
             } catch (e: Exception) {
                 error = "Cannot reach server. Check the URL.\n${e.message}"
@@ -58,6 +84,60 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
                 loading = false
             }
         }
+    }
+
+    // Self-signed certificate acceptance dialog
+    pendingCert?.let { cert ->
+        val fingerprint = cert.sha256Fingerprint()
+        AlertDialog(
+            onDismissRequest = { pendingCert = null },
+            icon = { Icon(Icons.Outlined.Warning, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Untrusted Certificate") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("This server uses a certificate not signed by a trusted authority. " +
+                         "Only continue if you trust this server.")
+                    Text("Issued to: ${cert.subjectX500Principal.name.substringAfter("CN=").substringBefore(",")}")
+                    Text("Expires: ${cert.notAfter}")
+                    Spacer(Modifier.height(4.dp))
+                    Text("SHA-256 Fingerprint:", style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(
+                            buildAnnotatedString {
+                                withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
+                                    append(fingerprint)
+                                }
+                            },
+                            modifier = Modifier.padding(8.dp),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val sha = fingerprint
+                        pendingCert = null
+                        connect(trustedSha = sha)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Outlined.Security, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Trust & Connect")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCert = null }) { Text("Cancel") }
+            }
+        )
     }
 
     Column(
@@ -108,8 +188,13 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
         }
 
         Spacer(Modifier.height(24.dp))
-        Button(onClick = ::connect, modifier = Modifier.fillMaxWidth().height(52.dp), enabled = !loading) {
-            if (loading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        Button(
+            onClick = { connect() },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            enabled = !loading
+        ) {
+            if (loading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onPrimary)
             else Text("Connect")
         }
         Spacer(Modifier.height(32.dp))

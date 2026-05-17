@@ -15,10 +15,11 @@ class ITFlowApplication : Application() {
         super.onCreate()
         prefs = AppPreferences(this)
         runBlocking {
-            val url   = prefs.serverUrl.first()
-            val token = prefs.authToken.first()
+            val url     = prefs.serverUrl.first()
+            val token   = prefs.authToken.first()
+            val certSha = prefs.trustedCertSha.first()
             if (url.isNotBlank()) {
-                ApiClient.init(url, token)
+                ApiClient.init(url, token, certSha)
             }
         }
     }
