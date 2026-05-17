@@ -5,13 +5,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.foleyit.itflow.data.api.ApiClient
-import com.foleyit.itflow.data.local.AppPreferences
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.screens.auth.LoginScreen
 import com.foleyit.itflow.ui.screens.auth.ServerSetupScreen
@@ -24,11 +22,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val prefs = AppPreferences(this)
+        // Reuse the single AppPreferences instance from Application
+        val prefs = (application as ITFlowApplication).prefs
 
-        // Determine start destination synchronously (ApiClient already initialized in Application)
         val startDestination = runBlocking {
-            val url = prefs.serverUrl.first()
+            val url   = prefs.serverUrl.first()
             val token = prefs.authToken.first()
             when {
                 url.isBlank() -> Screen.Setup.route
@@ -41,7 +39,6 @@ class MainActivity : AppCompatActivity() {
             ITFlowTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
-
                     NavHost(navController, startDestination = startDestination) {
                         composable(Screen.Setup.route) {
                             ServerSetupScreen(
@@ -72,6 +69,7 @@ class MainActivity : AppCompatActivity() {
                             MainScreen(
                                 prefs = prefs,
                                 onLoggedOut = {
+                                    ApiClient.clearToken()
                                     navController.navigate(Screen.Login.route) {
                                         popUpTo(0) { inclusive = true }
                                     }
