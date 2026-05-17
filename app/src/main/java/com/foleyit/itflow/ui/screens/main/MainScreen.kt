@@ -9,7 +9,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.local.AppPreferences
@@ -35,10 +34,10 @@ import kotlinx.coroutines.withContext
 // Routes that are "root" tabs — show the main AppBar
 private val ROOT_ROUTES = setOf(
     Screen.Dashboard.route, Screen.Tickets.route, Screen.Clients.route,
-    Screen.Assets.route, Screen.Credentials.route, Screen.Quotes.route,
-    Screen.Invoices.route, Screen.Expenses.route, Screen.Notifications.route,
-    Screen.Appointments.route,
-    Screen.Profile.route
+    Screen.Assets.route, Screen.Appointments.route,
+    Screen.Credentials.route, Screen.Quotes.route,
+    Screen.Invoices.route, Screen.Expenses.route,
+    Screen.Notifications.route, Screen.Profile.route
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,21 +46,16 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     var userName by remember { mutableStateOf("") }
-    var showMoreSheet by remember { mutableStateOf(false) }
     var showUserMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { userName = prefs.userName.first() ?: "" }
 
     val currentDest by navController.currentBackStackEntryAsState()
     val currentRoute = currentDest?.destination?.route
-
-    // Only show main AppBar on root/list screens, not detail screens
     val isRootScreen = currentRoute in ROOT_ROUTES
 
     fun navigateToTab(route: String) {
         navController.navigate(route) {
-            // Do NOT use saveState/restoreState — they restore detail screens (e.g. TicketDetail)
-            // back onto the stack when you re-enter a tab, which is the bug
             popUpTo(Screen.Dashboard.route) { inclusive = false }
             launchSingleTop = true
         }
@@ -69,7 +63,6 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
 
     Scaffold(
         topBar = {
-            // Only show main app bar on root screens — detail screens have their own
             if (isRootScreen) {
                 TopAppBar(
                     title = {
@@ -142,19 +135,12 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
                         label = { Text(item.label) }
                     )
                 }
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { showMoreSheet = true },
-                    icon = { Icon(Icons.Outlined.GridView, "More") },
-                    label = { Text("More") }
-                )
             }
         }
     ) { padding ->
         NavHost(
             navController,
             startDestination = Screen.Dashboard.route,
-            // Detail screens manage their own padding; root screens use outer padding
             modifier = if (isRootScreen) Modifier.padding(padding) else Modifier.padding(bottom = padding.calculateBottomPadding())
         ) {
             composable(Screen.Dashboard.route) { DashboardScreen(navController) }
@@ -170,6 +156,7 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
             composable(Screen.AssetDetail.route) {
                 AssetDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0)
             }
+            composable(Screen.Appointments.route) { AppointmentsScreen(navController) }
             composable(Screen.Credentials.route) { CredentialsScreen(navController) }
             composable(Screen.CredDetail.route) {
                 CredentialDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0)
@@ -185,7 +172,6 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
             composable(Screen.Expenses.route) { ExpensesScreen(navController) }
             composable(Screen.AddExpense.route) { AddExpenseScreen { navController.popBackStack() } }
             composable(Screen.Notifications.route) { NotificationsScreen() }
-            composable(Screen.Appointments.route) { AppointmentsScreen(navController) }
             composable(Screen.Profile.route) { ProfileScreen(navController, prefs) }
             composable(Screen.FillWorksheet.route) {
                 FillWorksheetScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
@@ -194,45 +180,5 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
                 SignWorksheetScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
             }
         }
-    }
-
-    if (showMoreSheet) {
-        ModalBottomSheet(onDismissRequest = { showMoreSheet = false }) {
-            MoreSheetContent(onNavigate = { route ->
-                showMoreSheet = false
-                navigateToTab(route)
-            })
-        }
-    }
-}
-
-@Composable
-private fun MoreSheetContent(onNavigate: (String) -> Unit) {
-    val items = listOf(
-        Triple(Icons.Outlined.Devices, "Assets", Screen.Assets.route),
-        Triple(Icons.Outlined.CalendarMonth, "Appts", Screen.Appointments.route),
-        Triple(Icons.Outlined.Notifications, "Notifications", Screen.Notifications.route),
-    )
-    Column(Modifier.padding(16.dp).navigationBarsPadding()) {
-        Text("More", style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 16.dp))
-        items.chunked(3).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { (icon, label, route) ->
-                    Surface(onClick = { onNavigate(route) }, shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        modifier = Modifier.weight(1f).padding(vertical = 4.dp)) {
-                        Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(icon, label, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                            Spacer(Modifier.height(8.dp))
-                            Text(label, style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer)
-                        }
-                    }
-                }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
     }
 }

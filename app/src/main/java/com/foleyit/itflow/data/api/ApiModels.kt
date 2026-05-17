@@ -261,7 +261,7 @@ data class AddChargeRequest(
 )
 
 data class CreateWorksheetRequest(
-    @com.google.gson.annotations.SerializedName("template_id") val templateId: Int,
+    @com.google.gson.annotations.SerializedName("template_id") val templateId: Int = 0,
     @com.google.gson.annotations.SerializedName("is_outtake") val isOuttake: Int = 0
 )
 

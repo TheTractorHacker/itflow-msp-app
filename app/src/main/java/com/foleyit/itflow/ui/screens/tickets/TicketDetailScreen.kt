@@ -114,16 +114,15 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     }
 
     if (showAddOuttake) {
-        SelectTemplateSheet(
-            title = "New Outtake Form",
+        OuttakeSheet(
             onDismiss = { showAddOuttake = false },
-            onCreate = { templateId ->
+            onCreate = {
                 scope.launch {
                     val form = runCatching {
-                        ApiClient.service().createOuttake(id, CreateWorksheetRequest(templateId))
+                        ApiClient.service().createOuttake(id, CreateWorksheetRequest())
                     }.getOrNull()
                     load()
-                    form?.get("id")?.let { formId -> navController.navigate(Screen.FillWorksheet.go(formId)) }
+                    form?.get("id")?.let { formId -> navController.navigate(Screen.SignWorksheet.go(formId)) }
                 }
                 showAddOuttake = false
             }
@@ -822,6 +821,47 @@ private fun AddChargeSheet(
                 ) { Text("Add Charge") }
             }
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OuttakeSheet(onDismiss: () -> Unit, onCreate: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.padding(horizontal = 24.dp).navigationBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(64.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.Draw, null, Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Text("Outtake Form", style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Creates a sign-off form so the client can sign when picking up their device.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Outlined.Draw, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Create & Sign")
+            }
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
+            Spacer(Modifier.height(16.dp))
         }
     }
 }

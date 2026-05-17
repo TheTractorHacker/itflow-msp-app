@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.*
 import com.foleyit.itflow.data.local.AppPreferences
@@ -32,6 +33,7 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
     var confirmPass by remember { mutableStateOf("") }
     var obscureCur by remember { mutableStateOf(true) }
     var obscureNew by remember { mutableStateOf(true) }
+    var obscureConfirm by remember { mutableStateOf(true) }
     var loading by remember { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -45,8 +47,8 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
     }
 
     fun save() {
-        if (name.isBlank() || email.isBlank()) { error = "Name and email required"; return }
-        if (newPass.isNotBlank() && newPass != confirmPass) { error = "Passwords don't match"; return }
+        if (name.isBlank() || email.isBlank()) { error = "Name and email are required"; return }
+        if (newPass.isNotBlank() && newPass != confirmPass) { error = "New passwords don't match"; return }
         if (newPass.isNotBlank() && currentPass.isBlank()) { error = "Enter current password to change it"; return }
         saving = true; error = null
         scope.launch {
@@ -57,12 +59,11 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                         currentPassword = currentPass, newPassword = newPass
                     ))
                 }
-                // Update stored name
                 val currentToken = prefs.authToken.first() ?: ""
                 prefs.saveAuthData(currentToken,
                     UserInfo(profile?.id ?: 0, name.trim(), email.trim(), profile?.type ?: 1))
                 currentPass = ""; newPass = ""; confirmPass = ""
-                snackbar.showSnackbar("Profile updated")
+                snackbar.showSnackbar("Profile updated successfully")
             } catch (e: Exception) {
                 error = e.message ?: "Failed to save"
             } finally {
@@ -74,16 +75,10 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit Profile") },
+                title = { Text("Profile") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Outlined.ArrowBack, null)
-                    }
-                },
-                actions = {
-                    TextButton(onClick = ::save, enabled = !saving) {
-                        if (saving) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                        else Text("Save", fontWeight = FontWeight.SemiBold)
                     }
                 }
             )
@@ -91,76 +86,180 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
         snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
         if (loading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
             return@Scaffold
         }
+
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding)
-                .verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
         ) {
-            // Avatar
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Surface(shape = MaterialTheme.shapes.extraLarge,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.size(80.dp)) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer)
+            // ── Avatar header ────────────────────────────────────────────
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Surface(
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(88.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                fontSize = 38.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
                     }
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        name.ifBlank { "Your Name" },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        email.ifBlank { "your@email.com" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
                 }
             }
-            Spacer(Modifier.height(4.dp))
 
-            Text("Account Info", style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedTextField(value = name, onValueChange = { name = it },
-                label = { Text("Full Name") }, leadingIcon = { Icon(Icons.Outlined.Person, null) },
-                modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = email, onValueChange = { email = it },
-                label = { Text("Email") }, leadingIcon = { Icon(Icons.Outlined.Email, null) },
-                modifier = Modifier.fillMaxWidth(), singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
+            // ── Account Info card ─────────────────────────────────────────
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Account Info",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold)
+                        OutlinedTextField(
+                            value = name, onValueChange = { name = it },
+                            label = { Text("Full Name") },
+                            leadingIcon = { Icon(Icons.Outlined.Person, null) },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = email, onValueChange = { email = it },
+                            label = { Text("Email") },
+                            leadingIcon = { Icon(Icons.Outlined.Email, null) },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+                        )
+                        Button(
+                            onClick = ::save,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !saving
+                        ) {
+                            if (saving) {
+                                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary)
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text("Save Profile")
+                        }
+                    }
+                }
 
-            Spacer(Modifier.height(4.dp))
-            Text("Change Password", style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("Leave blank to keep current password",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                // ── Change Password card ──────────────────────────────────────
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Lock, null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text("Change Password",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold)
+                                Text("Leave blank to keep your current password",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline)
+                            }
+                        }
+                        HorizontalDivider()
+                        OutlinedTextField(
+                            value = currentPass, onValueChange = { currentPass = it },
+                            label = { Text("Current Password") },
+                            leadingIcon = { Icon(Icons.Outlined.LockOpen, null) },
+                            trailingIcon = {
+                                IconButton(onClick = { obscureCur = !obscureCur }) {
+                                    Icon(if (obscureCur) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null)
+                                }
+                            },
+                            visualTransformation = if (obscureCur) PasswordVisualTransformation() else VisualTransformation.None,
+                            modifier = Modifier.fillMaxWidth(), singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                        )
+                        OutlinedTextField(
+                            value = newPass, onValueChange = { newPass = it },
+                            label = { Text("New Password") },
+                            leadingIcon = { Icon(Icons.Outlined.Lock, null) },
+                            trailingIcon = {
+                                IconButton(onClick = { obscureNew = !obscureNew }) {
+                                    Icon(if (obscureNew) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null)
+                                }
+                            },
+                            visualTransformation = if (obscureNew) PasswordVisualTransformation() else VisualTransformation.None,
+                            modifier = Modifier.fillMaxWidth(), singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                        )
+                        OutlinedTextField(
+                            value = confirmPass, onValueChange = { confirmPass = it },
+                            label = { Text("Confirm New Password") },
+                            leadingIcon = { Icon(Icons.Outlined.Lock, null) },
+                            trailingIcon = {
+                                IconButton(onClick = { obscureConfirm = !obscureConfirm }) {
+                                    Icon(if (obscureConfirm) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null)
+                                }
+                            },
+                            visualTransformation = if (obscureConfirm) PasswordVisualTransformation() else VisualTransformation.None,
+                            isError = newPass.isNotBlank() && confirmPass.isNotBlank() && newPass != confirmPass,
+                            supportingText = if (newPass.isNotBlank() && confirmPass.isNotBlank() && newPass != confirmPass) {
+                                { Text("Passwords don't match") }
+                            } else null,
+                            modifier = Modifier.fillMaxWidth(), singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                        )
+                        Button(
+                            onClick = ::save,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !saving && currentPass.isNotBlank() && newPass.isNotBlank()
+                        ) {
+                            Text("Change Password")
+                        }
+                    }
+                }
 
-            OutlinedTextField(value = currentPass, onValueChange = { currentPass = it },
-                label = { Text("Current Password") }, leadingIcon = { Icon(Icons.Outlined.Lock, null) },
-                trailingIcon = { IconButton(onClick = { obscureCur = !obscureCur }) {
-                    Icon(if (obscureCur) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null)
-                }},
-                visualTransformation = if (obscureCur) PasswordVisualTransformation() else VisualTransformation.None,
-                modifier = Modifier.fillMaxWidth(), singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-            OutlinedTextField(value = newPass, onValueChange = { newPass = it },
-                label = { Text("New Password") }, leadingIcon = { Icon(Icons.Outlined.LockOpen, null) },
-                trailingIcon = { IconButton(onClick = { obscureNew = !obscureNew }) {
-                    Icon(if (obscureNew) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null)
-                }},
-                visualTransformation = if (obscureNew) PasswordVisualTransformation() else VisualTransformation.None,
-                modifier = Modifier.fillMaxWidth(), singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-            OutlinedTextField(value = confirmPass, onValueChange = { confirmPass = it },
-                label = { Text("Confirm New Password") },
-                leadingIcon = { Icon(Icons.Outlined.LockOpen, null) },
-                visualTransformation = PasswordVisualTransformation(),
-                isError = newPass.isNotBlank() && confirmPass.isNotBlank() && newPass != confirmPass,
-                modifier = Modifier.fillMaxWidth(), singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
+                error?.let {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.ErrorOutline, null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(it, color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
 
-            error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall)
-            }
-            Button(onClick = ::save, modifier = Modifier.fillMaxWidth().height(52.dp), enabled = !saving) {
-                if (saving) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Text("Save Changes")
+                Spacer(Modifier.height(8.dp))
             }
         }
     }
