@@ -1,0 +1,106 @@
+package com.foleyit.itflow.ui.screens.credentials
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import android.content.Intent
+import android.net.Uri
+import com.foleyit.itflow.data.api.ApiClient
+import com.foleyit.itflow.data.api.CredentialDetail
+import com.foleyit.itflow.ui.components.ErrorScreen
+import com.foleyit.itflow.ui.components.LoadingScreen
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CredentialDetailScreen(id: Int) {
+    var state by remember { mutableStateOf<Result<CredentialDetail>?>(null) }
+    var showPassword by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val snackbarHost = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getCredential(id) } } }
+
+    fun copy(value: String, label: String) {
+        clipboard.setText(AnnotatedString(value))
+        scope.launch { snackbarHost.showSnackbar("$label copied") }
+    }
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }) { padding ->
+        when {
+            state == null -> LoadingScreen()
+            state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "")
+            else -> {
+                val c = state!!.getOrThrow()
+                LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        Card(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(48.dp)) {
+                                        Box(contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Lock, null, tint = MaterialTheme.colorScheme.onPrimaryContainer) }
+                                    }
+                                    Spacer(Modifier.width(12.dp))
+                                    Column {
+                                        Text(c.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                        c.client?.takeIf { it.isNotBlank() }?.let { Text(it, color = MaterialTheme.colorScheme.outline) }
+                                    }
+                                }
+                                HorizontalDivider(Modifier.padding(vertical = 16.dp))
+                                c.username?.takeIf { it.isNotBlank() }?.let { CredField("Username", it, Icons.Outlined.Person, onCopy = { copy(it, "Username") }) }
+                                c.password?.takeIf { it.isNotBlank() }?.let { pwd ->
+                                    CredField(
+                                        "Password",
+                                        if (showPassword) pwd else "••••••••••",
+                                        Icons.Outlined.Lock,
+                                        onCopy = { copy(pwd, "Password") },
+                                        trailingIcon = { IconButton(onClick = { showPassword = !showPassword }, modifier = Modifier.size(32.dp)) { Icon(if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, null, Modifier.size(18.dp)) } }
+                                    )
+                                }
+                                c.uri?.takeIf { it.isNotBlank() }?.let { url ->
+                                    CredField("URL", url, Icons.Outlined.Link, onCopy = { copy(url, "URL") }, onTap = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) })
+                                }
+                                c.note?.takeIf { it.isNotBlank() }?.let {
+                                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                                    Text("Notes", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(it)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CredField(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
+                      onCopy: (() -> Unit)? = null, onTap: (() -> Unit)? = null,
+                      trailingIcon: (@Composable () -> Unit)? = null) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                Surface(color = androidx.compose.ui.graphics.Color.Transparent, onClick = { onTap?.invoke() }, enabled = onTap != null) { Text(value, style = MaterialTheme.typography.bodyMedium) }
+            }
+            trailingIcon?.invoke()
+            onCopy?.let { IconButton(onClick = it, modifier = Modifier.size(32.dp)) { Icon(Icons.Outlined.ContentCopy, "Copy", Modifier.size(18.dp)) } }
+        }
+    }
+}
