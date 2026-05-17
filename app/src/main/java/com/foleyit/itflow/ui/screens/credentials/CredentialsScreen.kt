@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.FragmentActivity
+import androidx.activity.ComponentActivity
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.ui.components.*
@@ -31,7 +31,7 @@ fun CredentialsScreen(navController: NavController) {
     val context = LocalContext.current
 
     fun authenticate() {
-        val activity = context as? FragmentActivity ?: return
+        val activity = context as? ComponentActivity ?: return
         val executor = ContextCompat.getMainExecutor(context)
         val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
