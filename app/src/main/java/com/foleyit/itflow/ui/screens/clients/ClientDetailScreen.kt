@@ -122,7 +122,7 @@ private fun ClientInfoTab(client: ClientDetail) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (client.address != null || client.phone != null) {
             item {
-                Card(Modifier.fillMaxWidth()) {
+                Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Contact Info", style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -138,7 +138,7 @@ private fun ClientInfoTab(client: ClientDetail) {
         }
         if (!client.notes.isNullOrBlank()) {
             item {
-                Card(Modifier.fillMaxWidth()) {
+                Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Notes", style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -194,7 +194,7 @@ private fun ClientContactsTab(contacts: List<Contact>, context: android.content.
     if (contacts.isEmpty()) { EmptyScreen("No contacts", Icons.Outlined.People); return }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items(contacts) { c ->
-            Card(Modifier.fillMaxWidth()) {
+            Card(modifier = Modifier.fillMaxWidth()) {
                 ListItem(
                     headlineContent = { Text(c.name, fontWeight = FontWeight.Medium) },
                     supportingContent = {
@@ -227,7 +227,7 @@ private fun ClientAssetsTab(clientId: Int, navController: NavController) {
             if (assets.isEmpty()) { EmptyScreen("No assets", Icons.Outlined.Devices); return }
             LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(assets) { a ->
-                    Card(Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.AssetDetail.go(a.id)) }) {
+                    Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.AssetDetail.go(a.id)) }) {
                         ListItem(
                             headlineContent = { Text(a.name, fontWeight = FontWeight.Medium) },
                             supportingContent = { Text(listOfNotNull(a.make, a.model).joinToString(" ")) },
@@ -259,7 +259,7 @@ private fun ClientLocationsTab(clientId: Int, context: android.content.Context) 
             if (locs.isEmpty()) { EmptyScreen("No locations", Icons.Outlined.LocationOn); return }
             LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(locs) { loc ->
-                    Card(Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(loc.name ?: "Location", fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
@@ -301,7 +301,7 @@ private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
             if (creds.isEmpty()) { EmptyScreen("No credentials", Icons.Outlined.Lock); return }
             LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(creds) { c ->
-                    Card(Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.CredDetail.go(c.id)) }) {
+                    Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.CredDetail.go(c.id)) }) {
                         ListItem(
                             headlineContent = { Text(c.name, fontWeight = FontWeight.Medium) },
                             supportingContent = c.username?.let { { Text(it) } },
@@ -329,7 +329,7 @@ private fun ClientContractsTab(clientId: Int) {
             if (contracts.isEmpty()) { EmptyScreen("No contracts", Icons.Outlined.Description); return }
             LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(contracts) { c ->
-                    Card(Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
                         ListItem(
                             headlineContent = { Text(c.name ?: "", fontWeight = FontWeight.Medium) },
                             supportingContent = { Text("${c.type ?: ""} · ${c.status ?: ""}") },
