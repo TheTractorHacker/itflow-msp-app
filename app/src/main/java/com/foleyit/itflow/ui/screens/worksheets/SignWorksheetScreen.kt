@@ -104,7 +104,7 @@ fun SignWorksheetScreen(worksheetId: Int, navController: NavController) {
                 title = { Text("Sign Worksheet") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Outlined.ArrowBack, null)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, null)
                     }
                 }
             )

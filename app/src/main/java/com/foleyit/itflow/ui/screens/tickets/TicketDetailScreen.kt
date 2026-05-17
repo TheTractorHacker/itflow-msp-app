@@ -48,6 +48,8 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     var showReply by remember { mutableStateOf(false) }
     var replyType by remember { mutableStateOf("reply") }
     var showStatusPicker by remember { mutableStateOf(false) }
+    var showAddCharge by remember { mutableStateOf(false) }
+    var showAddWorksheet by remember { mutableStateOf(false) }
     var charges by remember { mutableStateOf<ChargesResponse?>(null) }
     var worksheets by remember { mutableStateOf<List<WorksheetSummary>>(emptyList()) }
 
@@ -80,6 +82,32 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
         }
     }
     LaunchedEffect(Unit) { load() }
+
+    if (showAddCharge) {
+        AddChargeSheet(onDismiss = { showAddCharge = false }, onSave = { name, desc, qty, price ->
+            scope.launch {
+                runCatching { ApiClient.service().addCharge(id, AddChargeRequest(name, desc, qty, price)) }
+                load()
+            }
+            showAddCharge = false
+        })
+    }
+
+    if (showAddWorksheet) {
+        AddWorksheetSheet(
+            onDismiss = { showAddWorksheet = false },
+            onCreate = { templateId, isOuttake ->
+                scope.launch {
+                    val ws = runCatching { ApiClient.service().createWorksheet(id, CreateWorksheetRequest(templateId, isOuttake)) }.getOrNull()
+                    load()
+                    ws?.get("id")?.let { wsId ->
+                        navController.navigate(Screen.FillWorksheet.go(wsId))
+                    }
+                }
+                showAddWorksheet = false
+            }
+        )
+    }
 
     if (showReply) {
         ReplySheet(
@@ -146,7 +174,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                 title = { state?.getOrNull()?.let { Text("#${it.number}") } ?: Text("Ticket") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Outlined.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
                     }
                 },
                 actions = {
@@ -180,14 +208,14 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                         onClick = { replyType = "note"; showReply = true },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Outlined.StickyNote2, null, Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Outlined.StickyNote2, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp)); Text("Note")
                     }
                     Button(
                         onClick = { replyType = "reply"; showReply = true },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Outlined.Reply, null, Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Outlined.Reply, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp)); Text("Reply")
                     }
                 }
@@ -291,10 +319,10 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                     }
 
                     // Charges — always show section so feature is visible
-                    item { ChargesCard(charges) }
+                    item { ChargesCard(charges, onAddCharge = { showAddCharge = true }) }
 
                     // Worksheets — always show section
-                    item { WorksheetsCard(worksheets, navController) }
+                    item { WorksheetsCard(worksheets, navController, onAddWorksheet = { showAddWorksheet = true }) }
 
                     // Reply count header
                     if (ticket.replies.isNotEmpty()) {
@@ -442,16 +470,24 @@ private fun ReplyCard(reply: TicketReply) {
 }
 
 @Composable
-private fun ChargesCard(cr: ChargesResponse?) {
+private fun ChargesCard(cr: ChargesResponse?, onAddCharge: (() -> Unit)? = null) {
     val currency = NumberFormat.getCurrencyInstance(Locale.US)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
                 Text("Charges", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                if (cr != null && cr.charges.isNotEmpty()) {
-                    Text(currency.format(cr.total), fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (cr != null && cr.charges.isNotEmpty()) {
+                        Text(currency.format(cr.total), fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    onAddCharge?.let { action ->
+                        FilledTonalIconButton(onClick = action, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Outlined.Add, "Add Charge", Modifier.size(16.dp))
+                        }
+                    }
                 }
             }
             if (cr == null || cr.charges.isEmpty()) {
@@ -492,10 +528,17 @@ private fun ChargesCard(cr: ChargesResponse?) {
 }
 
 @Composable
-private fun WorksheetsCard(worksheets: List<WorksheetSummary>, navController: NavController) {
+private fun WorksheetsCard(worksheets: List<WorksheetSummary>, navController: NavController, onAddWorksheet: (() -> Unit)? = null) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Text("Worksheets", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Worksheets", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                onAddWorksheet?.let { action ->
+                    FilledTonalIconButton(onClick = action, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Outlined.Add, "Add Worksheet", Modifier.size(16.dp))
+                    }
+                }
+            }
             if (worksheets.isEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text("No worksheets on this ticket.", style = MaterialTheme.typography.bodySmall,
@@ -507,7 +550,7 @@ private fun WorksheetsCard(worksheets: List<WorksheetSummary>, navController: Na
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        if (ws.signed) Icons.Outlined.CheckCircle else Icons.Outlined.Assignment,
+                        if (ws.signed) Icons.Outlined.CheckCircle else Icons.AutoMirrored.Outlined.Assignment,
                         null, modifier = Modifier.size(20.dp),
                         tint = if (ws.signed) MaterialTheme.colorScheme.primary
                                else MaterialTheme.colorScheme.outline
@@ -536,6 +579,104 @@ private fun WorksheetsCard(worksheets: List<WorksheetSummary>, navController: Na
                 }
                 if (i < worksheets.size - 1) HorizontalDivider()
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddChargeSheet(onDismiss: () -> Unit, onSave: (name: String, desc: String, qty: Double, price: Double) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var desc by remember { mutableStateOf("") }
+    var qty by remember { mutableStateOf("1") }
+    var price by remember { mutableStateOf("") }
+    val total = remember(qty, price) { (qty.toDoubleOrNull() ?: 0.0) * (price.toDoubleOrNull() ?: 0.0) }
+    val currency = NumberFormat.getCurrencyInstance(Locale.US)
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.padding(horizontal = 16.dp).navigationBarsPadding()) {
+            Text("Add Charge", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(16.dp))
+            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Item Name *") },
+                modifier = Modifier.fillMaxWidth(), singleLine = true)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 3)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = qty, onValueChange = { qty = it }, label = { Text("Qty") },
+                    modifier = Modifier.weight(1f), singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal))
+                OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("Unit Price") },
+                    leadingIcon = { Text("$") }, modifier = Modifier.weight(2f), singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal))
+            }
+            if (total > 0) {
+                Spacer(Modifier.height(8.dp))
+                Text("Total: ${currency.format(total)}", fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = { if (name.isNotBlank()) onSave(name, desc, qty.toDoubleOrNull() ?: 1.0, price.toDoubleOrNull() ?: 0.0) },
+                    enabled = name.isNotBlank()) { Text("Add Charge") }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddWorksheetSheet(onDismiss: () -> Unit, onCreate: (templateId: Int, isOuttake: Int) -> Unit) {
+    var templates by remember { mutableStateOf<List<WorksheetTemplate>>(emptyList()) }
+    var isOuttake by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        templates = runCatching { ApiClient.service().getWorksheetTemplates() }.getOrDefault(emptyList())
+    }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.padding(horizontal = 16.dp).navigationBarsPadding()) {
+            Text("New Worksheet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(checked = isOuttake, onCheckedChange = { isOuttake = it })
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("Outtake Form", style = MaterialTheme.typography.bodyMedium)
+                    Text("Requires client signature", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            if (templates.isEmpty()) {
+                Text("No worksheet templates available.", color = MaterialTheme.colorScheme.outline)
+            } else {
+                Text("Select Template", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                templates.forEach { t ->
+                    Surface(onClick = { onCreate(t.id, if (isOuttake) 1 else 0) },
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(t.name, fontWeight = FontWeight.Medium)
+                            t.description?.takeIf { it.isNotBlank() }?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
+            Spacer(Modifier.height(8.dp))
         }
     }
 }

@@ -29,7 +29,7 @@ fun InvoicesScreen(navController: NavController) {
     fun load() { scope.launch { state = runCatching { ApiClient.service().getInvoices() } } }
     LaunchedEffect(Unit) { load() }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Invoices") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.Outlined.ArrowBack, null) } }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Invoices") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) } }) }) { padding ->
         when {
             state == null -> LoadingScreen()
             state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)

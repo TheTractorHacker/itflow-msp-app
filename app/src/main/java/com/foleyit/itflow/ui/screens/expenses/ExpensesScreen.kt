@@ -29,7 +29,7 @@ fun ExpensesScreen(navController: NavController) {
     LaunchedEffect(Unit) { load() }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Expenses") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.Outlined.ArrowBack, null) } }) },
+        topBar = { TopAppBar(title = { Text("Expenses") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) } }) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { navController.navigate(Screen.AddExpense.route) },

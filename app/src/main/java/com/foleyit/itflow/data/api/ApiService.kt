@@ -128,6 +128,22 @@ interface ApiService {
     suspend fun getWorksheetTemplates(): List<WorksheetTemplate>
 
 
+    @GET("me")
+    suspend fun getProfile(): UserProfile
+
+    @PUT("me")
+    suspend fun updateProfile(@Body body: UpdateProfileRequest)
+
+    @POST("tickets/{id}/charges")
+    suspend fun addCharge(@Path("id") id: Int, @Body body: AddChargeRequest)
+
+    @POST("tickets/{id}/worksheets")
+    suspend fun createWorksheet(@Path("id") id: Int, @Body body: CreateWorksheetRequest): Map<String, Int>
+
+    @POST("worksheets/{id}/responses")
+    suspend fun saveResponses(@Path("id") id: Int, @Body body: SaveResponsesRequest)
+
+
     @GET("appointments")
     suspend fun getAppointments(
         @Query("when") when_: String = "future",

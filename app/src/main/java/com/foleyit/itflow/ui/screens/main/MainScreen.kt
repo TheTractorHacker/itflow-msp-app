@@ -16,6 +16,8 @@ import com.foleyit.itflow.data.local.AppPreferences
 import com.foleyit.itflow.ui.navigation.*
 import com.foleyit.itflow.ui.screens.appointments.AppointmentsScreen
 import com.foleyit.itflow.ui.screens.worksheets.SignWorksheetScreen
+import com.foleyit.itflow.ui.screens.worksheets.FillWorksheetScreen
+import com.foleyit.itflow.ui.screens.profile.ProfileScreen
 import com.foleyit.itflow.ui.screens.assets.*
 import com.foleyit.itflow.ui.screens.clients.*
 import com.foleyit.itflow.ui.screens.credentials.*
@@ -35,7 +37,8 @@ private val ROOT_ROUTES = setOf(
     Screen.Dashboard.route, Screen.Tickets.route, Screen.Clients.route,
     Screen.Assets.route, Screen.Credentials.route, Screen.Quotes.route,
     Screen.Invoices.route, Screen.Expenses.route, Screen.Notifications.route,
-    Screen.Appointments.route
+    Screen.Appointments.route,
+    Screen.Profile.route
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -118,7 +121,7 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
                                             onLoggedOut()
                                         }
                                     },
-                                    leadingIcon = { Icon(Icons.Outlined.Logout, null) }
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Logout, null) }
                                 )
                             }
                         }
@@ -183,6 +186,10 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
             composable(Screen.AddExpense.route) { AddExpenseScreen { navController.popBackStack() } }
             composable(Screen.Notifications.route) { NotificationsScreen() }
             composable(Screen.Appointments.route) { AppointmentsScreen(navController) }
+            composable(Screen.Profile.route) { ProfileScreen(navController, prefs) }
+            composable(Screen.FillWorksheet.route) {
+                FillWorksheetScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
+            }
             composable(Screen.SignWorksheet.route) {
                 SignWorksheetScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
             }

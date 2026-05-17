@@ -247,3 +247,31 @@ data class SignRequest(
     @SerializedName("signed_name") val signedName: String,
     val signature: String
 )
+
+// ── Profile ──────────────────────────────────────────────────────────────────
+data class UserProfile(
+    val id: Int, val name: String, val email: String,
+    val type: Int, val color: String?, val avatar: String?
+)
+
+data class AddChargeRequest(
+    val name: String, val description: String,
+    val quantity: Double, @com.google.gson.annotations.SerializedName("unit_price") val unitPrice: Double
+)
+
+data class CreateWorksheetRequest(
+    @com.google.gson.annotations.SerializedName("template_id") val templateId: Int,
+    @com.google.gson.annotations.SerializedName("is_outtake") val isOuttake: Int = 0
+)
+
+data class SaveResponsesRequest(val responses: List<FieldResponse>)
+data class FieldResponse(
+    @com.google.gson.annotations.SerializedName("field_id") val fieldId: Int,
+    val value: String
+)
+
+data class UpdateProfileRequest(
+    val name: String, val email: String,
+    @com.google.gson.annotations.SerializedName("current_password") val currentPassword: String = "",
+    @com.google.gson.annotations.SerializedName("new_password") val newPassword: String = ""
+)
