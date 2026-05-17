@@ -16,6 +16,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Beta build — separate app ID so it installs alongside release
+            applicationIdSuffix = ".beta"
+            versionNameSuffix = "-beta"
+            resValue("string", "app_name", "ITFlow Beta")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -54,5 +60,16 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.gson)
     implementation(libs.kotlinx.coroutines.android)
+    // CameraX + ZXing for barcode scanning
+    implementation(libs.camera.core)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
+    implementation(libs.zxing.core)
+    // Glance widget
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+    // WorkManager for widget refresh
+    implementation(libs.work.runtime.ktx)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

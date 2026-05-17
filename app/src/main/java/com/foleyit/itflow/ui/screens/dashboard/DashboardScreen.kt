@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.DashboardResponse
@@ -25,10 +26,23 @@ import kotlinx.coroutines.launch
 fun DashboardScreen(navController: NavController) {
     var state by remember { mutableStateOf<Result<DashboardResponse>?>(null) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     fun load() {
         scope.launch {
-            state = runCatching { ApiClient.service().getDashboard() }
+            val result = runCatching { ApiClient.service().getDashboard() }
+            state = result
+            // Update widget cache
+            result.getOrNull()?.let { dash ->
+                context.getSharedPreferences("widget_cache", android.content.Context.MODE_PRIVATE)
+                    .edit()
+                    .putInt("open", dash.allOpen)
+                    .putInt("overdue", dash.overdue)
+                    .apply()
+                // Request widget update
+                val intent = android.content.Intent("android.appwidget.action.APPWIDGET_UPDATE")
+                context.sendBroadcast(intent)
+            }
         }
     }
 

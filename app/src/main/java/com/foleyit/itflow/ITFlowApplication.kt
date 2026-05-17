@@ -19,7 +19,7 @@ class ITFlowApplication : Application() {
             val token   = prefs.authToken.first()
             val certSha = prefs.trustedCertSha.first()
             if (url.isNotBlank()) {
-                ApiClient.init(url, token, certSha)
+                ApiClient.init(url, token, certSha, context = this@ITFlowApplication)
             }
         }
     }

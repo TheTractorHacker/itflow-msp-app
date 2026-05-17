@@ -31,10 +31,16 @@ fun AssetsScreen(navController: NavController) {
     fun load() {
         scope.launch { state = runCatching { ApiClient.service().getAssets(search = search) } }
     }
-
     LaunchedEffect(Unit) { load() }
 
-    Column(Modifier.fillMaxSize()) {
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = { navController.navigate(Screen.ScanBarcode.route) }) {
+                Icon(Icons.Outlined.QrCodeScanner, "Scan Barcode")
+            }
+        }
+    ) { scaffoldPadding ->
+        Column(Modifier.fillMaxSize().padding(scaffoldPadding)) {
             OutlinedTextField(
                 value = search,
                 onValueChange = { search = it },
@@ -85,6 +91,6 @@ fun AssetsScreen(navController: NavController) {
                     }
                 }
             }
+        }
     }
 }
-

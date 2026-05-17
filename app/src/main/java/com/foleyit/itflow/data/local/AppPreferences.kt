@@ -21,7 +21,8 @@ class AppPreferences(context: Context) {
         val USER_NAME        = stringPreferencesKey("user_name")
         val USER_ID          = intPreferencesKey("user_id")
         val USER_TYPE        = intPreferencesKey("user_type")
-        val TRUSTED_CERT_SHA = stringPreferencesKey("trusted_cert_sha")
+        val TRUSTED_CERT_SHA      = stringPreferencesKey("trusted_cert_sha")
+        val BIOMETRIC_LOCK        = booleanPreferencesKey("biometric_lock")
     }
 
     // AES256-GCM master key stored in Android Keystore (hardware-backed on Android 9+)
@@ -41,7 +42,8 @@ class AppPreferences(context: Context) {
     // Non-sensitive: server URL, display name, trusted cert fingerprint — plain DataStore
     val serverUrl: Flow<String>   = ctx.dataStore.data.map { it[SERVER_URL] ?: "" }
     val userName: Flow<String?>   = ctx.dataStore.data.map { it[USER_NAME] }
-    val trustedCertSha: Flow<String?> = ctx.dataStore.data.map { it[TRUSTED_CERT_SHA] }
+    val trustedCertSha: Flow<String?>  = ctx.dataStore.data.map { it[TRUSTED_CERT_SHA] }
+    val biometricLock: Flow<Boolean>   = ctx.dataStore.data.map { it[BIOMETRIC_LOCK] ?: false }
 
     // Auth token from encrypted storage — one-shot Flow (callers use .first())
     val authToken: Flow<String?> = flow {
@@ -76,5 +78,9 @@ class AppPreferences(context: Context) {
 
     suspend fun clearTrustedCert() {
         ctx.dataStore.edit { it.remove(TRUSTED_CERT_SHA) }
+    }
+
+    suspend fun setBiometricLock(enabled: Boolean) {
+        ctx.dataStore.edit { it[BIOMETRIC_LOCK] = enabled }
     }
 }

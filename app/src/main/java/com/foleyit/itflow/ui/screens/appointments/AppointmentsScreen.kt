@@ -12,7 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
+import com.foleyit.itflow.ui.util.addAppointmentToCalendar
 import com.foleyit.itflow.ui.util.fmtDate
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.Appointment
@@ -145,12 +147,21 @@ private fun AppointmentCard(appt: Appointment, onClick: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
                 }
             }
-            appt.status?.let {
-                Surface(color = MaterialTheme.colorScheme.secondaryContainer,
-                    shape = MaterialTheme.shapes.small) {
-                    Text(it, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer)
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                appt.status?.let {
+                    Surface(color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.small) {
+                        Text(it, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    }
+                }
+                val ctx = LocalContext.current
+                if (appt.schedule != null) {
+                    FilledTonalIconButton(onClick = { addAppointmentToCalendar(ctx, appt) },
+                        modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Outlined.CalendarMonth, "Add to Calendar", Modifier.size(16.dp))
+                    }
                 }
             }
         }

@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
+import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.data.api.TicketSummary
 import com.foleyit.itflow.data.api.TicketsResponse
 import com.foleyit.itflow.ui.components.EmptyScreen
@@ -56,7 +57,14 @@ fun TicketsScreen(navController: NavController) {
 
     LaunchedEffect(selectedTab, mineOnly) { load() }
 
-    Column(Modifier.fillMaxSize()) {
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = { navController.navigate(Screen.CreateTicket.route) }) {
+                Icon(Icons.Outlined.Add, "New Ticket")
+            }
+        }
+    ) { scaffoldPadding ->
+    Column(Modifier.fillMaxSize().padding(scaffoldPadding)) {
         // Search + Mine filter
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -180,6 +188,7 @@ fun TicketsScreen(navController: NavController) {
             }
         }
     }
+    } // end Scaffold
 }
 
 @Composable

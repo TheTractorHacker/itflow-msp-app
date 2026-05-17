@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.*
 import com.foleyit.itflow.data.local.AppPreferences
+import com.foleyit.itflow.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -256,6 +257,44 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                             Spacer(Modifier.width(8.dp))
                             Text(it, color = MaterialTheme.colorScheme.onErrorContainer,
                                 style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+
+                // ── App Settings card ───────────────────────────────────────
+                val biometricEnabled by prefs.biometricLock.collectAsState(initial = false)
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("App Settings", style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold)
+                        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Fingerprint, null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("Biometric Lock", style = MaterialTheme.typography.bodyMedium)
+                                Text("Require fingerprint after 5 min in background",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline)
+                            }
+                            Switch(checked = biometricEnabled,
+                                onCheckedChange = { scope.launch { prefs.setBiometricLock(it) } })
+                        }
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                        Surface(modifier = Modifier.fillMaxWidth(),
+                            onClick = { navController.navigate(Screen.TimeReport.route) }) {
+                            Row(Modifier.padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.Timer, null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(12.dp))
+                                Text("Time Summary Report", Modifier.weight(1f))
+                                Icon(Icons.Outlined.ChevronRight, null,
+                                    tint = MaterialTheme.colorScheme.outline)
+                            }
                         }
                     }
                 }

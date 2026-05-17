@@ -277,6 +277,41 @@ data class UpdateProfileRequest(
     @com.google.gson.annotations.SerializedName("new_password") val newPassword: String = ""
 )
 
+// ── Create Ticket ────────────────────────────────────────────────────────────
+data class CreateTicketRequest(
+    val subject: String,
+    val details: String = "",
+    @SerializedName("client_id") val clientId: Int? = null,
+    val priority: String = "low",
+    @SerializedName("assigned_to") val assignedTo: Int? = null
+)
+
+// ── Search ───────────────────────────────────────────────────────────────────
+data class SearchResult(
+    val tickets: List<TicketSummary>,
+    val clients: List<ClientSummary>,
+    val assets: List<AssetSummary>
+)
+
+data class SearchTicket(
+    val id: Int, val number: Int, val subject: String,
+    val status: String?, val client: String?, val priority: String?
+)
+
+// ── Time Report ──────────────────────────────────────────────────────────────
+data class TimeReportResponse(
+    val period: String,
+    @SerializedName("total_hours") val totalHours: Double,
+    val entries: List<TimeReportEntry>
+)
+
+data class TimeReportEntry(
+    val client: String,
+    @SerializedName("client_id") val clientId: Int,
+    val hours: Double,
+    @SerializedName("ticket_count") val ticketCount: Int
+)
+
 // ── Outtake Forms ────────────────────────────────────────────────────────────
 data class OuttakeSummary(
     val id: Int,

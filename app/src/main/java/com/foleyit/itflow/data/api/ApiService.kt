@@ -17,6 +17,29 @@ interface ApiService {
     @GET("dashboard")
     suspend fun getDashboard(): DashboardResponse
 
+    // Create ticket
+    @POST("tickets")
+    suspend fun createTicket(@Body req: CreateTicketRequest): Map<String, Int>
+
+    // Search
+    @GET("search")
+    suspend fun search(@Query("q") q: String): SearchResult
+
+    // Time report
+    @GET("reports/time")
+    suspend fun getTimeReport(
+        @Query("period") period: String = "week",
+        @Query("mine") mine: Int = 0
+    ): TimeReportResponse
+
+    // Ticket attachment upload
+    @Multipart
+    @POST("tickets/{id}/attachments")
+    suspend fun uploadAttachment(
+        @Path("id") id: Int,
+        @Part file: MultipartBody.Part
+    ): Map<String, String>
+
     // Tickets
     @GET("tickets")
     suspend fun getTickets(

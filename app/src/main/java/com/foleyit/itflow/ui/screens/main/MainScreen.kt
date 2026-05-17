@@ -28,12 +28,15 @@ import com.foleyit.itflow.ui.screens.invoices.*
 import com.foleyit.itflow.ui.screens.notifications.NotificationsScreen
 import com.foleyit.itflow.ui.screens.quotes.*
 import com.foleyit.itflow.ui.screens.tickets.*
+import com.foleyit.itflow.ui.screens.search.SearchScreen
+import com.foleyit.itflow.ui.screens.reports.TimeSummaryScreen
+import com.foleyit.itflow.ui.screens.scan.ScanBarcodeScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// Routes that are "root" tabs — show the main AppBar (Profile excluded: it has its own AppBar)
+// Routes that show the main ITFlow MSP AppBar
 private val ROOT_ROUTES = setOf(
     Screen.Dashboard.route, Screen.Tickets.route, Screen.Clients.route,
     Screen.Assets.route, Screen.Appointments.route,
@@ -83,6 +86,9 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
                         }
                     },
                     actions = {
+                        IconButton(onClick = { navController.navigate(Screen.Search.route) }) {
+                            Icon(Icons.Outlined.Search, "Search")
+                        }
                         IconButton(onClick = { navController.navigate(Screen.Notifications.route) }) {
                             Icon(Icons.Outlined.Notifications, "Notifications")
                         }
@@ -184,6 +190,10 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
             composable(Screen.OuttakeSign.route) {
                 OuttakeSignScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
             }
+            composable(Screen.CreateTicket.route) { CreateTicketScreen(navController) }
+            composable(Screen.Search.route) { SearchScreen(navController) }
+            composable(Screen.TimeReport.route) { TimeSummaryScreen(navController) }
+            composable(Screen.ScanBarcode.route) { ScanBarcodeScreen(navController) }
         }
     }
 }

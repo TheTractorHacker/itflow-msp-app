@@ -2,6 +2,7 @@ package com.foleyit.itflow.ui.screens.clients
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -201,10 +202,16 @@ private fun ClientContactsTab(contacts: List<Contact>, context: android.content.
                     supportingContent = {
                         Column {
                             c.title?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                            c.email?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                            c.email?.takeIf { it.isNotBlank() }?.let { email ->
+                                Text(email, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.clickable {
+                                        context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$email")))
+                                    })
+                            }
                         }
                     },
-                    trailingContent = c.phone?.let { phone -> {
+                    trailingContent = c.phone?.takeIf { it.isNotBlank() }?.let { phone -> {
                         IconButton(onClick = { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))) }) {
                             Icon(Icons.Outlined.Phone, null)
                         }

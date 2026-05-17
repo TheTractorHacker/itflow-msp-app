@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalContext
+import com.foleyit.itflow.ui.util.generatePassword
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -121,6 +122,45 @@ fun CredentialDetailScreen(id: Int) {
                                 c.uri?.takeIf { it.isNotBlank() }?.let { url ->
                                     CredField("URL", url, Icons.Outlined.Link, onCopy = { copy(url, "URL") }, onTap = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) })
                                 }
+                                // Password generator
+                                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                                var genLen by remember { mutableStateOf(16f) }
+                                var genResult by remember { mutableStateOf("") }
+                                Text("Generate Password", style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(4.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Slider(value = genLen, onValueChange = { genLen = it },
+                                        valueRange = 8f..32f, steps = 23,
+                                        modifier = Modifier.weight(1f))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("${genLen.toInt()} chars",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline)
+                                }
+                                if (genResult.isNotBlank()) {
+                                    Surface(color = MaterialTheme.colorScheme.surfaceVariant,
+                                        shape = MaterialTheme.shapes.small,
+                                        modifier = Modifier.fillMaxWidth()) {
+                                        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Text(genResult, Modifier.weight(1f),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                                            IconButton(onClick = { copy(genResult, "Password") },
+                                                modifier = Modifier.size(32.dp)) {
+                                                Icon(Icons.Outlined.ContentCopy, null, Modifier.size(16.dp))
+                                            }
+                                        }
+                                    }
+                                    Spacer(Modifier.height(4.dp))
+                                }
+                                Button(onClick = { genResult = generatePassword(genLen.toInt()) },
+                                    modifier = Modifier.fillMaxWidth()) {
+                                    Icon(Icons.Outlined.Refresh, null, Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Generate")
+                                }
+
                                 c.note?.takeIf { it.isNotBlank() }?.let {
                                     HorizontalDivider(Modifier.padding(vertical = 8.dp))
                                     Text("Notes", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
