@@ -92,7 +92,7 @@ fun CredentialsScreen(navController: NavController) {
                             Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.CredDetail.go(c.id)) }) {
                                 ListItem(
                                     headlineContent = { Text(c.name, fontWeight = FontWeight.Medium) },
-                                    supportingContent = { Text(c.username ?: "") },
+                                    supportingContent = c.uri?.takeIf { it.isNotBlank() }?.let { uri -> { Text(uri, maxLines = 1) } },
                                     leadingContent = {
                                         Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) {
                                             Box(contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Lock, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp)) }

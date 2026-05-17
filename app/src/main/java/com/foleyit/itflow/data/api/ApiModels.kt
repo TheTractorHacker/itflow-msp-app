@@ -100,16 +100,24 @@ data class AssetDetail(
     val id: Int, val name: String, val type: String?,
     val make: String?, val model: String?, val serial: String?,
     val os: String?, val status: String?, val description: String?,
-    val location: String?, val client: String?,
-    @SerializedName("assigned_to") val assignedTo: String?,
-    @SerializedName("created_at") val createdAt: String?
+    @SerializedName("physical_location") val physicalLocation: String?,
+    @SerializedName("location_name") val locationName: String?,
+    @SerializedName("location_city") val locationCity: String?,
+    @SerializedName("location_state") val locationState: String?,
+    @SerializedName("contact_name") val contactName: String?,
+    @SerializedName("contact_phone") val contactPhone: String?,
+    val client: String?,
+    @SerializedName("created_at") val createdAt: String?,
+    @SerializedName("purchase_date") val purchaseDate: String?,
+    @SerializedName("warranty_expire") val warrantyExpire: String?,
+    val notes: String?
 )
 
 // ── Credentials ──────────────────────────────────────────────────────────────
 data class CredentialsResponse(val data: List<CredentialSummary>, val total: Int)
 
 data class CredentialSummary(
-    val id: Int, val name: String, val username: String?,
+    val id: Int, val name: String,
     val uri: String?, val client: String?
 )
 

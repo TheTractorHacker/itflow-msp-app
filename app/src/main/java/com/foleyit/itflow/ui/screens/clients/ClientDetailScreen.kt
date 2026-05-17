@@ -304,7 +304,7 @@ private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
                     Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.CredDetail.go(c.id)) }) {
                         ListItem(
                             headlineContent = { Text(c.name, fontWeight = FontWeight.Medium) },
-                            supportingContent = c.username?.let { { Text(it) } },
+                            supportingContent = c.uri?.takeIf { it.isNotBlank() }?.let { uri -> { Text(uri, maxLines = 1) } },
                             leadingContent = { Icon(Icons.Outlined.Lock, null,
                                 tint = MaterialTheme.colorScheme.primary) },
                             trailingContent = { Icon(Icons.Outlined.ChevronRight, null) }
