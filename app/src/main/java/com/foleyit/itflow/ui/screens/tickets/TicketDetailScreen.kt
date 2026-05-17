@@ -55,6 +55,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     var showAddOuttake by remember { mutableStateOf(false) }
     var charges by remember { mutableStateOf<ChargesResponse?>(null) }
     var worksheets by remember { mutableStateOf<List<WorksheetSummary>>(emptyList()) }
+    var outtakes by remember { mutableStateOf<List<OuttakeSummary>>(emptyList()) }
 
     LaunchedEffect(timerRunning) {
         if (timerRunning) {
@@ -79,6 +80,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
             state = runCatching { ApiClient.service().getTicket(id) }
             charges = runCatching { ApiClient.service().getTicketCharges(id) }.getOrNull()
             worksheets = runCatching { ApiClient.service().getTicketWorksheets(id) }.getOrDefault(emptyList())
+            outtakes = runCatching { ApiClient.service().getTicketOuttakes(id) }.getOrDefault(emptyList())
             if (statuses.isEmpty()) {
                 statuses = runCatching { ApiClient.service().getTicketStatuses() }.getOrDefault(emptyList())
             }
@@ -122,7 +124,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                         ApiClient.service().createOuttake(id, CreateWorksheetRequest())
                     }.getOrNull()
                     load()
-                    form?.get("id")?.let { formId -> navController.navigate(Screen.SignWorksheet.go(formId)) }
+                    form?.get("id")?.let { formId -> navController.navigate(Screen.OuttakeSign.go(formId)) }
                 }
                 showAddOuttake = false
             }
@@ -342,9 +344,22 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                     item {
                         WorksheetsCard(
                             worksheets = worksheets,
+                            outtakes = outtakes,
                             navController = navController,
                             onAddWorksheet = { showAddWorksheet = true },
-                            onAddOuttake = { showAddOuttake = true }
+                            onAddOuttake = { showAddOuttake = true },
+                            onDeleteWorksheet = { wsId ->
+                                scope.launch {
+                                    runCatching { ApiClient.service().deleteWorksheet(wsId) }
+                                    load()
+                                }
+                            },
+                            onDeleteOuttake = { otId ->
+                                scope.launch {
+                                    runCatching { ApiClient.service().deleteOuttake(otId) }
+                                    load()
+                                }
+                            }
                         )
                     }
 
@@ -599,13 +614,13 @@ private fun ChargesCard(cr: ChargesResponse?, onAddCharge: (() -> Unit)? = null)
 @Composable
 private fun WorksheetsCard(
     worksheets: List<WorksheetSummary>,
+    outtakes: List<OuttakeSummary>,
     navController: NavController,
     onAddWorksheet: (() -> Unit)? = null,
-    onAddOuttake: (() -> Unit)? = null
+    onAddOuttake: (() -> Unit)? = null,
+    onDeleteWorksheet: ((Int) -> Unit)? = null,
+    onDeleteOuttake: ((Int) -> Unit)? = null
 ) {
-    val regularSheets = worksheets.filter { !it.isOuttake }
-    val outtakeForms = worksheets.filter { it.isOuttake }
-
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             // ── Worksheets ───────────────────────────────────────────────
@@ -618,13 +633,13 @@ private fun WorksheetsCard(
                     }
                 }
             }
-            if (regularSheets.isEmpty()) {
+            if (worksheets.isEmpty()) {
                 Spacer(Modifier.height(4.dp))
                 Text("No worksheets.", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline)
             } else {
                 Spacer(Modifier.height(8.dp))
-                WorksheetItems(regularSheets, navController)
+                WorksheetItems(worksheets, navController, onDeleteWorksheet)
             }
 
             Spacer(Modifier.height(16.dp))
@@ -645,20 +660,43 @@ private fun WorksheetsCard(
                     }
                 }
             }
-            if (outtakeForms.isEmpty()) {
+            if (outtakes.isEmpty()) {
                 Spacer(Modifier.height(4.dp))
                 Text("No outtake forms.", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline)
             } else {
                 Spacer(Modifier.height(8.dp))
-                WorksheetItems(outtakeForms, navController)
+                OuttakeItems(outtakes, navController, onDeleteOuttake)
             }
         }
     }
 }
 
 @Composable
-private fun WorksheetItems(entries: List<WorksheetSummary>, navController: NavController) {
+private fun WorksheetItems(
+    entries: List<WorksheetSummary>,
+    navController: NavController,
+    onDelete: ((Int) -> Unit)? = null
+) {
+    var deleteTarget by remember { mutableStateOf<WorksheetSummary?>(null) }
+
+    if (deleteTarget != null) {
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("Delete Worksheet?") },
+            text = { Text("\"${deleteTarget!!.templateName ?: "Worksheet"}\" will be permanently deleted.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDelete?.invoke(deleteTarget!!.id)
+                    deleteTarget = null
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) { Text("Cancel") }
+            }
+        )
+    }
+
     entries.forEachIndexed { i, ws ->
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -688,6 +726,76 @@ private fun WorksheetItems(entries: List<WorksheetSummary>, navController: NavCo
                     Spacer(Modifier.width(4.dp))
                     Text("Sign", style = MaterialTheme.typography.labelMedium)
                 }
+                Spacer(Modifier.width(4.dp))
+            }
+            IconButton(onClick = { deleteTarget = ws }, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Outlined.DeleteOutline, "Delete",
+                    Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+            }
+        }
+        if (i < entries.size - 1) HorizontalDivider()
+    }
+}
+
+@Composable
+private fun OuttakeItems(
+    entries: List<OuttakeSummary>,
+    navController: NavController,
+    onDelete: ((Int) -> Unit)? = null
+) {
+    var deleteTarget by remember { mutableStateOf<OuttakeSummary?>(null) }
+
+    if (deleteTarget != null) {
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("Delete Outtake Form?") },
+            text = { Text("This outtake form will be permanently deleted.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDelete?.invoke(deleteTarget!!.id)
+                    deleteTarget = null
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    entries.forEachIndexed { i, ot ->
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                if (ot.signed) Icons.Outlined.CheckCircle else Icons.Outlined.Draw,
+                null, modifier = Modifier.size(20.dp),
+                tint = if (ot.signed) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.outline
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Outtake Form", fontWeight = FontWeight.Medium)
+                Text(
+                    if (ot.signed) "Signed by ${ot.signedName}"
+                    else "Not signed · by ${ot.createdBy ?: ""}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (ot.signed) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outline
+                )
+            }
+            if (!ot.signed) {
+                FilledTonalButton(
+                    onClick = { navController.navigate(Screen.OuttakeSign.go(ot.id)) },
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Outlined.Draw, null, Modifier.size(15.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Sign", style = MaterialTheme.typography.labelMedium)
+                }
+                Spacer(Modifier.width(4.dp))
+            }
+            IconButton(onClick = { deleteTarget = ot }, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Outlined.DeleteOutline, "Delete",
+                    Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
             }
         }
         if (i < entries.size - 1) HorizontalDivider()

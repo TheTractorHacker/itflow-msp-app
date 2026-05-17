@@ -277,6 +277,31 @@ data class UpdateProfileRequest(
     @com.google.gson.annotations.SerializedName("new_password") val newPassword: String = ""
 )
 
+// ── Outtake Forms ────────────────────────────────────────────────────────────
+data class OuttakeSummary(
+    val id: Int,
+    @SerializedName("sign_token") val signToken: String?,
+    val notes: String?,
+    @SerializedName("created_by") val createdBy: String?,
+    @SerializedName("created_at") val createdAt: String?,
+    @SerializedName("signed_name") val signedName: String?,
+    @SerializedName("signed_at") val signedAt: String?,
+    val signed: Boolean
+)
+
+data class OuttakeDetail(
+    val id: Int,
+    @SerializedName("sign_token") val signToken: String?,
+    val notes: String?,
+    @SerializedName("created_by") val createdBy: String?,
+    @SerializedName("created_at") val createdAt: String?,
+    @SerializedName("signed_name") val signedName: String?,
+    @SerializedName("signed_at") val signedAt: String?,
+    val signed: Boolean,
+    @SerializedName("ticket_subject") val ticketSubject: String?,
+    val client: String?
+)
+
 // ── Products ─────────────────────────────────────────────────────────────────
 data class Product(
     val id: Int, val name: String, val type: String?,

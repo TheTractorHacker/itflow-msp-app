@@ -26,7 +26,9 @@ interface ApiService {
         @Query("status") status: String = "open",
         @Query("mine") mine: Int = 0,
         @Query("search") search: String = "",
-        @Query("page") page: Int = 1
+        @Query("page") page: Int = 1,
+        @Query("priority") priority: String = "",
+        @Query("onsite") onsite: Int = -1
     ): TicketsResponse
 
     @GET("tickets/{id}")
@@ -117,6 +119,21 @@ interface ApiService {
 
     @GET("tickets/{id}/worksheets")
     suspend fun getTicketWorksheets(@Path("id") id: Int): List<WorksheetSummary>
+
+    @GET("tickets/{id}/outtakes")
+    suspend fun getTicketOuttakes(@Path("id") id: Int): List<OuttakeSummary>
+
+    @GET("outtakes/{id}")
+    suspend fun getOuttake(@Path("id") id: Int): OuttakeDetail
+
+    @POST("outtakes/{id}/sign")
+    suspend fun signOuttake(@Path("id") id: Int, @Body body: SignRequest)
+
+    @DELETE("outtakes/{id}")
+    suspend fun deleteOuttake(@Path("id") id: Int)
+
+    @DELETE("worksheets/{id}")
+    suspend fun deleteWorksheet(@Path("id") id: Int)
 
     @GET("worksheets/{id}")
     suspend fun getWorksheet(@Path("id") id: Int): WorksheetDetail

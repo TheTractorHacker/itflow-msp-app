@@ -1,8 +1,10 @@
 package com.foleyit.itflow.ui.screens.tickets
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -32,6 +34,8 @@ fun TicketsScreen(navController: NavController) {
     var search by remember { mutableStateOf("") }
     var mineOnly by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
+    var priorityFilter by remember { mutableStateOf("") }   // "", "critical", "high", "medium", "low"
+    var onsiteFilter by remember { mutableStateOf(-1) }     // -1=all, 1=onsite, 0=remote
     var state by remember { mutableStateOf<Result<TicketsResponse>?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -41,7 +45,9 @@ fun TicketsScreen(navController: NavController) {
                 ApiClient.service().getTickets(
                     status = if (selectedTab == 0) "open" else "closed",
                     mine = if (mineOnly) 1 else 0,
-                    search = search
+                    search = search,
+                    priority = priorityFilter,
+                    onsite = onsiteFilter
                 )
             }
         }
@@ -84,6 +90,39 @@ fun TicketsScreen(navController: NavController) {
                 text = { Text("Open") })
             Tab(selected = selectedTab == 1, onClick = { selectedTab = 1; load() },
                 text = { Text("Closed") })
+        }
+
+        // Scrollable filter chips
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Priority filters
+            listOf("" to "All", "critical" to "Critical", "high" to "High",
+                   "medium" to "Medium", "low" to "Low").forEach { (value, label) ->
+                FilterChip(
+                    selected = priorityFilter == value,
+                    onClick = { priorityFilter = if (priorityFilter == value && value != "") "" else value; load() },
+                    label = { Text(label) }
+                )
+            }
+            VerticalDivider(modifier = Modifier.height(32.dp).padding(horizontal = 4.dp))
+            // On-site / Remote filters
+            FilterChip(
+                selected = onsiteFilter == 1,
+                onClick = { onsiteFilter = if (onsiteFilter == 1) -1 else 1; load() },
+                label = { Text("On-Site") },
+                leadingIcon = { Icon(Icons.Outlined.LocationOn, null, Modifier.size(14.dp)) }
+            )
+            FilterChip(
+                selected = onsiteFilter == 0,
+                onClick = { onsiteFilter = if (onsiteFilter == 0) -1 else 0; load() },
+                label = { Text("Remote") },
+                leadingIcon = { Icon(Icons.Outlined.Wifi, null, Modifier.size(14.dp)) }
+            )
         }
 
         when {

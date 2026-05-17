@@ -1,0 +1,270 @@
+package com.foleyit.itflow.ui.screens.worksheets
+
+import android.graphics.Bitmap
+import android.util.Base64
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.foleyit.itflow.data.api.*
+import com.foleyit.itflow.ui.components.ErrorScreen
+import com.foleyit.itflow.ui.components.LoadingScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OuttakeSignScreen(outtakeId: Int, navController: NavController) {
+    var outtake by remember { mutableStateOf<Result<OuttakeDetail>?>(null) }
+    var signedName by remember { mutableStateOf("") }
+    var paths by remember { mutableStateOf<List<List<Offset>>>(emptyList()) }
+    var currentPath by remember { mutableStateOf<List<Offset>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var canvasSize by remember { mutableStateOf(android.util.Size(0, 0)) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        outtake = runCatching { ApiClient.service().getOuttake(outtakeId) }
+    }
+
+    fun clearSignature() { paths = emptyList(); currentPath = emptyList() }
+
+    fun captureSignature(): String? {
+        if (paths.isEmpty() && currentPath.isEmpty()) return null
+        val w = canvasSize.width.takeIf { it > 0 } ?: 600
+        val h = canvasSize.height.takeIf { it > 0 } ?: 200
+        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        canvas.drawColor(android.graphics.Color.WHITE)
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.BLACK
+            strokeWidth = 4f
+            style = android.graphics.Paint.Style.STROKE
+            strokeCap = android.graphics.Paint.Cap.ROUND
+            strokeJoin = android.graphics.Paint.Join.ROUND
+            isAntiAlias = true
+        }
+        (paths + if (currentPath.size > 1) listOf(currentPath) else emptyList()).forEach { pts ->
+            if (pts.size < 2) return@forEach
+            val path = android.graphics.Path()
+            path.moveTo(pts[0].x, pts[0].y)
+            pts.drop(1).forEach { path.lineTo(it.x, it.y) }
+            canvas.drawPath(path, paint)
+        }
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 90, stream)
+        return "data:image/png;base64," + Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
+    }
+
+    fun sign() {
+        if (signedName.isBlank()) { error = "Name is required"; return }
+        val allPaths = paths + if (currentPath.size > 1) listOf(currentPath) else emptyList()
+        if (allPaths.isEmpty()) { error = "Please draw your signature"; return }
+        loading = true; error = null
+        scope.launch {
+            try {
+                val sig = captureSignature() ?: run { error = "Failed to capture signature"; loading = false; return@launch }
+                withContext(Dispatchers.IO) {
+                    ApiClient.service().signOuttake(outtakeId, SignRequest(signedName.trim(), sig))
+                }
+                navController.popBackStack()
+            } catch (e: Exception) {
+                error = "Failed to sign: ${e.message}"
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Outtake Form") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Outlined.ArrowBack, null)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        when {
+            outtake == null -> LoadingScreen()
+            outtake!!.isFailure -> ErrorScreen(outtake!!.exceptionOrNull()?.message ?: "")
+            else -> {
+                val ot = outtake!!.getOrThrow()
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Header card
+                    item {
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Outlined.Assignment, null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Outtake / Pickup Form",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold)
+                                }
+                                ot.ticketSubject?.let {
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(it, style = MaterialTheme.typography.bodyMedium)
+                                }
+                                ot.client?.let {
+                                    Spacer(Modifier.height(4.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Outlined.Business, null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.outline)
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(it, style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.outline)
+                                    }
+                                }
+                                if (ot.signed) {
+                                    Spacer(Modifier.height(10.dp))
+                                    Surface(color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = MaterialTheme.shapes.small) {
+                                        Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Outlined.CheckCircle, null, Modifier.size(16.dp),
+                                                tint = MaterialTheme.colorScheme.primary)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Signed by ${ot.signedName} on ${ot.signedAt?.take(10) ?: ""}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (!ot.signed) {
+                        // Customer name field
+                        item {
+                            OutlinedTextField(
+                                value = signedName, onValueChange = { signedName = it },
+                                label = { Text("Customer Name *") },
+                                leadingIcon = { Icon(Icons.Outlined.Person, null) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                        }
+
+                        // Signature canvas
+                        item {
+                            Column {
+                                Row(Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Customer Signature",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    TextButton(onClick = ::clearSignature) {
+                                        Icon(Icons.Outlined.Clear, null, Modifier.size(16.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Clear")
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .background(Color.White)
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium)
+                                ) {
+                                    if (paths.isEmpty() && currentPath.isEmpty()) {
+                                        Text("Customer signs here",
+                                            modifier = Modifier.align(Alignment.Center),
+                                            color = Color.Gray,
+                                            style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    Canvas(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .pointerInput(Unit) {
+                                                detectDragGestures(
+                                                    onDragStart = { offset ->
+                                                        currentPath = listOf(offset)
+                                                        canvasSize = android.util.Size(size.width, size.height)
+                                                    },
+                                                    onDrag = { change, _ ->
+                                                        currentPath = currentPath + change.position
+                                                    },
+                                                    onDragEnd = {
+                                                        if (currentPath.size > 1) paths = paths + listOf(currentPath)
+                                                        currentPath = emptyList()
+                                                    }
+                                                )
+                                            }
+                                    ) {
+                                        (paths + if (currentPath.size > 1) listOf(currentPath) else emptyList())
+                                            .forEach { pts ->
+                                                if (pts.size < 2) return@forEach
+                                                drawPath(
+                                                    path = androidx.compose.ui.graphics.Path().apply {
+                                                        moveTo(pts[0].x, pts[0].y)
+                                                        pts.drop(1).forEach { lineTo(it.x, it.y) }
+                                                    },
+                                                    color = Color.Black,
+                                                    style = Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                                                )
+                                            }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (error != null) {
+                            item {
+                                Text(error!!, color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+
+                        item {
+                            Button(
+                                onClick = ::sign,
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                                enabled = !loading
+                            ) {
+                                if (loading) {
+                                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimary)
+                                } else {
+                                    Icon(Icons.Outlined.Draw, null, Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Sign & Complete")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

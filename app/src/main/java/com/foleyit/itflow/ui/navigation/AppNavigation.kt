@@ -32,6 +32,7 @@ sealed class Screen(val route: String) {
     object Appointments  : Screen("appointments")
     object SignWorksheet : Screen("worksheets/{id}/sign") { fun go(id: Int) = "worksheets/$id/sign" }
     object FillWorksheet : Screen("worksheets/{id}/fill") { fun go(id: Int) = "worksheets/$id/fill" }
+    object OuttakeSign   : Screen("outtakes/{id}/sign")   { fun go(id: Int) = "outtakes/$id/sign" }
     object Profile       : Screen("profile")
 }
 
