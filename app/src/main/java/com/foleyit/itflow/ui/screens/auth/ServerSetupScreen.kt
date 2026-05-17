@@ -8,13 +8,16 @@ import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.SyncAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.local.AppPreferences
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
@@ -32,18 +35,24 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
         scope.launch {
             try {
                 val cleanUrl = url.trimEnd('/')
-                val client = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).build()
-                val req = Request.Builder().url("$cleanUrl/api/v1/auth").build()
-                val resp = client.newCall(req).execute()
-                if (resp.code in 200..499) {
+                // Network call must run on IO thread
+                val responseCode = withContext(Dispatchers.IO) {
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(10, TimeUnit.SECONDS)
+                        .readTimeout(10, TimeUnit.SECONDS)
+                        .build()
+                    val req = Request.Builder().url("$cleanUrl/api/v1/auth").build()
+                    client.newCall(req).execute().code
+                }
+                if (responseCode in 200..499) {
                     prefs.saveServerUrl(cleanUrl)
                     ApiClient.init(cleanUrl, null)
                     onDone()
                 } else {
-                    error = "Server responded with error ${resp.code}"
+                    error = "Server responded with error $responseCode"
                 }
             } catch (e: Exception) {
-                error = "Cannot reach server. Check the URL."
+                error = "Cannot reach server. Check the URL and try again.\n${e.message}"
             } finally {
                 loading = false
             }
@@ -51,7 +60,10 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).windowInsetsPadding(WindowInsets.systemBars),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .windowInsetsPadding(WindowInsets.systemBars),
         verticalArrangement = Arrangement.Center
     ) {
         Surface(
@@ -59,7 +71,7 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
             color = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.size(72.dp)
         ) {
-            Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
+            Box(contentAlignment = Alignment.Center) {
                 Icon(Icons.Outlined.SyncAlt, contentDescription = null,
                     modifier = Modifier.size(40.dp),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -73,9 +85,10 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
         Spacer(Modifier.height(32.dp))
 
         OutlinedTextField(
-            value = url, onValueChange = { url = it },
+            value = url,
+            onValueChange = { url = it },
             label = { Text("Server URL") },
-            placeholder = { Text("https://itflow.company.com") },
+            placeholder = { Text("https://itflow.example.com") },
             leadingIcon = { Icon(Icons.Outlined.Link, null) },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(
@@ -99,14 +112,19 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
             modifier = Modifier.fillMaxWidth().height(52.dp),
             enabled = !loading
         ) {
-            if (loading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-            else Text("Connect")
+            if (loading) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            } else {
+                Text("Connect")
+            }
         }
 
         Spacer(Modifier.height(48.dp))
-        Text("Not affiliated with ITFlow LLC.",
+        Text(
+            "Not affiliated with ITFlow LLC.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline,
-            modifier = Modifier.fillMaxWidth().wrapContentWidth())
+            modifier = Modifier.fillMaxWidth().wrapContentWidth()
+        )
     }
 }

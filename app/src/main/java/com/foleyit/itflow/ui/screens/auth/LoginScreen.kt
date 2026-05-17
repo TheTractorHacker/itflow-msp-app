@@ -17,7 +17,9 @@ import com.foleyit.itflow.data.api.LoginRequest
 import com.foleyit.itflow.data.local.AppPreferences
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.tasks.await
 
 @Composable
@@ -42,13 +44,19 @@ fun LoginScreen(
         loading = true; error = null
         scope.launch {
             try {
-                val resp = ApiClient.service().login(LoginRequest(username.trim(), password, "ITFlow MSP Android"))
+                val resp = withContext(Dispatchers.IO) {
+                    ApiClient.service().login(LoginRequest(username.trim(), password, "ITFlow MSP Android"))
+                }
                 prefs.saveAuthData(resp.token, resp.user)
                 ApiClient.setToken(resp.token)
-                // Register FCM token
+                // Register FCM token in background
                 try {
-                    val fcm = FirebaseMessaging.getInstance().token.await()
-                    ApiClient.service().updateFcmToken(mapOf("fcm_token" to fcm))
+                    val fcm = withContext(Dispatchers.IO) {
+                        FirebaseMessaging.getInstance().token.await()
+                    }
+                    withContext(Dispatchers.IO) {
+                        ApiClient.service().updateFcmToken(mapOf("fcm_token" to fcm))
+                    }
                 } catch (_: Exception) {}
                 onLoggedIn()
             } catch (e: Exception) {
