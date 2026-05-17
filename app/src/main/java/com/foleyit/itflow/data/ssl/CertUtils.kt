@@ -70,7 +70,10 @@ class FingerprintTrustManager(private val trustedSha: String?) : X509TrustManage
         val leaf = chain.firstOrNull()
             ?: throw java.security.cert.CertificateException("Empty certificate chain")
 
-        if (trustedSha != null && leaf.sha256Fingerprint() == trustedSha) return
+        if (trustedSha != null && leaf.sha256Fingerprint() == trustedSha) {
+            leaf.checkValidity() // throws if cert is expired, even if fingerprint matches
+            return
+        }
 
         throw java.security.cert.CertificateException(
             "Certificate not trusted by system and no matching fingerprint stored"

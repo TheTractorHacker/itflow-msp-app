@@ -25,6 +25,12 @@ import java.io.File
 
 class MainActivity : FragmentActivity() {
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // Prevent ApiClient from holding a stale navController/Activity reference
+        ApiClient.onUnauthorized = null
+    }
+
     private fun isRooted(): Boolean {
         val paths = arrayOf(
             "/system/app/Superuser.apk", "/sbin/su", "/system/bin/su", "/system/xbin/su",
