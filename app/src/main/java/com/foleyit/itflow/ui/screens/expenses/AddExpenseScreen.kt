@@ -1,8 +1,10 @@
 package com.foleyit.itflow.ui.screens.expenses
 
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -11,10 +13,11 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.foleyit.itflow.data.api.ApiClient
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
@@ -88,7 +91,17 @@ fun AddExpenseScreen(onDone: () -> Unit) {
                 Text("Receipt", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
                 if (receiptUri != null) {
-                    AsyncImage(model = receiptUri, contentDescription = null, modifier = Modifier.fillMaxWidth().height(160.dp))
+                    val bmp = remember(receiptUri) {
+                        receiptUri?.let { uri ->
+                            context.contentResolver.openInputStream(uri)
+                                ?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
+                        }
+                    }
+                    bmp?.let {
+                        Image(bitmap = it, contentDescription = null,
+                            modifier = Modifier.fillMaxWidth().height(160.dp),
+                            contentScale = ContentScale.Crop)
+                    }
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = { receiptUri = null }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Delete, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Remove") }
                 } else {

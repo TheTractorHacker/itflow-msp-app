@@ -16,7 +16,9 @@ import com.foleyit.itflow.ui.screens.auth.LoginScreen
 import com.foleyit.itflow.ui.screens.auth.ServerSetupScreen
 import com.foleyit.itflow.ui.screens.main.MainScreen
 import com.foleyit.itflow.ui.theme.ITFlowTheme
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 import java.io.File
