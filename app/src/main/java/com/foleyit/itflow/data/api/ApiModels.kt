@@ -61,6 +61,8 @@ data class TicketReply(
 )
 
 data class AddReplyRequest(val reply: String, val type: String, val time_worked: String?)
+data class TicketStatus(val id: Int, val name: String, val color: String)
+
 data class LogTimeRequest(val time_worked: String, val note: String)
 
 // ── Clients ──────────────────────────────────────────────────────────────────

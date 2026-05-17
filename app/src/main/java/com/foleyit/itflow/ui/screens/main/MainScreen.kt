@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -22,8 +23,10 @@ import com.foleyit.itflow.ui.screens.invoices.*
 import com.foleyit.itflow.ui.screens.notifications.NotificationsScreen
 import com.foleyit.itflow.ui.screens.quotes.*
 import com.foleyit.itflow.ui.screens.tickets.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,26 +35,35 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
     val scope = rememberCoroutineScope()
     var userName by remember { mutableStateOf("") }
     var showMoreSheet by remember { mutableStateOf(false) }
+    var showUserMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { userName = prefs.userName.first() ?: "" }
 
     val currentDest by navController.currentBackStackEntryAsState()
 
-    val inTopLevel = bottomNavItems.any {
-        currentDest?.destination?.hierarchy?.any { d -> d.route == it.screen.route } == true
+    fun navigateToTab(route: String) {
+        navController.navigate(route) {
+            // Always pop back to the root so tapping a tab always clears detail screens
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+                inclusive = false
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             shape = MaterialTheme.shapes.small,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(28.dp)
                         ) {
-                            Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
+                            Box(contentAlignment = Alignment.Center) {
                                 Icon(Icons.Outlined.SyncAlt, null,
                                     tint = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.size(18.dp))
@@ -65,15 +77,43 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
                     IconButton(onClick = { navController.navigate(Screen.Notifications.route) }) {
                         Icon(Icons.Outlined.Notifications, "Notifications")
                     }
-                    IconButton(onClick = {
-                        scope.launch {
-                            try { ApiClient.service().logout() } catch (_: Exception) {}
-                            prefs.clearAuth()
-                            ApiClient.clearToken()
-                            onLoggedOut()
+                    // Profile menu — NOT instant logout
+                    Box {
+                        IconButton(onClick = { showUserMenu = true }) {
+                            Icon(Icons.Outlined.AccountCircle, "Account")
                         }
-                    }) {
-                        Icon(Icons.Outlined.AccountCircle, userName)
+                        DropdownMenu(
+                            expanded = showUserMenu,
+                            onDismissRequest = { showUserMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(userName, style = MaterialTheme.typography.labelLarge)
+                                        Text("Signed in", style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.outline)
+                                    }
+                                },
+                                onClick = {},
+                                leadingIcon = { Icon(Icons.Outlined.Person, null) }
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("Sign out") },
+                                onClick = {
+                                    showUserMenu = false
+                                    scope.launch {
+                                        withContext(Dispatchers.IO) {
+                                            try { ApiClient.service().logout() } catch (_: Exception) {}
+                                        }
+                                        prefs.clearAuth()
+                                        ApiClient.clearToken()
+                                        onLoggedOut()
+                                    }
+                                },
+                                leadingIcon = { Icon(Icons.Outlined.Logout, null) }
+                            )
+                        }
                     }
                 }
             )
@@ -86,17 +126,17 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
                     NavigationBarItem(
                         selected = selected,
                         onClick = {
-                            navController.navigate(item.screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+                            if (selected) {
+                                // Already on this tab root — pop back to it to clear any detail screens
+                                navController.popBackStack(item.screen.route, inclusive = false)
+                            } else {
+                                navigateToTab(item.screen.route)
                             }
                         },
                         icon = { Icon(if (selected) item.selectedIcon else item.icon, item.label) },
                         label = { Text(item.label) }
                     )
                 }
-                // More button
                 NavigationBarItem(
                     selected = false,
                     onClick = { showMoreSheet = true },
@@ -143,12 +183,10 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
 
     if (showMoreSheet) {
         ModalBottomSheet(onDismissRequest = { showMoreSheet = false }) {
-            MoreSheetContent(
-                onNavigate = { route ->
-                    showMoreSheet = false
-                    navController.navigate(route)
-                }
-            )
+            MoreSheetContent(onNavigate = { route ->
+                showMoreSheet = false
+                navigateToTab(route)
+            })
         }
     }
 }
@@ -163,7 +201,7 @@ private fun MoreSheetContent(onNavigate: (String) -> Unit) {
         Triple(Icons.Outlined.Receipt, "Expenses", Screen.Expenses.route),
         Triple(Icons.Outlined.Notifications, "Notifications", Screen.Notifications.route),
     )
-    Column(Modifier.padding(16.dp)) {
+    Column(Modifier.padding(16.dp).navigationBarsPadding()) {
         Text("More", style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = 16.dp))
         items.chunked(3).forEach { row ->
@@ -177,7 +215,7 @@ private fun MoreSheetContent(onNavigate: (String) -> Unit) {
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(icon, label, tint = MaterialTheme.colorScheme.onSecondaryContainer)
                             Spacer(Modifier.height(8.dp))
@@ -189,6 +227,6 @@ private fun MoreSheetContent(onNavigate: (String) -> Unit) {
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
     }
 }

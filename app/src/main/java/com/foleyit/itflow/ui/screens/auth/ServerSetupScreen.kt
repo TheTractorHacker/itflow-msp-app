@@ -1,8 +1,10 @@
 package com.foleyit.itflow.ui.screens.auth
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.SyncAlt
@@ -35,7 +37,6 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
         scope.launch {
             try {
                 val cleanUrl = url.trimEnd('/')
-                // Network call must run on IO thread
                 val responseCode = withContext(Dispatchers.IO) {
                     val client = OkHttpClient.Builder()
                         .connectTimeout(10, TimeUnit.SECONDS)
@@ -52,7 +53,7 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
                     error = "Server responded with error $responseCode"
                 }
             } catch (e: Exception) {
-                error = "Cannot reach server. Check the URL and try again.\n${e.message}"
+                error = "Cannot reach server. Check the URL.\n${e.message}"
             } finally {
                 loading = false
             }
@@ -62,17 +63,21 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
             .windowInsetsPadding(WindowInsets.systemBars),
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(Modifier.height(64.dp))
+
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.size(72.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.SyncAlt, contentDescription = null,
+                Icon(Icons.Outlined.SyncAlt, null,
                     modifier = Modifier.size(40.dp),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
@@ -82,19 +87,15 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         Text("Enter your ITFlow server address.",
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(40.dp))
 
         OutlinedTextField(
-            value = url,
-            onValueChange = { url = it },
+            value = url, onValueChange = { url = it },
             label = { Text("Server URL") },
             placeholder = { Text("https://itflow.example.com") },
             leadingIcon = { Icon(Icons.Outlined.Link, null) },
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Uri,
-                imeAction = ImeAction.Go
-            ),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = { connect() }),
             singleLine = true,
             isError = error != null
@@ -107,24 +108,14 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
         }
 
         Spacer(Modifier.height(24.dp))
-        Button(
-            onClick = ::connect,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            enabled = !loading
-        ) {
-            if (loading) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-            } else {
-                Text("Connect")
-            }
+        Button(onClick = ::connect, modifier = Modifier.fillMaxWidth().height(52.dp), enabled = !loading) {
+            if (loading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            else Text("Connect")
         }
-
-        Spacer(Modifier.height(48.dp))
-        Text(
-            "Not affiliated with ITFlow LLC.",
+        Spacer(Modifier.height(32.dp))
+        Text("Not affiliated with ITFlow LLC.",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline,
-            modifier = Modifier.fillMaxWidth().wrapContentWidth()
-        )
+            color = MaterialTheme.colorScheme.outline)
+        Spacer(Modifier.height(24.dp))
     }
 }

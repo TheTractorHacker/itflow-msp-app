@@ -35,6 +35,13 @@ interface ApiService {
     @POST("tickets/{id}/reply")
     suspend fun addReply(@Path("id") id: Int, @Body req: AddReplyRequest)
 
+    
+    @POST("tickets/{id}/status")
+    suspend fun updateTicketStatus(@Path("id") id: Int, @Body body: Map<String, Int>)
+
+    @GET("statuses")
+    suspend fun getTicketStatuses(): List<TicketStatus>
+
     @POST("tickets/{id}/time")
     suspend fun logTime(@Path("id") id: Int, @Body req: LogTimeRequest)
 
@@ -115,3 +122,4 @@ interface ApiService {
 // Extension helpers
 suspend fun ApiService.addReply(id: Int, reply: String, type: String = "reply", timeWorked: String? = null) =
     addReply(id, AddReplyRequest(reply, type, timeWorked))
+
