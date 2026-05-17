@@ -46,7 +46,7 @@ fun ExpensesScreen(navController: NavController) {
                 if (expenses.isEmpty()) EmptyScreen("No expenses. Tap + to add one.", Icons.Outlined.Receipt)
                 else LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(expenses) { e ->
-                        Card(Modifier.fillMaxWidth()) {
+                        Card(modifier = Modifier.fillMaxWidth()) {
                             ListItem(
                                 headlineContent = { Text(e.description ?: "", fontWeight = FontWeight.Medium) },
                                 supportingContent = { Text("${e.date ?: ""} · ${e.paymentMethod ?: ""}") },

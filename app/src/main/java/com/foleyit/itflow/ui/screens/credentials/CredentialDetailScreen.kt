@@ -46,7 +46,7 @@ fun CredentialDetailScreen(id: Int) {
                 val c = state!!.getOrThrow()
                 LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     item {
-                        Card(Modifier.fillMaxWidth()) {
+                        Card(modifier = Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(48.dp)) {

@@ -41,7 +41,7 @@ fun ClientDetailScreen(id: Int, navController: NavController) {
                 val c = state!!.getOrThrow()
                 LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     item {
-                        Card(Modifier.fillMaxWidth()) {
+                        Card(modifier = Modifier.fillMaxWidth()) {
                             Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(64.dp)) {
                                     Box(contentAlignment = Alignment.Center) { Text(c.name.first().uppercaseChar().toString(), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onPrimaryContainer) }
@@ -69,7 +69,7 @@ fun ClientDetailScreen(id: Int, navController: NavController) {
                     if (c.contacts.isNotEmpty()) {
                         item { Text("Contacts", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         item {
-                            Card(Modifier.fillMaxWidth()) {
+                            Card(modifier = Modifier.fillMaxWidth()) {
                                 c.contacts.forEachIndexed { i, contact ->
                                     ListItem(
                                         headlineContent = { Text(contact.name) },

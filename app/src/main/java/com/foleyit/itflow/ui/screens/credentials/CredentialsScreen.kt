@@ -1,6 +1,5 @@
 package com.foleyit.itflow.ui.screens.credentials
 
-import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -70,7 +69,18 @@ fun CredentialsScreen(navController: NavController) {
 
     Scaffold(topBar = { TopAppBar(title = { Text("Credentials") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.Outlined.ArrowBack, null) } }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            SearchBar(query = search, onQueryChange = { search = it }, onSearch = { load() }, active = false, onActiveChange = {}, placeholder = { Text("Search credentials…") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {}
+            OutlinedTextField(
+                value = search,
+                onValueChange = { search = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("Search credentials…") },
+                leadingIcon = { Icon(Icons.Outlined.Search, null) },
+                trailingIcon = {
+                    if (search.isNotEmpty()) IconButton(onClick = { search = ""; load() }) { Icon(Icons.Outlined.Clear, null) }
+                },
+                singleLine = true,
+                shape = MaterialTheme.shapes.extraLarge,
+            )
             when {
                 state == null -> LoadingScreen()
                 state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
@@ -79,7 +89,7 @@ fun CredentialsScreen(navController: NavController) {
                     if (creds.isEmpty()) EmptyScreen("No credentials found", Icons.Outlined.Lock)
                     else LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(creds) { c ->
-                            Card(Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.CredDetail.go(c.id)) }) {
+                            Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.CredDetail.go(c.id)) }) {
                                 ListItem(
                                     headlineContent = { Text(c.name, fontWeight = FontWeight.Medium) },
                                     supportingContent = { Text(c.username ?: "") },

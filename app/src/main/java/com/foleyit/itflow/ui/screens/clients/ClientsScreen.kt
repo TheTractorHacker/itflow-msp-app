@@ -27,12 +27,18 @@ fun ClientsScreen(navController: NavController) {
     LaunchedEffect(search) { load() }
 
     Column(Modifier.fillMaxSize()) {
-        SearchBar(query = search, onQueryChange = { search = it }, onSearch = { load() },
-            active = false, onActiveChange = {},
+        OutlinedTextField(
+            value = search,
+            onValueChange = { search = it },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             placeholder = { Text("Search clients…") },
             leadingIcon = { Icon(Icons.Outlined.Search, null) },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {}
+            trailingIcon = {
+                if (search.isNotEmpty()) IconButton(onClick = { search = ""; load() }) { Icon(Icons.Outlined.Clear, null) }
+            },
+            singleLine = true,
+            shape = MaterialTheme.shapes.extraLarge,
+        )
         when {
             state == null -> LoadingScreen()
             state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)

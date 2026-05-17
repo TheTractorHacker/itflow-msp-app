@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.*; import androidx.compose.foundation.
     LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getAsset(id) } } }
     when { state == null -> LoadingScreen(); state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: ""); else -> { val a = state!!.getOrThrow()
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
+            item { Card(modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
                 Text(a.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 a.type?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
                 HorizontalDivider(Modifier.padding(vertical = 12.dp))

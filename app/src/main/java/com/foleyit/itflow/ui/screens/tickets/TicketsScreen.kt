@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -42,33 +43,49 @@ fun TicketsScreen(navController: NavController) {
         }
     }
 
-    LaunchedEffect(selectedTab, mineOnly, search) { load() }
+    LaunchedEffect(selectedTab, mineOnly) { load() }
 
     Column(Modifier.fillMaxSize()) {
-        // Search
-        SearchBar(
-            query = search,
-            onQueryChange = { search = it },
-            onSearch = { load() },
-            active = false,
-            onActiveChange = {},
-            placeholder = { Text("Search tickets…") },
-            leadingIcon = { Icon(Icons.Outlined.Search, null) },
-            trailingContent = {
-                FilterChip(selected = mineOnly, onClick = { mineOnly = !mineOnly },
-                    label = { Text("Mine") })
-            },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {}
+        // Search row
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = search,
+                onValueChange = { search = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Search tickets…") },
+                leadingIcon = { Icon(Icons.Outlined.Search, null) },
+                trailingIcon = {
+                    if (search.isNotEmpty()) {
+                        IconButton(onClick = { search = ""; load() }) {
+                            Icon(Icons.Outlined.Clear, "Clear")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = MaterialTheme.shapes.extraLarge,
+            )
+            Spacer(Modifier.width(8.dp))
+            FilterChip(
+                selected = mineOnly,
+                onClick = { mineOnly = !mineOnly },
+                label = { Text("Mine") }
+            )
+        }
 
         TabRow(selectedTabIndex = selectedTab) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Open") })
-            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Closed") })
+            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0; load() },
+                text = { Text("Open") })
+            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1; load() },
+                text = { Text("Closed") })
         }
 
         when {
             state == null -> LoadingScreen()
-            state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
+            state!!.isFailure -> ErrorScreen(
+                state!!.exceptionOrNull()?.message ?: "Error", onRetry = ::load)
             else -> {
                 val tickets = state!!.getOrThrow().data
                 if (tickets.isEmpty()) {
@@ -105,36 +122,51 @@ fun TicketCard(ticket: TicketSummary, onClick: () -> Unit) {
             ) {}
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Row {
-                    Text("#${ticket.number}",
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "#${ticket.number}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary)
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     Spacer(Modifier.width(8.dp))
-                    ticket.status?.let {
-                        Surface(color = MaterialTheme.colorScheme.secondaryContainer,
-                            shape = MaterialTheme.shapes.extraSmall) {
-                            Text(it, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    ticket.status?.let { status ->
+                        Surface(
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Text(
+                                status,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         }
                     }
                 }
                 Spacer(Modifier.height(4.dp))
-                Text(ticket.subject, style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium, maxLines = 2)
+                Text(
+                    ticket.subject,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2
+                )
                 Spacer(Modifier.height(4.dp))
-                Row {
-                    Icon(Icons.Outlined.Business, null, modifier = Modifier.size(13.dp),
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Business, null,
+                        modifier = Modifier.size(13.dp),
                         tint = MaterialTheme.colorScheme.outline)
                     Spacer(Modifier.width(4.dp))
-                    Text(ticket.client ?: "", style = MaterialTheme.typography.bodySmall,
+                    Text(ticket.client ?: "",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline)
-                    ticket.assignedTo?.let {
+                    ticket.assignedTo?.let { assigned ->
                         Spacer(Modifier.width(8.dp))
-                        Icon(Icons.Outlined.Person, null, modifier = Modifier.size(13.dp),
+                        Icon(Icons.Outlined.Person, null,
+                            modifier = Modifier.size(13.dp),
                             tint = MaterialTheme.colorScheme.outline)
                         Spacer(Modifier.width(4.dp))
-                        Text(it, style = MaterialTheme.typography.bodySmall,
+                        Text(assigned,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline)
                     }
                 }

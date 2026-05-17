@@ -39,7 +39,7 @@ fun QuotesScreen(navController: NavController) {
                 else LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(quotes) { q ->
                         val statusColor = when (q.status) { "Accepted" -> Color(0xFF2E7D32); "Declined" -> MaterialTheme.colorScheme.error; else -> MaterialTheme.colorScheme.outline }
-                        Card(Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.QuoteDetail.go(q.id)) }) {
+                        Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.QuoteDetail.go(q.id)) }) {
                             ListItem(
                                 headlineContent = { Text(q.subject ?: "", fontWeight = FontWeight.Medium) },
                                 supportingContent = { Text("${q.client ?: ""} · ${q.date ?: ""}") },

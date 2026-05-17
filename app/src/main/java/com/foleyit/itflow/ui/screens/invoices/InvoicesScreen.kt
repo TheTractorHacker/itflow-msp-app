@@ -39,7 +39,7 @@ fun InvoicesScreen(navController: NavController) {
                 else LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(invoices) { inv ->
                         val statusColor: Color = when (inv.status) { "Paid" -> Color(0xFF2E7D32); "Overdue" -> MaterialTheme.colorScheme.error; "Partial" -> Color(0xFFE65100); else -> MaterialTheme.colorScheme.outline }
-                        Card(Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.InvoiceDetail.go(inv.id)) }) {
+                        Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.InvoiceDetail.go(inv.id)) }) {
                             ListItem(
                                 headlineContent = { Text("Invoice #${inv.number}", fontWeight = FontWeight.Medium) },
                                 supportingContent = { Text("${inv.client ?: ""} · Due ${inv.dueDate ?: ""}") },

@@ -36,7 +36,7 @@ fun QuoteDetailScreen(id: Int) {
             val q = state!!.getOrThrow()
             LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
-                    Card(Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                                 Text(q.subject ?: "", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
@@ -55,7 +55,7 @@ fun QuoteDetailScreen(id: Int) {
                     }
                 }
                 item {
-                    Card(Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             Text("Line Items", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(12.dp))
