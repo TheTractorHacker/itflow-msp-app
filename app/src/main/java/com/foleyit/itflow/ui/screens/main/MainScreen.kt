@@ -15,6 +15,7 @@ import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.local.AppPreferences
 import com.foleyit.itflow.ui.navigation.*
 import com.foleyit.itflow.ui.screens.appointments.AppointmentsScreen
+import com.foleyit.itflow.ui.screens.worksheets.SignWorksheetScreen
 import com.foleyit.itflow.ui.screens.assets.*
 import com.foleyit.itflow.ui.screens.clients.*
 import com.foleyit.itflow.ui.screens.credentials.*
@@ -190,6 +191,9 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
             composable(Screen.AddExpense.route) { AddExpenseScreen { navController.popBackStack() } }
             composable(Screen.Notifications.route) { NotificationsScreen() }
             composable(Screen.Appointments.route) { AppointmentsScreen(navController) }
+            composable(Screen.SignWorksheet.route) {
+                SignWorksheetScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
+            }
         }
     }
 
@@ -207,11 +211,7 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
 private fun MoreSheetContent(onNavigate: (String) -> Unit) {
     val items = listOf(
         Triple(Icons.Outlined.Devices, "Assets", Screen.Assets.route),
-        Triple(Icons.Outlined.Lock, "Credentials", Screen.Credentials.route),
         Triple(Icons.Outlined.CalendarMonth, "Appointments", Screen.Appointments.route),
-        Triple(Icons.Outlined.RequestQuote, "Quotes", Screen.Quotes.route),
-        Triple(Icons.Outlined.ReceiptLong, "Invoices", Screen.Invoices.route),
-        Triple(Icons.Outlined.Receipt, "Expenses", Screen.Expenses.route),
         Triple(Icons.Outlined.Notifications, "Notifications", Screen.Notifications.route),
     )
     Column(Modifier.padding(16.dp).navigationBarsPadding()) {

@@ -18,6 +18,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.*
+import com.foleyit.itflow.ui.navigation.Screen
+import java.text.NumberFormat
+import java.util.Locale
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.components.PriorityBadge
@@ -45,6 +48,8 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     var showReply by remember { mutableStateOf(false) }
     var replyType by remember { mutableStateOf("reply") }
     var showStatusPicker by remember { mutableStateOf(false) }
+    var charges by remember { mutableStateOf<ChargesResponse?>(null) }
+    var worksheets by remember { mutableStateOf<List<WorksheetSummary>>(emptyList()) }
 
     LaunchedEffect(timerRunning) {
         if (timerRunning) {
@@ -67,6 +72,8 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     fun load() {
         scope.launch {
             state = runCatching { ApiClient.service().getTicket(id) }
+            charges = runCatching { ApiClient.service().getTicketCharges(id) }.getOrNull()
+            worksheets = runCatching { ApiClient.service().getTicketWorksheets(id) }.getOrDefault(emptyList())
             if (statuses.isEmpty()) {
                 statuses = runCatching { ApiClient.service().getTicketStatuses() }.getOrDefault(emptyList())
             }
@@ -283,6 +290,22 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                         }
                     }
 
+                    // Charges
+                    charges?.let { cr ->
+                        if (cr.charges.isNotEmpty()) {
+                            item {
+                                ChargesCard(cr)
+                            }
+                        }
+                    }
+
+                    // Worksheets
+                    if (worksheets.isNotEmpty()) {
+                        item {
+                            WorksheetsCard(worksheets, navController)
+                        }
+                    }
+
                     // Reply count header
                     if (ticket.replies.isNotEmpty()) {
                         item {
@@ -424,6 +447,91 @@ private fun ReplyCard(reply: TicketReply) {
             }
             Spacer(Modifier.height(10.dp))
             Text(stripHtml(reply.body))
+        }
+    }
+}
+
+@Composable
+private fun ChargesCard(cr: ChargesResponse) {
+    val currency = NumberFormat.getCurrencyInstance(Locale.US)
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                Text("Charges", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(currency.format(cr.total), fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(Modifier.height(12.dp))
+            cr.charges.forEachIndexed { i, charge ->
+                Row(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text(charge.name, fontWeight = FontWeight.Medium)
+                        if (!charge.description.isNullOrBlank()) {
+                            Text(charge.description, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text("${charge.quantity} × ${currency.format(charge.unitPrice)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(currency.format(charge.total), fontWeight = FontWeight.Medium)
+                        if (charge.invoiced) {
+                            Surface(color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = MaterialTheme.shapes.extraSmall) {
+                                Text("Invoiced", modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer)
+                            }
+                        }
+                    }
+                }
+                if (i < cr.charges.size - 1) HorizontalDivider()
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorksheetsCard(worksheets: List<WorksheetSummary>, navController: NavController) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Worksheets", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(12.dp))
+            worksheets.forEachIndexed { i, ws ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (ws.signed) Icons.Outlined.CheckCircle else Icons.Outlined.Assignment,
+                        null, modifier = Modifier.size(20.dp),
+                        tint = if (ws.signed) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.outline
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(ws.templateName ?: "Worksheet", fontWeight = FontWeight.Medium)
+                        Text(
+                            if (ws.signed) "Signed by ${ws.signedName}"
+                            else "Not signed · by ${ws.createdBy ?: ""}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (ws.signed) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    if (!ws.signed) {
+                        FilledTonalButton(
+                            onClick = { navController.navigate(Screen.SignWorksheet.go(ws.id)) },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Outlined.Draw, null, Modifier.size(15.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Sign", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                }
+                if (i < worksheets.size - 1) HorizontalDivider()
+            }
         }
     }
 }

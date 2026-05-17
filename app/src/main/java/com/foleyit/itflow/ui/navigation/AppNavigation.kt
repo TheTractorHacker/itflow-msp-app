@@ -30,6 +30,7 @@ sealed class Screen(val route: String) {
     object AddExpense  : Screen("expenses/add")
     object Notifications: Screen("notifications")
     object Appointments: Screen("appointments")
+    object SignWorksheet: Screen("worksheets/{id}/sign") { fun go(id: Int) = "worksheets/$id/sign" }
 }
 
 data class BottomNavItem(

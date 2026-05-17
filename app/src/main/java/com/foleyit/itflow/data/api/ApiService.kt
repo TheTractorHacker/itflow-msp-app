@@ -112,6 +112,22 @@ interface ApiService {
     @GET("notifications")
     suspend fun getNotifications(@Query("page") page: Int = 1): NotificationsResponse
 
+    @GET("tickets/{id}/charges")
+    suspend fun getTicketCharges(@Path("id") id: Int): ChargesResponse
+
+    @GET("tickets/{id}/worksheets")
+    suspend fun getTicketWorksheets(@Path("id") id: Int): List<WorksheetSummary>
+
+    @GET("worksheets/{id}")
+    suspend fun getWorksheet(@Path("id") id: Int): WorksheetDetail
+
+    @POST("worksheets/{id}/sign")
+    suspend fun signWorksheet(@Path("id") id: Int, @Body body: SignRequest)
+
+    @GET("worksheet-templates")
+    suspend fun getWorksheetTemplates(): List<WorksheetTemplate>
+
+
     @GET("appointments")
     suspend fun getAppointments(
         @Query("when") when_: String = "future",

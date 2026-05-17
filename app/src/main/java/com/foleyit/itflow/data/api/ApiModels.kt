@@ -205,3 +205,45 @@ data class ClientLocation(
 data class ClientContract(
     val id: Int, val name: String?, val status: String?, val type: String?
 )
+
+// ── Charges & Worksheets ─────────────────────────────────────────────────────
+data class TicketCharge(
+    val id: Int, val name: String, val description: String?,
+    val quantity: Double, @SerializedName("unit_price") val unitPrice: Double,
+    val total: Double, val invoiced: Boolean,
+    @SerializedName("created_by") val createdBy: String?,
+    @SerializedName("created_at") val createdAt: String?
+)
+
+data class ChargesResponse(val charges: List<TicketCharge>, val total: Double)
+
+data class WorksheetSummary(
+    val id: Int, @SerializedName("template_name") val templateName: String?,
+    @SerializedName("created_by") val createdBy: String?,
+    @SerializedName("created_at") val createdAt: String?,
+    @SerializedName("completed_at") val completedAt: String?,
+    @SerializedName("signed_name") val signedName: String?,
+    @SerializedName("signed_at") val signedAt: String?,
+    @SerializedName("is_outtake") val isOuttake: Boolean,
+    val signed: Boolean
+)
+
+data class WorksheetField(
+    val id: Int, val name: String, val type: String,
+    val options: String?, val required: Boolean, val value: String?
+)
+
+data class WorksheetDetail(
+    val id: Int, @SerializedName("template_name") val templateName: String?,
+    @SerializedName("signed_name") val signedName: String?,
+    @SerializedName("signed_at") val signedAt: String?,
+    @SerializedName("completed_at") val completedAt: String?,
+    val signed: Boolean, val fields: List<WorksheetField>
+)
+
+data class WorksheetTemplate(val id: Int, val name: String, val description: String?)
+
+data class SignRequest(
+    @SerializedName("signed_name") val signedName: String,
+    val signature: String
+)
