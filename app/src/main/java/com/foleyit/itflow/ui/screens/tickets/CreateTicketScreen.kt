@@ -34,7 +34,8 @@ fun CreateTicketScreen(navController: NavController) {
     val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        clients = runCatching { ApiClient.service().getClients(limit = 100) }.getOrNull()
+        // Load all pages until we have enough clients for the picker
+        clients = runCatching { ApiClient.service().getClients(search = "", page = 1) }.getOrNull()
     }
 
     if (showClientPicker) {

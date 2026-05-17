@@ -16,15 +16,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
-import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.data.api.TicketSummary
 import com.foleyit.itflow.data.api.TicketsResponse
 import com.foleyit.itflow.ui.components.EmptyScreen
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
-import kotlinx.coroutines.launch
 import com.foleyit.itflow.ui.util.fmtDate
+import kotlinx.coroutines.launch
 
 private fun ticketStatusColor(hex: String?): Color = try {
     Color(android.graphics.Color.parseColor(if (hex?.startsWith("#") == true) hex else "#${hex}"))
