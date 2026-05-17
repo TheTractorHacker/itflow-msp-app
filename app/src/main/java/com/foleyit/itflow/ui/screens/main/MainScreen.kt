@@ -104,7 +104,7 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
                                                 color = MaterialTheme.colorScheme.outline)
                                         }
                                     },
-                                    onClick = {},
+                                    onClick = { showUserMenu = false; navController.navigate(Screen.Profile.route) },
                                     leadingIcon = { Icon(Icons.Outlined.Person, null) }
                                 )
                                 HorizontalDivider()

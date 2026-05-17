@@ -56,11 +56,12 @@ data class TicketDetail(
 data class TicketReply(
     val id: Int, val body: String, val type: String,
     @SerializedName("time_worked") val timeWorked: String?,
+    val onsite: Boolean?,
     val by: String?,
     @SerializedName("created_at") val createdAt: String?
 )
 
-data class AddReplyRequest(val reply: String, val type: String, val time_worked: String?)
+data class AddReplyRequest(val reply: String, val type: String, val time_worked: String?, val onsite: Int = 0)
 data class TicketStatus(val id: Int, val name: String, val color: String)
 
 data class LogTimeRequest(val time_worked: String, val note: String)
@@ -274,4 +275,11 @@ data class UpdateProfileRequest(
     val name: String, val email: String,
     @com.google.gson.annotations.SerializedName("current_password") val currentPassword: String = "",
     @com.google.gson.annotations.SerializedName("new_password") val newPassword: String = ""
+)
+
+// ── Products ─────────────────────────────────────────────────────────────────
+data class Product(
+    val id: Int, val name: String, val type: String?,
+    val description: String?, val price: Double,
+    val currency: String?, val code: String?
 )

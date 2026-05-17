@@ -290,9 +290,47 @@ private fun ClientLocationsTab(clientId: Int, context: android.content.Context) 
 
 @Composable
 private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
+    var biometricPassed by remember { mutableStateOf(false) }
     var state by remember { mutableStateOf<Result<List<CredentialSummary>>?>(null) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getClientCredentials(clientId) } } }
+    val context = LocalContext.current
+
+    // Biometric gate — must pass before fetching or showing any credentials
+    if (!biometricPassed) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Outlined.Fingerprint, null, modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(16.dp))
+                Text("Authentication required to view credentials",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = {
+                    val activity = context as? androidx.fragment.app.FragmentActivity ?: return@Button
+                    val executor = androidx.core.content.ContextCompat.getMainExecutor(context)
+                    val prompt = androidx.biometric.BiometricPrompt(activity, executor,
+                        object : androidx.biometric.BiometricPrompt.AuthenticationCallback() {
+                            override fun onAuthenticationSucceeded(result: androidx.biometric.BiometricPrompt.AuthenticationResult) {
+                                biometricPassed = true
+                                scope.launch { state = runCatching { ApiClient.service().getClientCredentials(clientId) } }
+                            }
+                        })
+                    prompt.authenticate(androidx.biometric.BiometricPrompt.PromptInfo.Builder()
+                        .setTitle("Verify identity")
+                        .setSubtitle("Access client credentials")
+                        .setNegativeButtonText("Cancel")
+                        .build())
+                }) {
+                    Icon(Icons.Outlined.Fingerprint, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Authenticate")
+                }
+            }
+        }
+        return
+    }
+    // Only reaches here after biometric success
     when {
         state == null -> LoadingScreen()
         state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "")

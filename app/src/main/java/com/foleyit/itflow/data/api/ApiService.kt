@@ -128,6 +128,13 @@ interface ApiService {
     suspend fun getWorksheetTemplates(): List<WorksheetTemplate>
 
 
+    @GET("products")
+    suspend fun getProducts(@Query("search") search: String = ""): List<Product>
+
+    @POST("tickets/{id}/outtake")
+    suspend fun createOuttake(@Path("id") id: Int, @Body body: CreateWorksheetRequest): Map<String, Int>
+
+
     @GET("me")
     suspend fun getProfile(): UserProfile
 
@@ -174,8 +181,8 @@ interface ApiService {
 }
 
 // Extension helpers
-suspend fun ApiService.addReply(id: Int, reply: String, type: String = "reply", timeWorked: String? = null) =
-    addReply(id, AddReplyRequest(reply, type, timeWorked))
+suspend fun ApiService.addReply(id: Int, reply: String, type: String = "reply", timeWorked: String? = null, onsite: Boolean = false) =
+    addReply(id, AddReplyRequest(reply, type, timeWorked, if (onsite) 1 else 0))
 
 
 // ── Appointments ─────────────────────────────────────────────────────────────
