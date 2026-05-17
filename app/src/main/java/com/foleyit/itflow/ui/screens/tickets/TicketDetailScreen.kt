@@ -290,21 +290,11 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                         }
                     }
 
-                    // Charges
-                    charges?.let { cr ->
-                        if (cr.charges.isNotEmpty()) {
-                            item {
-                                ChargesCard(cr)
-                            }
-                        }
-                    }
+                    // Charges — always show section so feature is visible
+                    item { ChargesCard(charges) }
 
-                    // Worksheets
-                    if (worksheets.isNotEmpty()) {
-                        item {
-                            WorksheetsCard(worksheets, navController)
-                        }
-                    }
+                    // Worksheets — always show section
+                    item { WorksheetsCard(worksheets, navController) }
 
                     // Reply count header
                     if (ticket.replies.isNotEmpty()) {
@@ -452,15 +442,23 @@ private fun ReplyCard(reply: TicketReply) {
 }
 
 @Composable
-private fun ChargesCard(cr: ChargesResponse) {
+private fun ChargesCard(cr: ChargesResponse?) {
     val currency = NumberFormat.getCurrencyInstance(Locale.US)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
                 Text("Charges", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text(currency.format(cr.total), fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary)
+                if (cr != null && cr.charges.isNotEmpty()) {
+                    Text(currency.format(cr.total), fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            if (cr == null || cr.charges.isEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text("No charges on this ticket.", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline)
+                return@Column
             }
             Spacer(Modifier.height(12.dp))
             cr.charges.forEachIndexed { i, charge ->
@@ -498,6 +496,12 @@ private fun WorksheetsCard(worksheets: List<WorksheetSummary>, navController: Na
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text("Worksheets", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            if (worksheets.isEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text("No worksheets on this ticket.", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline)
+                return@Column
+            }
             Spacer(Modifier.height(12.dp))
             worksheets.forEachIndexed { i, ws ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),

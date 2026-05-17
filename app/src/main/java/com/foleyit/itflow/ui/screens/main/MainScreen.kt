@@ -57,9 +57,10 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
 
     fun navigateToTab(route: String) {
         navController.navigate(route) {
-            popUpTo(Screen.Dashboard.route) { saveState = true; inclusive = false }
+            // Do NOT use saveState/restoreState — they restore detail screens (e.g. TicketDetail)
+            // back onto the stack when you re-enter a tab, which is the bug
+            popUpTo(Screen.Dashboard.route) { inclusive = false }
             launchSingleTop = true
-            restoreState = true
         }
     }
 
@@ -133,16 +134,7 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
                                    (currentRoute == item.screen.route)
                     NavigationBarItem(
                         selected = selected,
-                        onClick = {
-                            if (currentRoute == item.screen.route) {
-                                // Already on this exact route — do nothing (already here)
-                            } else if (selected) {
-                                // On a detail screen within this tab — pop back to tab root
-                                navController.popBackStack(item.screen.route, inclusive = false)
-                            } else {
-                                navigateToTab(item.screen.route)
-                            }
-                        },
+                        onClick = { navigateToTab(item.screen.route) },
                         icon = { Icon(if (selected) item.selectedIcon else item.icon, item.label) },
                         label = { Text(item.label) }
                     )
@@ -211,7 +203,7 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
 private fun MoreSheetContent(onNavigate: (String) -> Unit) {
     val items = listOf(
         Triple(Icons.Outlined.Devices, "Assets", Screen.Assets.route),
-        Triple(Icons.Outlined.CalendarMonth, "Appointments", Screen.Appointments.route),
+        Triple(Icons.Outlined.CalendarMonth, "Appts", Screen.Appointments.route),
         Triple(Icons.Outlined.Notifications, "Notifications", Screen.Notifications.route),
     )
     Column(Modifier.padding(16.dp).navigationBarsPadding()) {
