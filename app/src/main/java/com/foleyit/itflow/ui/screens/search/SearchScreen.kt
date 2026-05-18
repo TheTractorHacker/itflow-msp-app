@@ -56,7 +56,7 @@ fun SearchScreen(navController: NavController) {
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it; search(it) },
-                        modifier = Modifier.fillMaxWidth().height(46.dp).focusRequester(focus),
+                        modifier = Modifier.fillMaxWidth().height(56.dp).focusRequester(focus),
                         placeholder = { Text("Search…", style = MaterialTheme.typography.bodyMedium) },
                         textStyle = MaterialTheme.typography.bodyMedium,
                         singleLine = true,
