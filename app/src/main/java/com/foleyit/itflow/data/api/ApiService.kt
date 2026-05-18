@@ -57,6 +57,9 @@ interface ApiService {
     @POST("tickets/{id}/reply")
     suspend fun addReply(@Path("id") id: Int, @Body req: AddReplyRequest)
 
+    @DELETE("tickets/{id}/reply/{replyId}")
+    suspend fun deleteReply(@Path("id") id: Int, @Path("replyId") replyId: Int)
+
     
     @POST("tickets/{id}/status")
     suspend fun updateTicketStatus(@Path("id") id: Int, @Body body: Map<String, Int>)

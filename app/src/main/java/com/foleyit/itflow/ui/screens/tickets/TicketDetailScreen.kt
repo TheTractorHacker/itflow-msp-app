@@ -58,6 +58,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     var charges by remember { mutableStateOf<ChargesResponse?>(null) }
     var worksheets by remember { mutableStateOf<List<WorksheetSummary>>(emptyList()) }
     var outtakes by remember { mutableStateOf<List<OuttakeSummary>>(emptyList()) }
+    var refresh by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(timerRunning) {
         if (timerRunning) {
@@ -88,7 +89,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
             }
         }
     }
-    LaunchedEffect(Unit) { load() }
+    LaunchedEffect(refresh) { load() }
 
     if (showAddCharge) {
         AddChargeSheet(onDismiss = { showAddCharge = false }, onSave = { name, desc, qty, price ->
@@ -376,7 +377,9 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                     }
 
                     // Replies
-                    items(ticket.replies) { reply -> ReplyCard(reply) }
+                    items(ticket.replies) { reply ->
+                        ReplyCard(reply, ticketId = id, onDeleted = { refresh++ })
+                    }
                 }
             }
         }
@@ -471,8 +474,31 @@ private fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text:
 }
 
 @Composable
-private fun ReplyCard(reply: TicketReply) {
+private fun ReplyCard(reply: TicketReply, ticketId: Int, onDeleted: () -> Unit) {
     val isNote = reply.type == "note"
+    val scope = rememberCoroutineScope()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete ${if (isNote) "Note" else "Reply"}?") },
+            text = { Text("This will permanently remove this ${if (isNote) "note" else "reply"}. This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    scope.launch {
+                        runCatching { ApiClient.service().deleteReply(ticketId, reply.id) }
+                        onDeleted()
+                    }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     Surface(
         color = if (isNote) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
                 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
@@ -550,7 +576,16 @@ private fun ReplyCard(reply: TicketReply) {
                 }
             }
             Spacer(Modifier.height(10.dp))
-            Text(stripHtml(reply.body))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top) {
+                Text(stripHtml(reply.body), modifier = Modifier.weight(1f))
+                IconButton(onClick = { showDeleteDialog = true },
+                    modifier = Modifier.size(28.dp).padding(start = 4.dp)) {
+                    Icon(Icons.Outlined.Delete, contentDescription = "Delete",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+                }
+            }
         }
     }
 }
