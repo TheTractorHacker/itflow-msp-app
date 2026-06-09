@@ -42,6 +42,7 @@ fun CredentialsScreen(navController: NavController) {
         val info = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Verify identity")
             .setSubtitle("Access credentials")
+            .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
             .setNegativeButtonText("Cancel")
             .build()
         prompt.authenticate(info)

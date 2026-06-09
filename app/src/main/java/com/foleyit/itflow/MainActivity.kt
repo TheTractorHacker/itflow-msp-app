@@ -164,6 +164,7 @@ private fun BiometricLockScreen(prefs: AppPreferences, onUnlocked: () -> Unit) {
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle("ITFlow MSP")
                 .setSubtitle("Authenticate to continue")
+                .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
                 .setNegativeButtonText("Sign out")
                 .build()
         )

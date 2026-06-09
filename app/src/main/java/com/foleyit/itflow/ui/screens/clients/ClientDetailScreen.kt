@@ -327,6 +327,7 @@ private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
                     prompt.authenticate(androidx.biometric.BiometricPrompt.PromptInfo.Builder()
                         .setTitle("Verify identity")
                         .setSubtitle("Access client credentials")
+                        .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
                         .setNegativeButtonText("Cancel")
                         .build())
                 }) {
