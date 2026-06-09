@@ -22,6 +22,7 @@ import com.foleyit.itflow.ui.components.EmptyScreen
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.util.BiometricCrypto
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -316,12 +317,15 @@ private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = {
                     val activity = context as? androidx.fragment.app.FragmentActivity ?: return@Button
+                    val crypto = try { BiometricCrypto.cryptoObject() } catch (_: Exception) { return@Button }
                     val executor = androidx.core.content.ContextCompat.getMainExecutor(context)
                     val prompt = androidx.biometric.BiometricPrompt(activity, executor,
                         object : androidx.biometric.BiometricPrompt.AuthenticationCallback() {
                             override fun onAuthenticationSucceeded(result: androidx.biometric.BiometricPrompt.AuthenticationResult) {
-                                biometricPassed = true
-                                scope.launch { state = runCatching { ApiClient.service().getClientCredentials(clientId) } }
+                                if (BiometricCrypto.confirm(result)) {
+                                    biometricPassed = true
+                                    scope.launch { state = runCatching { ApiClient.service().getClientCredentials(clientId) } }
+                                }
                             }
                         })
                     prompt.authenticate(androidx.biometric.BiometricPrompt.PromptInfo.Builder()
@@ -329,7 +333,8 @@ private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
                         .setSubtitle("Access client credentials")
                         .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
                         .setNegativeButtonText("Cancel")
-                        .build())
+                        .build(),
+                        crypto)
                 }) {
                     Icon(Icons.Outlined.Fingerprint, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))

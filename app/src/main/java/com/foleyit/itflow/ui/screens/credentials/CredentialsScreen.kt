@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.ui.components.*
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.util.BiometricCrypto
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,10 +34,11 @@ fun CredentialsScreen(navController: NavController) {
 
     fun authenticate() {
         val activity = context as? FragmentActivity ?: return
+        val crypto = try { BiometricCrypto.cryptoObject() } catch (_: Exception) { return }
         val executor = ContextCompat.getMainExecutor(context)
         val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                authenticated = true
+                if (BiometricCrypto.confirm(result)) authenticated = true
             }
         })
         val info = BiometricPrompt.PromptInfo.Builder()
@@ -45,7 +47,7 @@ fun CredentialsScreen(navController: NavController) {
             .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
             .setNegativeButtonText("Cancel")
             .build()
-        prompt.authenticate(info)
+        prompt.authenticate(info, crypto)
     }
 
     fun load() { scope.launch { state = runCatching { ApiClient.service().getCredentials(search = search) } } }

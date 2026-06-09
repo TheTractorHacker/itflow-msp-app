@@ -26,6 +26,7 @@ import com.foleyit.itflow.ui.screens.auth.LoginScreen
 import com.foleyit.itflow.ui.screens.auth.ServerSetupScreen
 import com.foleyit.itflow.ui.screens.main.MainScreen
 import com.foleyit.itflow.ui.theme.ITFlowTheme
+import com.foleyit.itflow.ui.util.BiometricCrypto
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -154,10 +155,11 @@ private fun BiometricLockScreen(prefs: AppPreferences, onUnlocked: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     fun authenticate() {
+        val crypto = try { BiometricCrypto.cryptoObject() } catch (_: Exception) { return }
         val executor = ContextCompat.getMainExecutor(activity)
         val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                onUnlocked()
+                if (BiometricCrypto.confirm(result)) onUnlocked()
             }
         })
         prompt.authenticate(
@@ -166,7 +168,8 @@ private fun BiometricLockScreen(prefs: AppPreferences, onUnlocked: () -> Unit) {
                 .setSubtitle("Authenticate to continue")
                 .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
                 .setNegativeButtonText("Sign out")
-                .build()
+                .build(),
+            crypto
         )
     }
 

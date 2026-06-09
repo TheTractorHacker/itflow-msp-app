@@ -23,6 +23,7 @@ import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.CredentialDetail
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
+import com.foleyit.itflow.ui.util.BiometricCrypto
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,10 +39,11 @@ fun CredentialDetailScreen(id: Int) {
 
     fun authenticate() {
         val activity = context as? FragmentActivity ?: return
+        val crypto = try { BiometricCrypto.cryptoObject() } catch (_: Exception) { return }
         val executor = ContextCompat.getMainExecutor(context)
         val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                authenticated = true
+                if (BiometricCrypto.confirm(result)) authenticated = true
             }
         })
         val info = BiometricPrompt.PromptInfo.Builder()
@@ -50,7 +52,7 @@ fun CredentialDetailScreen(id: Int) {
             .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
             .setNegativeButtonText("Cancel")
             .build()
-        prompt.authenticate(info)
+        prompt.authenticate(info, crypto)
     }
 
     LaunchedEffect(authenticated) {
