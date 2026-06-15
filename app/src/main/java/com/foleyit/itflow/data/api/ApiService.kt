@@ -83,14 +83,8 @@ interface ApiService {
     @GET("ticket-views")
     suspend fun getSavedTicketViews(): List<SavedTicketView>
 
-    // Push notifications (UnifiedPush)
-    @POST("me/push-endpoint")
-    suspend fun registerPushEndpoint(@Body req: PushEndpointRequest)
-
-    @DELETE("me/push-endpoint")
-    suspend fun unregisterPushEndpoint()
-
     @GET("tickets/{id}")
+    @Headers("Cache-Control: no-store")
     suspend fun getTicket(@Path("id") id: Int): TicketDetail
 
     @POST("tickets/{id}/reply")

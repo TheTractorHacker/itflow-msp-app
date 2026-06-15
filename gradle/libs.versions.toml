@@ -17,7 +17,6 @@ cameraX = "1.4.1"
 zxing = "3.5.3"
 glance = "1.1.0"
 workManager = "2.10.0"
-unifiedpush = "3.3.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,8 +51,8 @@ glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", versi
 glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
 # WorkManager (widget refresh)
 work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
-# UnifiedPush (open push notification standard, no Google dependency)
-unifiedpush-connector = { group = "org.unifiedpush.android", name = "connector", version.ref = "unifiedpush" }
+# SSE client (real-time notification stream)
+okhttp-sse = { group = "com.squareup.okhttp3", name = "okhttp-sse", version.ref = "okhttp" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 
 [plugins]

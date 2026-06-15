@@ -348,9 +348,6 @@ data class Product(
     val currency: String?, val code: String?
 )
 
-// ── Push notifications (UnifiedPush) ────────────────────────────────────────
-data class PushEndpointRequest(@SerializedName("endpoint_url") val endpointUrl: String)
-
 // ── Ticket Live Chat ─────────────────────────────────────────────────────────
 data class ChatMessagesResponse(val data: List<ChatMessage>)
 

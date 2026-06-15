@@ -23,7 +23,7 @@ class AppPreferences(context: Context) {
         val USER_TYPE        = intPreferencesKey("user_type")
         val TRUSTED_CERT_SHA      = stringPreferencesKey("trusted_cert_sha")
         val BIOMETRIC_LOCK        = booleanPreferencesKey("biometric_lock")
-        val PUSH_ENABLED          = booleanPreferencesKey("push_enabled")
+        val REALTIME_NOTIFICATIONS_ENABLED = booleanPreferencesKey("realtime_notifications_enabled")
     }
 
     // AES256-GCM master key stored in Android Keystore (hardware-backed on Android 9+)
@@ -45,7 +45,7 @@ class AppPreferences(context: Context) {
     val userName: Flow<String?>   = ctx.dataStore.data.map { it[USER_NAME] }
     val trustedCertSha: Flow<String?>  = ctx.dataStore.data.map { it[TRUSTED_CERT_SHA] }
     val biometricLock: Flow<Boolean>   = ctx.dataStore.data.map { it[BIOMETRIC_LOCK] ?: false }
-    val pushEnabled: Flow<Boolean>     = ctx.dataStore.data.map { it[PUSH_ENABLED] ?: false }
+    val realtimeNotificationsEnabled: Flow<Boolean> = ctx.dataStore.data.map { it[REALTIME_NOTIFICATIONS_ENABLED] ?: false }
 
     // Auth token from encrypted storage — one-shot Flow (callers use .first())
     val authToken: Flow<String?> = flow {
@@ -86,7 +86,7 @@ class AppPreferences(context: Context) {
         ctx.dataStore.edit { it[BIOMETRIC_LOCK] = enabled }
     }
 
-    suspend fun setPushEnabled(enabled: Boolean) {
-        ctx.dataStore.edit { it[PUSH_ENABLED] = enabled }
+    suspend fun setRealtimeNotificationsEnabled(enabled: Boolean) {
+        ctx.dataStore.edit { it[REALTIME_NOTIFICATIONS_ENABLED] = enabled }
     }
 }

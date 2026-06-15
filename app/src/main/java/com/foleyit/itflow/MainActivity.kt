@@ -25,7 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import android.content.Intent
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.local.AppPreferences
-import com.foleyit.itflow.push.PushManager
+import com.foleyit.itflow.push.NotificationStreamController
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.screens.auth.LoginScreen
 import com.foleyit.itflow.ui.screens.auth.ServerSetupScreen
@@ -89,10 +89,12 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        // Re-register for push on startup if previously enabled
+        // Resume the real-time notification stream on startup if previously enabled
         if (startDestination == Screen.Dashboard.route) {
             MainScope().launch {
-                if (prefs.pushEnabled.first()) PushManager.register(this@MainActivity)
+                if (prefs.realtimeNotificationsEnabled.first()) {
+                    NotificationStreamController.start(this@MainActivity)
+                }
             }
         }
 
@@ -109,6 +111,7 @@ class MainActivity : FragmentActivity() {
                     LaunchedEffect(Unit) {
                         ApiClient.onUnauthorized = {
                             MainScope().launch {
+                                NotificationStreamController.stop(this@MainActivity)
                                 prefs.clearAuth()
                                 ApiClient.clearToken()
                                 navController.navigate(Screen.Login.route) {
@@ -167,7 +170,7 @@ class MainActivity : FragmentActivity() {
                                 deepLinkRoute = deepLink,
                                 onDeepLinkConsumed = { pendingDeepLink.value = null },
                                 onLoggedOut = {
-                                    MainScope().launch { PushManager.unregister(this@MainActivity) }
+                                    NotificationStreamController.stop(this@MainActivity)
                                     ApiClient.clearToken()
                                     navController.navigate(Screen.Login.route) {
                                         popUpTo(0) { inclusive = true }

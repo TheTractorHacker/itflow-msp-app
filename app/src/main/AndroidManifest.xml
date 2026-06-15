@@ -7,6 +7,10 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".ITFlowApplication"
@@ -40,15 +44,17 @@
                 android:resource="@xml/ticket_count_widget_info" />
         </receiver>
 
-        <!-- UnifiedPush receiver -->
+        <!-- Real-time notification stream -->
+        <service
+            android:name=".push.NotificationStreamService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <receiver
-            android:name=".push.PushReceiver"
+            android:name=".push.BootReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="org.unifiedpush.android.connector.MESSAGE" />
-                <action android:name="org.unifiedpush.android.connector.UNREGISTERED" />
-                <action android:name="org.unifiedpush.android.connector.NEW_ENDPOINT" />
-                <action android:name="org.unifiedpush.android.connector.REGISTRATION_FAILED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 

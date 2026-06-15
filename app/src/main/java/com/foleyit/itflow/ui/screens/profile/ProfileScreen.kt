@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.*
 import com.foleyit.itflow.data.local.AppPreferences
-import com.foleyit.itflow.push.PushManager
+import com.foleyit.itflow.push.NotificationStreamController
 import com.foleyit.itflow.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -315,45 +315,41 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
 
                         Spacer(Modifier.height(8.dp))
 
-                        // Push Notifications row
-                        val pushEnabled by prefs.pushEnabled.collectAsState(initial = false)
+                        // Real-time Notifications row
+                        val realtimeEnabled by prefs.realtimeNotificationsEnabled.collectAsState(initial = false)
                         val context = LocalContext.current
-                        var pushNote by remember { mutableStateOf<String?>(null) }
+                        var realtimeNote by remember { mutableStateOf<String?>(null) }
 
                         val notificationPermissionLauncher = rememberLauncherForActivityResult(
                             ActivityResultContracts.RequestPermission()
                         ) { granted ->
                             scope.launch {
-                                prefs.setPushEnabled(granted)
+                                prefs.setRealtimeNotificationsEnabled(granted)
                                 if (granted) {
-                                    PushManager.register(context)
-                                    pushNote = if (PushManager.hasDistributor(context)) {
-                                        "Push notifications enabled."
-                                    } else {
-                                        "No push distributor app found. Install one (e.g. ntfy) to receive notifications."
-                                    }
+                                    NotificationStreamController.start(context)
+                                    requestIgnoreBatteryOptimizations(context)
+                                    realtimeNote = "Real-time notifications enabled."
+                                } else {
+                                    realtimeNote = null
                                 }
                             }
                         }
 
-                        fun setPush(enable: Boolean) {
+                        fun setRealtime(enable: Boolean) {
                             scope.launch {
                                 if (enable) {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     } else {
-                                        prefs.setPushEnabled(true)
-                                        PushManager.register(context)
-                                        pushNote = if (PushManager.hasDistributor(context)) {
-                                            "Push notifications enabled."
-                                        } else {
-                                            "No push distributor app found. Install one (e.g. ntfy) to receive notifications."
-                                        }
+                                        prefs.setRealtimeNotificationsEnabled(true)
+                                        NotificationStreamController.start(context)
+                                        requestIgnoreBatteryOptimizations(context)
+                                        realtimeNote = "Real-time notifications enabled."
                                     }
                                 } else {
-                                    prefs.setPushEnabled(false)
-                                    PushManager.unregister(context)
-                                    pushNote = null
+                                    prefs.setRealtimeNotificationsEnabled(false)
+                                    NotificationStreamController.stop(context)
+                                    realtimeNote = null
                                 }
                             }
                         }
@@ -380,20 +376,20 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text("Push Notifications",
+                                    Text("Real-time Notifications",
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Medium)
-                                    Text("New tickets, replies & assignments",
+                                    Text("Instant alerts for new tickets, replies & assignments",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.outline)
                                 }
                                 Switch(
-                                    checked = pushEnabled,
-                                    onCheckedChange = { setPush(it) }
+                                    checked = realtimeEnabled,
+                                    onCheckedChange = { setRealtime(it) }
                                 )
                             }
                         }
-                        pushNote?.let {
+                        realtimeNote?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline,
                                 modifier = Modifier.padding(top = 4.dp, start = 4.dp))
@@ -481,4 +477,17 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
             }
         }
     }
+}
+
+/** Prompts the user to exempt the app from battery optimizations so the
+ *  real-time notification stream service can stay alive in the background. */
+private fun requestIgnoreBatteryOptimizations(context: android.content.Context) {
+    val powerManager = context.getSystemService(android.os.PowerManager::class.java)
+    if (powerManager.isIgnoringBatteryOptimizations(context.packageName)) return
+
+    val intent = android.content.Intent(
+        android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+        android.net.Uri.parse("package:${context.packageName}")
+    )
+    runCatching { context.startActivity(intent) }
 }

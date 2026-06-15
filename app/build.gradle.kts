@@ -11,8 +11,8 @@ android {
         applicationId = "com.foleyit.itflow"
         minSdk = 34
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.7.0"
+        versionCode = 8
+        versionName = "1.8.0"
     }
 
     buildTypes {
@@ -79,13 +79,9 @@ dependencies {
     // Glance widget
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
-    // WorkManager for widget refresh
+    // WorkManager for widget refresh + notification stream watchdog
     implementation(libs.work.runtime.ktx)
-    // UnifiedPush (open push notification standard)
-    // Exclude the JVM tink artifact — it duplicates classes already provided by
-    // tink-android (pulled in transitively via androidx.security:security-crypto).
-    implementation(libs.unifiedpush.connector) {
-        exclude(group = "com.google.crypto.tink", module = "tink")
-    }
+    // SSE client for the real-time notification stream
+    implementation(libs.okhttp.sse)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
