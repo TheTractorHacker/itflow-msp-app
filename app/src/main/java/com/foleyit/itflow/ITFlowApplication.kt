@@ -3,6 +3,7 @@ package com.foleyit.itflow
 import android.app.Application
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.local.AppPreferences
+import com.foleyit.itflow.push.NotificationHelper
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -14,6 +15,7 @@ class ITFlowApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         prefs = AppPreferences(this)
+        NotificationHelper.createChannel(this)
         runBlocking {
             val url     = prefs.serverUrl.first()
             val token   = prefs.authToken.first()

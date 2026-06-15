@@ -203,6 +203,9 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = { navController.navigate(Screen.TicketChat.go(id)) }) {
+                        Icon(Icons.Outlined.Forum, "Live Chat")
+                    }
                     IconButton(onClick = { timerRunning = !timerRunning }) {
                         Icon(
                             if (timerRunning) Icons.Outlined.PauseCircle else Icons.Outlined.PlayCircle,

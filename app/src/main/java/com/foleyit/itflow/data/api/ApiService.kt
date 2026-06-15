@@ -48,8 +48,47 @@ interface ApiService {
         @Query("search") search: String = "",
         @Query("page") page: Int = 1,
         @Query("priority") priority: String? = null,
-        @Query("onsite") onsite: Int? = null
+        @Query("onsite") onsite: Int? = null,
+        @Query("category_id") categoryId: Int? = null,
+        @Query("overdue") overdue: Int? = null,
+        @Query("due_today") dueToday: Int? = null
     ): TicketsResponse
+
+    // Ticket live chat
+    @GET("tickets/{id}/chat")
+    suspend fun getChatMessages(@Path("id") id: Int, @Query("since_id") sinceId: Int = 0): ChatMessagesResponse
+
+    @POST("tickets/{id}/chat")
+    suspend fun sendChatMessage(@Path("id") id: Int, @Body req: SendChatMessageRequest): Map<String, Int>
+
+    // Knowledge base
+    @GET("kb/categories")
+    suspend fun getKbCategories(): List<KbCategory>
+
+    @GET("kb/articles")
+    suspend fun getKbArticles(
+        @Query("category_id") categoryId: Int? = null,
+        @Query("client_id") clientId: Int? = null,
+        @Query("search") search: String = "",
+        @Query("page") page: Int = 1
+    ): KbArticlesResponse
+
+    @GET("kb/articles/{id}")
+    suspend fun getKbArticle(@Path("id") id: Int): KbArticleDetail
+
+    // Ticket categories & saved views
+    @GET("ticket-categories")
+    suspend fun getTicketCategories(): List<TicketCategory>
+
+    @GET("ticket-views")
+    suspend fun getSavedTicketViews(): List<SavedTicketView>
+
+    // Push notifications (UnifiedPush)
+    @POST("me/push-endpoint")
+    suspend fun registerPushEndpoint(@Body req: PushEndpointRequest)
+
+    @DELETE("me/push-endpoint")
+    suspend fun unregisterPushEndpoint()
 
     @GET("tickets/{id}")
     suspend fun getTicket(@Path("id") id: Int): TicketDetail

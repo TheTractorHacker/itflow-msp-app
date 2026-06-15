@@ -16,6 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
+import com.foleyit.itflow.data.api.SavedTicketView
+import com.foleyit.itflow.data.api.TicketCategory
 import com.foleyit.itflow.data.api.TicketSummary
 import com.foleyit.itflow.data.api.TicketsResponse
 import com.foleyit.itflow.ui.components.EmptyScreen
@@ -37,10 +39,16 @@ fun TicketsScreen(navController: NavController) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var priorityFilter by remember { mutableStateOf<String?>(null) }
     var onsiteFilter by remember { mutableStateOf<Int?>(null) }  // null=all, 1=onsite, 0=remote
+    var categoryFilter by remember { mutableStateOf<Int?>(null) }
+    var categories by remember { mutableStateOf<List<TicketCategory>>(emptyList()) }
+    var savedViews by remember { mutableStateOf<List<SavedTicketView>>(emptyList()) }
+    var activeView by remember { mutableStateOf<SavedTicketView?>(null) }
+    var showViewsMenu by remember { mutableStateOf(false) }
     var state by remember { mutableStateOf<Result<TicketsResponse>?>(null) }
     val scope = rememberCoroutineScope()
 
     fun load() {
+        activeView = null
         scope.launch {
             state = runCatching {
                 ApiClient.service().getTickets(
@@ -48,13 +56,38 @@ fun TicketsScreen(navController: NavController) {
                     mine = if (mineOnly) 1 else 0,
                     search = search,
                     priority = priorityFilter?.takeIf { it.isNotBlank() },
-                    onsite = onsiteFilter
+                    onsite = onsiteFilter,
+                    categoryId = categoryFilter
+                )
+            }
+        }
+    }
+
+    fun applyView(view: SavedTicketView) {
+        activeView = view
+        val p = view.params
+        scope.launch {
+            state = runCatching {
+                ApiClient.service().getTickets(
+                    status = p["status"] ?: "open",
+                    mine = p["mine"]?.toIntOrNull() ?: 0,
+                    search = p["search"] ?: "",
+                    priority = p["priority"]?.takeIf { it.isNotBlank() },
+                    onsite = p["onsite"]?.toIntOrNull(),
+                    categoryId = p["category_id"]?.toIntOrNull(),
+                    overdue = p["overdue"]?.toIntOrNull(),
+                    dueToday = p["due_today"]?.toIntOrNull()
                 )
             }
         }
     }
 
     LaunchedEffect(selectedTab, mineOnly) { load() }
+
+    LaunchedEffect(Unit) {
+        runCatching { categories = ApiClient.service().getTicketCategories() }
+        runCatching { savedViews = ApiClient.service().getSavedTicketViews() }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -93,6 +126,42 @@ fun TicketsScreen(navController: NavController) {
                 onClick = { mineOnly = !mineOnly },
                 label = { Text("Mine", style = MaterialTheme.typography.labelMedium) }
             )
+            if (savedViews.isNotEmpty()) {
+                Box {
+                    IconButton(onClick = { showViewsMenu = true }) {
+                        Icon(Icons.Outlined.BookmarkBorder, "Saved Views")
+                    }
+                    DropdownMenu(expanded = showViewsMenu, onDismissRequest = { showViewsMenu = false }) {
+                        savedViews.forEach { view ->
+                            DropdownMenuItem(
+                                text = { Text(view.name) },
+                                onClick = { showViewsMenu = false; applyView(view) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        activeView?.let { view ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.extraSmall
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(view.name, modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        IconButton(onClick = { load() }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Outlined.Close, "Clear view", Modifier.size(14.dp))
+                        }
+                    }
+                }
+            }
         }
 
         TabRow(selectedTabIndex = selectedTab) {
@@ -132,6 +201,23 @@ fun TicketsScreen(navController: NavController) {
                 label = { Text("Remote") },
                 leadingIcon = { Icon(Icons.Outlined.Wifi, null, Modifier.size(14.dp)) }
             )
+            if (categories.isNotEmpty()) {
+                VerticalDivider(modifier = Modifier.height(32.dp).padding(horizontal = 4.dp))
+                categories.forEach { cat ->
+                    FilterChip(
+                        selected = categoryFilter == cat.id,
+                        onClick = { categoryFilter = if (categoryFilter == cat.id) null else cat.id; load() },
+                        label = { Text(cat.name) },
+                        leadingIcon = {
+                            Surface(
+                                color = ticketStatusColor(cat.color),
+                                shape = MaterialTheme.shapes.extraSmall,
+                                modifier = Modifier.size(10.dp)
+                            ) {}
+                        }
+                    )
+                }
+            }
         }
 
         when {

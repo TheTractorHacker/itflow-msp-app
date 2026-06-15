@@ -16,6 +16,7 @@ sealed class Screen(val route: String) {
     object Dashboard     : Screen("dashboard")
     object Tickets       : Screen("tickets")
     object TicketDetail  : Screen("tickets/{id}")    { fun go(id: Int) = "tickets/$id" }
+    object TicketChat    : Screen("tickets/{id}/chat") { fun go(id: Int) = "tickets/$id/chat" }
     object Clients       : Screen("clients")
     object ClientDetail  : Screen("clients/{id}")    { fun go(id: Int) = "clients/$id" }
     object Assets        : Screen("assets")
@@ -38,6 +39,8 @@ sealed class Screen(val route: String) {
     object TimeReport    : Screen("reports/time")
     object ScanBarcode   : Screen("scan/barcode")
     object Profile       : Screen("profile")
+    object KnowledgeBase : Screen("kb")
+    object KbArticleDetail : Screen("kb/{id}") { fun go(id: Int) = "kb/$id" }
 }
 
 data class BottomNavItem(

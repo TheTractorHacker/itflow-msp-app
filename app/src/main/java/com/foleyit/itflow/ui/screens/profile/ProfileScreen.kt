@@ -1,5 +1,9 @@
 package com.foleyit.itflow.ui.screens.profile
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
@@ -18,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.*
 import com.foleyit.itflow.data.local.AppPreferences
+import com.foleyit.itflow.push.PushManager
 import com.foleyit.itflow.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -309,6 +315,92 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
 
                         Spacer(Modifier.height(8.dp))
 
+                        // Push Notifications row
+                        val pushEnabled by prefs.pushEnabled.collectAsState(initial = false)
+                        val context = LocalContext.current
+                        var pushNote by remember { mutableStateOf<String?>(null) }
+
+                        val notificationPermissionLauncher = rememberLauncherForActivityResult(
+                            ActivityResultContracts.RequestPermission()
+                        ) { granted ->
+                            scope.launch {
+                                prefs.setPushEnabled(granted)
+                                if (granted) {
+                                    PushManager.register(context)
+                                    pushNote = if (PushManager.hasDistributor(context)) {
+                                        "Push notifications enabled."
+                                    } else {
+                                        "No push distributor app found. Install one (e.g. ntfy) to receive notifications."
+                                    }
+                                }
+                            }
+                        }
+
+                        fun setPush(enable: Boolean) {
+                            scope.launch {
+                                if (enable) {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        prefs.setPushEnabled(true)
+                                        PushManager.register(context)
+                                        pushNote = if (PushManager.hasDistributor(context)) {
+                                            "Push notifications enabled."
+                                        } else {
+                                            "No push distributor app found. Install one (e.g. ntfy) to receive notifications."
+                                        }
+                                    }
+                                } else {
+                                    prefs.setPushEnabled(false)
+                                    PushManager.unregister(context)
+                                    pushNote = null
+                                }
+                            }
+                        }
+
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = MaterialTheme.shapes.small,
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Outlined.Notifications, null,
+                                            Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                                    }
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("Push Notifications",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium)
+                                    Text("New tickets, replies & assignments",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline)
+                                }
+                                Switch(
+                                    checked = pushEnabled,
+                                    onCheckedChange = { setPush(it) }
+                                )
+                            }
+                        }
+                        pushNote?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(top = 4.dp, start = 4.dp))
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
                         // Time Report row
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -337,6 +429,43 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Medium)
                                     Text("Hours logged by client",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline)
+                                }
+                                Icon(Icons.Outlined.ChevronRight, null,
+                                    tint = MaterialTheme.colorScheme.outline)
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+
+                        // Knowledge Base row
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { navController.navigate(Screen.KnowledgeBase.route) }
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = MaterialTheme.shapes.small,
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.AutoMirrored.Outlined.Article, null,
+                                            Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                    }
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("Knowledge Base",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium)
+                                    Text("Browse help articles",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.outline)
                                 }

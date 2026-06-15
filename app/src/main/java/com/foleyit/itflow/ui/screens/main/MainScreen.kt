@@ -25,6 +25,8 @@ import com.foleyit.itflow.ui.screens.credentials.*
 import com.foleyit.itflow.ui.screens.dashboard.DashboardScreen
 import com.foleyit.itflow.ui.screens.expenses.*
 import com.foleyit.itflow.ui.screens.invoices.*
+import com.foleyit.itflow.ui.screens.kb.KbArticleDetailScreen
+import com.foleyit.itflow.ui.screens.kb.KnowledgeBaseScreen
 import com.foleyit.itflow.ui.screens.notifications.NotificationsScreen
 import com.foleyit.itflow.ui.screens.quotes.*
 import com.foleyit.itflow.ui.screens.tickets.*
@@ -47,13 +49,25 @@ private val ROOT_ROUTES = setOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
+fun MainScreen(
+    prefs: AppPreferences,
+    onLoggedOut: () -> Unit,
+    deepLinkRoute: String? = null,
+    onDeepLinkConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     var userName by remember { mutableStateOf("") }
     var showUserMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { userName = prefs.userName.first() ?: "" }
+
+    LaunchedEffect(deepLinkRoute) {
+        deepLinkRoute?.let {
+            navController.navigate(it) { launchSingleTop = true }
+            onDeepLinkConsumed()
+        }
+    }
 
     val currentDest by navController.currentBackStackEntryAsState()
     val currentRoute = currentDest?.destination?.route
@@ -156,6 +170,9 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
             composable(Screen.TicketDetail.route) {
                 TicketDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
             }
+            composable(Screen.TicketChat.route) {
+                TicketChatScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
+            }
             composable(Screen.Clients.route) { ClientsScreen(navController) }
             composable(Screen.ClientDetail.route) {
                 ClientDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
@@ -181,6 +198,10 @@ fun MainScreen(prefs: AppPreferences, onLoggedOut: () -> Unit) {
             composable(Screen.AddExpense.route) { AddExpenseScreen { navController.popBackStack() } }
             composable(Screen.Notifications.route) { NotificationsScreen() }
             composable(Screen.Profile.route) { ProfileScreen(navController, prefs) }
+            composable(Screen.KnowledgeBase.route) { KnowledgeBaseScreen(navController) }
+            composable(Screen.KbArticleDetail.route) {
+                KbArticleDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
+            }
             composable(Screen.FillWorksheet.route) {
                 FillWorksheetScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
             }

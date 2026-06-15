@@ -1,5 +1,6 @@
 package com.foleyit.itflow.ui.screens.dashboard
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -75,6 +76,26 @@ fun DashboardScreen(navController: NavController) {
                             else MaterialTheme.colorScheme.surfaceVariant,
                             if (dash.overdue > 0) MaterialTheme.colorScheme.onErrorContainer
                             else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
+                    }
+                }
+                if (dash.dueToday != null || dash.onsiteOpen != null) {
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            dash.dueToday?.let { dueToday ->
+                                StatCard("Due Today", dueToday.toString(), Icons.Outlined.Schedule,
+                                    if (dueToday > 0) MaterialTheme.colorScheme.tertiaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant,
+                                    if (dueToday > 0) MaterialTheme.colorScheme.onTertiaryContainer
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    Modifier.weight(1f).clickable { navController.navigate(Screen.Tickets.route) })
+                            }
+                            dash.onsiteOpen?.let { onsiteOpen ->
+                                StatCard("On-Site", onsiteOpen.toString(), Icons.Outlined.LocationOn,
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                    Modifier.weight(1f).clickable { navController.navigate(Screen.Tickets.route) })
+                            }
+                        }
                     }
                 }
                 item {

@@ -17,6 +17,8 @@ data class DashboardResponse(
     @SerializedName("all_open") val allOpen: Int,
     val overdue: Int,
     val unread: Int,
+    @SerializedName("due_today") val dueToday: Int? = null,
+    @SerializedName("onsite_open") val onsiteOpen: Int? = null,
     val queue: List<TicketSummary>
 )
 
@@ -283,7 +285,8 @@ data class CreateTicketRequest(
     val details: String = "",
     @SerializedName("client_id") val clientId: Int? = null,
     val priority: String = "low",
-    @SerializedName("assigned_to") val assignedTo: Int? = null
+    @SerializedName("assigned_to") val assignedTo: Int? = null,
+    @SerializedName("category_id") val categoryId: Int? = null
 )
 
 // ── Search ───────────────────────────────────────────────────────────────────
@@ -343,4 +346,61 @@ data class Product(
     val id: Int, val name: String, val type: String?,
     val description: String?, val price: Double,
     val currency: String?, val code: String?
+)
+
+// ── Push notifications (UnifiedPush) ────────────────────────────────────────
+data class PushEndpointRequest(@SerializedName("endpoint_url") val endpointUrl: String)
+
+// ── Ticket Live Chat ─────────────────────────────────────────────────────────
+data class ChatMessagesResponse(val data: List<ChatMessage>)
+
+data class ChatMessage(
+    val id: Int,
+    @SerializedName("sender_type") val senderType: String,
+    @SerializedName("sender_id") val senderId: Int,
+    @SerializedName("sender_name") val senderName: String?,
+    val message: String,
+    @SerializedName("created_at") val createdAt: String?
+)
+
+data class SendChatMessageRequest(val message: String)
+
+// ── Knowledge Base ───────────────────────────────────────────────────────────
+data class KbCategory(
+    val id: Int, val name: String,
+    @SerializedName("parent_id") val parentId: Int,
+    @SerializedName("client_id") val clientId: Int
+)
+
+data class KbArticlesResponse(val data: List<KbArticleSummary>, val total: Int)
+
+data class KbArticleSummary(
+    val id: Int, val title: String,
+    @SerializedName("category_id") val categoryId: Int,
+    @SerializedName("category_name") val categoryName: String?,
+    @SerializedName("client_id") val clientId: Int,
+    @SerializedName("client_name") val clientName: String?,
+    @SerializedName("client_visible") val clientVisible: Int,
+    @SerializedName("updated_at") val updatedAt: String?
+)
+
+data class KbArticleAttachment(val id: Int, val name: String, val url: String)
+
+data class KbArticleDetail(
+    val id: Int, val title: String, val content: String?,
+    @SerializedName("category_id") val categoryId: Int,
+    @SerializedName("category_name") val categoryName: String?,
+    @SerializedName("client_id") val clientId: Int,
+    @SerializedName("client_name") val clientName: String?,
+    @SerializedName("client_visible") val clientVisible: Int,
+    @SerializedName("updated_at") val updatedAt: String?,
+    val attachments: List<KbArticleAttachment>
+)
+
+// ── Ticket categories & saved views ─────────────────────────────────────────
+data class TicketCategory(val id: Int, val name: String, val color: String?)
+
+data class SavedTicketView(
+    val id: Int, val name: String, val icon: String?,
+    val params: Map<String, String>
 )

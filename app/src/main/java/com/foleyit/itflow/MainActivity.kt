@@ -14,13 +14,18 @@ import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import android.content.Intent
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.local.AppPreferences
+import com.foleyit.itflow.push.PushManager
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.screens.auth.LoginScreen
 import com.foleyit.itflow.ui.screens.auth.ServerSetupScreen
@@ -36,10 +41,17 @@ import java.io.File
 class MainActivity : FragmentActivity() {
 
     private var backgroundedAt = 0L
+    private val pendingDeepLink = mutableStateOf<String?>(null)
 
     override fun onPause() {
         super.onPause()
         backgroundedAt = System.currentTimeMillis()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra("deep_link_route")?.let { pendingDeepLink.value = it }
     }
 
     override fun onDestroy() {
@@ -77,6 +89,15 @@ class MainActivity : FragmentActivity() {
             }
         }
 
+        // Re-register for push on startup if previously enabled
+        if (startDestination == Screen.Dashboard.route) {
+            MainScope().launch {
+                if (prefs.pushEnabled.first()) PushManager.register(this@MainActivity)
+            }
+        }
+
+        intent?.getStringExtra("deep_link_route")?.let { pendingDeepLink.value = it }
+
         setContent {
             ITFlowTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -98,14 +119,19 @@ class MainActivity : FragmentActivity() {
                     }
 
                     // App lock — re-lock after 5 minutes in background
-                    DisposableEffect(biometricEnabled) {
-                        val resumeCallback = Runnable {
-                            if (biometricEnabled && backgroundedAt > 0 &&
+                    val lifecycleOwner = LocalLifecycleOwner.current
+                    DisposableEffect(lifecycleOwner, biometricEnabled) {
+                        val observer = LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_RESUME &&
+                                biometricEnabled && backgroundedAt > 0 &&
                                 System.currentTimeMillis() - backgroundedAt > 5 * 60_000L) {
                                 isLocked = true
                             }
                         }
-                        onDispose {}
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose {
+                            lifecycleOwner.lifecycle.removeObserver(observer)
+                        }
                     }
 
                     if (isLocked) {
@@ -135,12 +161,18 @@ class MainActivity : FragmentActivity() {
                                 })
                         }
                         composable(Screen.Dashboard.route) {
-                            MainScreen(prefs = prefs, onLoggedOut = {
-                                ApiClient.clearToken()
-                                navController.navigate(Screen.Login.route) {
-                                    popUpTo(0) { inclusive = true }
-                                }
-                            })
+                            val deepLink by pendingDeepLink
+                            MainScreen(
+                                prefs = prefs,
+                                deepLinkRoute = deepLink,
+                                onDeepLinkConsumed = { pendingDeepLink.value = null },
+                                onLoggedOut = {
+                                    MainScope().launch { PushManager.unregister(this@MainActivity) }
+                                    ApiClient.clearToken()
+                                    navController.navigate(Screen.Login.route) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                })
                         }
                     }
                 }

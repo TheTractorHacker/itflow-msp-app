@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".ITFlowApplication"
@@ -37,6 +38,18 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/ticket_count_widget_info" />
+        </receiver>
+
+        <!-- UnifiedPush receiver -->
+        <receiver
+            android:name=".push.PushReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.MESSAGE" />
+                <action android:name="org.unifiedpush.android.connector.UNREGISTERED" />
+                <action android:name="org.unifiedpush.android.connector.NEW_ENDPOINT" />
+                <action android:name="org.unifiedpush.android.connector.REGISTRATION_FAILED" />
+            </intent-filter>
         </receiver>
 
     </application>
