@@ -279,6 +279,10 @@ data class UpdateProfileRequest(
     @com.google.gson.annotations.SerializedName("new_password") val newPassword: String = ""
 )
 
+data class FcmTokenRequest(
+    @com.google.gson.annotations.SerializedName("fcm_token") val fcmToken: String
+)
+
 // ── Create Ticket ────────────────────────────────────────────────────────────
 data class CreateTicketRequest(
     val subject: String,

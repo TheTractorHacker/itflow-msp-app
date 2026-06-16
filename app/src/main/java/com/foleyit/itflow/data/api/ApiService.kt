@@ -214,6 +214,9 @@ interface ApiService {
     @PUT("me")
     suspend fun updateProfile(@Body body: UpdateProfileRequest)
 
+    @PUT("me")
+    suspend fun registerFcmToken(@Body body: FcmTokenRequest)
+
     @POST("tickets/{id}/charges")
     suspend fun addCharge(@Path("id") id: Int, @Body body: AddChargeRequest)
 

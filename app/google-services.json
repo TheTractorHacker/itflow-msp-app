@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "516173833703",
+    "project_id": "itflow-msp",
+    "storage_bucket": "itflow-msp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:516173833703:android:420e3705734c4e628b8942",
+        "android_client_info": {
+          "package_name": "com.foleyit.itflow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqOrYXp7WufCmI0VX1cazSKxy_v8DNVDU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

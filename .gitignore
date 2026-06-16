@@ -5,7 +5,8 @@ local.properties
 .DS_Store
 build/
 captures/
-app/google-services.json
+# google-services.json contains only public client config (no private keys), safe to track
+# app/google-services.json
 *.keystore
 *.jks
 *.hprof

@@ -15,11 +15,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
 import com.foleyit.itflow.data.api.ApiClient
+import com.foleyit.itflow.data.api.FcmTokenRequest
 import com.foleyit.itflow.data.api.LoginRequest
 import com.foleyit.itflow.data.local.AppPreferences
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,6 +58,11 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
                 val token = resp.token ?: run { error = "No token received"; loading = false; return@launch }
                 prefs.saveAuthData(token, resp.user!!)
                 ApiClient.setToken(token)
+                // Register FCM token so server can push to this device
+                try {
+                    val fcmToken = FirebaseMessaging.getInstance().token.await()
+                    ApiClient.service().registerFcmToken(FcmTokenRequest(fcmToken))
+                } catch (_: Exception) { /* non-fatal */ }
                 onLoggedIn()
             } catch (e: Exception) {
                 error = if (requires2fa) "Invalid 2FA code" else "Invalid username or password"

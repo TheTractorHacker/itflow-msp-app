@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -83,5 +84,9 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     // SSE client for the real-time notification stream
     implementation(libs.okhttp.sse)
+    // Firebase Cloud Messaging
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+    implementation(libs.kotlinx.coroutines.play.services)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

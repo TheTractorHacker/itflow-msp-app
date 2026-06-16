@@ -44,6 +44,15 @@
                 android:resource="@xml/ticket_count_widget_info" />
         </receiver>
 
+        <!-- Firebase Cloud Messaging -->
+        <service
+            android:name=".push.ITFlowFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <!-- Real-time notification stream -->
         <service
             android:name=".push.NotificationStreamService"
