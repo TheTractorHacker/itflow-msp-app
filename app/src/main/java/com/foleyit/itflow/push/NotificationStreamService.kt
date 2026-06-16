@@ -128,6 +128,10 @@ class NotificationStreamService : Service() {
             if (type != "notification") return
             try {
                 val json = JsonParser.parseString(data).asJsonObject
+                // Server sets push=false for low-priority background events (e.g. ticket edits).
+                // Default true so older server versions still show notifications.
+                val push = json.get("push")?.asBoolean ?: true
+                if (!push) return
                 val title = json.get("title")?.asString ?: "ITFlow"
                 val body = json.get("body")?.asString ?: ""
                 val action = json.get("action")?.asString
