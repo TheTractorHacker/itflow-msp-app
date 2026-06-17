@@ -17,21 +17,18 @@ class AppPreferences(context: Context) {
     private val ctx = context.applicationContext
 
     companion object {
-        val SERVER_URL       = stringPreferencesKey("server_url")
-        val USER_NAME        = stringPreferencesKey("user_name")
-        val USER_ID          = intPreferencesKey("user_id")
-        val USER_TYPE        = intPreferencesKey("user_type")
-        val TRUSTED_CERT_SHA      = stringPreferencesKey("trusted_cert_sha")
-        val BIOMETRIC_LOCK        = booleanPreferencesKey("biometric_lock")
-        val REALTIME_NOTIFICATIONS_ENABLED = booleanPreferencesKey("realtime_notifications_enabled")
+        val SERVER_URL        = stringPreferencesKey("server_url")
+        val USER_NAME         = stringPreferencesKey("user_name")
+        val USER_ID           = intPreferencesKey("user_id")
+        val USER_TYPE         = intPreferencesKey("user_type")
+        val TRUSTED_CERT_SHA  = stringPreferencesKey("trusted_cert_sha")
+        val BIOMETRIC_LOCK    = booleanPreferencesKey("biometric_lock")
     }
 
-    // AES256-GCM master key stored in Android Keystore (hardware-backed on Android 9+)
     private val masterKey = MasterKey.Builder(ctx)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
-    // Auth token encrypted with AES256-GCM; key names encrypted with AES256-SIV
     private val securePrefs = EncryptedSharedPreferences.create(
         ctx,
         "itflow_secure",
@@ -40,14 +37,11 @@ class AppPreferences(context: Context) {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
-    // Non-sensitive: server URL, display name, trusted cert fingerprint — plain DataStore
-    val serverUrl: Flow<String>   = ctx.dataStore.data.map { it[SERVER_URL] ?: "" }
-    val userName: Flow<String?>   = ctx.dataStore.data.map { it[USER_NAME] }
+    val serverUrl: Flow<String>        = ctx.dataStore.data.map { it[SERVER_URL] ?: "" }
+    val userName: Flow<String?>        = ctx.dataStore.data.map { it[USER_NAME] }
     val trustedCertSha: Flow<String?>  = ctx.dataStore.data.map { it[TRUSTED_CERT_SHA] }
     val biometricLock: Flow<Boolean>   = ctx.dataStore.data.map { it[BIOMETRIC_LOCK] ?: false }
-    val realtimeNotificationsEnabled: Flow<Boolean> = ctx.dataStore.data.map { it[REALTIME_NOTIFICATIONS_ENABLED] ?: false }
 
-    // Auth token from encrypted storage — one-shot Flow (callers use .first())
     val authToken: Flow<String?> = flow {
         emit(securePrefs.getString("auth_token", null))
     }
@@ -84,9 +78,5 @@ class AppPreferences(context: Context) {
 
     suspend fun setBiometricLock(enabled: Boolean) {
         ctx.dataStore.edit { it[BIOMETRIC_LOCK] = enabled }
-    }
-
-    suspend fun setRealtimeNotificationsEnabled(enabled: Boolean) {
-        ctx.dataStore.edit { it[REALTIME_NOTIFICATIONS_ENABLED] = enabled }
     }
 }

@@ -82,8 +82,6 @@ dependencies {
     implementation(libs.glance.material3)
     // WorkManager for widget refresh + notification stream watchdog
     implementation(libs.work.runtime.ktx)
-    // SSE client for the real-time notification stream
-    implementation(libs.okhttp.sse)
     // Firebase Cloud Messaging
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
