@@ -59,7 +59,7 @@ fun TicketChatScreen(ticketId: Int, navController: NavController) {
     LaunchedEffect(ticketId) {
         while (true) {
             poll()
-            delay(5000)
+            delay(1500)
         }
     }
 
