@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 
 private val STATUS_TABS = listOf("new" to "New", "acknowledged" to "Acked", "resolved" to "Resolved", "all" to "All")
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlertsScreen(navController: NavController) {
     var status by remember { mutableStateOf("new") }
@@ -45,37 +44,35 @@ fun AlertsScreen(navController: NavController) {
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Alerts") }) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            ScrollableTabRow(
-                selectedTabIndex = STATUS_TABS.indexOfFirst { it.first == status }.coerceAtLeast(0),
-                edgePadding = 12.dp
-            ) {
-                STATUS_TABS.forEach { (key, label) ->
-                    Tab(selected = status == key, onClick = { status = key }, text = { Text(label) })
-                }
+    Column(Modifier.fillMaxSize()) {
+        ScrollableTabRow(
+            selectedTabIndex = STATUS_TABS.indexOfFirst { it.first == status }.coerceAtLeast(0),
+            edgePadding = 12.dp
+        ) {
+            STATUS_TABS.forEach { (key, label) ->
+                Tab(selected = status == key, onClick = { status = key }, text = { Text(label) })
             }
+        }
 
-            when {
-                state == null -> LoadingScreen()
-                state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
-                else -> {
-                    val alerts = state!!.getOrThrow()
-                    if (alerts.isEmpty()) {
-                        EmptyScreen("No alerts here", Icons.Outlined.CheckCircle)
-                    } else {
-                        LazyColumn(Modifier.fillMaxSize()) {
-                            items(alerts, key = { it.source + it.id }) { alert ->
-                                AlertRow(
-                                    alert = alert,
-                                    onAcknowledge = { act(alert, "acknowledge") },
-                                    onResolve = { act(alert, "resolve") },
-                                    onViewTicket = {
-                                        alert.ticketId?.let { navController.navigate(Screen.TicketDetail.go(it)) }
-                                    }
-                                )
-                                HorizontalDivider()
-                            }
+        when {
+            state == null -> LoadingScreen()
+            state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
+            else -> {
+                val alerts = state!!.getOrThrow()
+                if (alerts.isEmpty()) {
+                    EmptyScreen("No alerts here", Icons.Outlined.CheckCircle)
+                } else {
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        items(alerts, key = { it.source + it.id }) { alert ->
+                            AlertRow(
+                                alert = alert,
+                                onAcknowledge = { act(alert, "acknowledge") },
+                                onResolve = { act(alert, "resolve") },
+                                onViewTicket = {
+                                    alert.ticketId?.let { navController.navigate(Screen.TicketDetail.go(it)) }
+                                }
+                            )
+                            HorizontalDivider()
                         }
                     }
                 }
