@@ -6,12 +6,19 @@ import retrofit2.http.*
 
 interface ApiService {
 
-    // Auth
+    // Auth — password
     @POST("auth")
     suspend fun login(@Body req: LoginRequest): LoginResponse
 
     @DELETE("auth")
     suspend fun logout()
+
+    // Auth — passkey
+    @GET("auth")
+    suspend fun passkeyBegin(): PasskeyBeginResponse
+
+    @POST("auth")
+    suspend fun passkeyComplete(@Body req: PasskeyCompleteRequest): LoginResponse
 
     // Dashboard
     @GET("dashboard")

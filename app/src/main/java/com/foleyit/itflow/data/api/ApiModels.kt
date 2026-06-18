@@ -11,6 +11,20 @@ data class LoginResponse(
 )
 data class UserInfo(val id: Int, val name: String, val email: String, val type: Int)
 
+data class PasskeyBeginResponse(
+    val challenge: String,
+    val timeout: Long,
+    @SerializedName("rpId") val rpId: String,
+    @SerializedName("allowCredentials") val allowCredentials: List<Any>,
+    @SerializedName("userVerification") val userVerification: String,
+    @SerializedName("challengeToken") val challengeToken: String
+)
+
+data class PasskeyCompleteRequest(
+    @SerializedName("challenge_token") val challengeToken: String,
+    @SerializedName("passkey_response") val passkeyResponse: Map<String, Any>
+)
+
 // ── Dashboard ────────────────────────────────────────────────────────────────
 data class DashboardResponse(
     @SerializedName("my_open")  val myOpen: Int,

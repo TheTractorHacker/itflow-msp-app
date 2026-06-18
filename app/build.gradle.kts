@@ -12,8 +12,8 @@ android {
         applicationId = "com.foleyit.itflow"
         minSdk = 34
         targetSdk = 36
-        versionCode = 12
-        versionName = "1.9.2"
+        versionCode = 13
+        versionName = "1.10.0"
     }
 
     buildTypes {
@@ -86,5 +86,8 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
     implementation(libs.kotlinx.coroutines.play.services)
+    // Passkey / Credential Manager
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.auth)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
