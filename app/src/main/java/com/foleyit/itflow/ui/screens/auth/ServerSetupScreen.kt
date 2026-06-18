@@ -46,7 +46,7 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     fun connect(trustedSha: String? = null) {
-        if (!url.startsWith("http")) { error = "URL must start with https://"; return }
+        if (!url.startsWith("https://")) { error = "URL must start with https://"; return }
         loading = true; error = null
         scope.launch {
             try {

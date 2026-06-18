@@ -13,9 +13,15 @@ class ITFlowFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val title  = message.notification?.title ?: message.data["title"] ?: "ITFlow"
         val body   = message.notification?.body  ?: message.data["body"]  ?: return
-        val action = message.data["action"]
+        val action = message.data["action"]?.takeIf { ALLOWED_ROUTE.matches(it) }
         NotificationHelper.createChannel(this)
         NotificationHelper.show(this, title, body, action)
+    }
+
+    companion object {
+        private val ALLOWED_ROUTE = Regex(
+            """^(tickets|clients|assets|credentials|quotes|invoices|expenses|notifications|appointments|worksheets|outtakes|search|reports|scan|profile|kb|alerts)(/\d+(/\w+)?)?$"""
+        )
     }
 
     override fun onNewToken(token: String) {

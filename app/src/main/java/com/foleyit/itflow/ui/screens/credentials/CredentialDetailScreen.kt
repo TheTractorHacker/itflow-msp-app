@@ -61,11 +61,15 @@ fun CredentialDetailScreen(id: Int) {
         }
     }
 
-    fun copy(value: String, label: String) {
+    fun copy(value: String, label: String, sensitive: Boolean = false) {
         scope.launch {
-            clipboard.setClipEntry(
-                ClipEntry(android.content.ClipData.newPlainText(label, value))
-            )
+            val clip = android.content.ClipData.newPlainText(label, value)
+            if (sensitive) {
+                clip.description.extras = android.os.PersistableBundle().apply {
+                    putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
+                }
+            }
+            clipboard.setClipEntry(ClipEntry(clip))
             snackbarHost.showSnackbar("$label copied")
         }
     }
@@ -118,7 +122,7 @@ fun CredentialDetailScreen(id: Int) {
                                         "Password",
                                         if (showPassword) pwd else "••••••••••",
                                         Icons.Outlined.Lock,
-                                        onCopy = { copy(pwd, "Password") },
+                                        onCopy = { copy(pwd, "Password", sensitive = true) },
                                         trailingIcon = { IconButton(onClick = { showPassword = !showPassword }, modifier = Modifier.size(32.dp)) { Icon(if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, null, Modifier.size(18.dp)) } }
                                     )
                                 }
@@ -149,7 +153,7 @@ fun CredentialDetailScreen(id: Int) {
                                             Text(genResult, Modifier.weight(1f),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                                            IconButton(onClick = { copy(genResult, "Password") },
+                                            IconButton(onClick = { copy(genResult, "Password", sensitive = true) },
                                                 modifier = Modifier.size(32.dp)) {
                                                 Icon(Icons.Outlined.ContentCopy, null, Modifier.size(16.dp))
                                             }

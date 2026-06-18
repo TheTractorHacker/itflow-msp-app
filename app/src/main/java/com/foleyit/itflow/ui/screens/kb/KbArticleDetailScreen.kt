@@ -1,6 +1,10 @@
 package com.foleyit.itflow.ui.screens.kb
 
+import android.content.Intent
+import android.net.Uri
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -72,6 +76,12 @@ private fun ArticleContent(article: KbArticleDetail, modifier: Modifier = Modifi
                     settings.javaScriptEnabled = false
                     settings.loadWithOverviewMode = true
                     settings.useWideViewPort = true
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, request.url))
+                            return true
+                        }
+                    }
                 }
             },
             update = { webView ->
