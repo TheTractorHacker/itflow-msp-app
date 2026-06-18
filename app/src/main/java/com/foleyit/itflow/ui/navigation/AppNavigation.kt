@@ -41,6 +41,7 @@ sealed class Screen(val route: String) {
     object Profile       : Screen("profile")
     object KnowledgeBase : Screen("kb")
     object KbArticleDetail : Screen("kb/{id}") { fun go(id: Int) = "kb/$id" }
+    object Alerts        : Screen("alerts")
 }
 
 data class BottomNavItem(

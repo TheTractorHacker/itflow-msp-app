@@ -28,6 +28,7 @@ import com.foleyit.itflow.ui.screens.invoices.*
 import com.foleyit.itflow.ui.screens.kb.KbArticleDetailScreen
 import com.foleyit.itflow.ui.screens.kb.KnowledgeBaseScreen
 import com.foleyit.itflow.ui.screens.notifications.NotificationsScreen
+import com.foleyit.itflow.ui.screens.alerts.AlertsScreen
 import com.foleyit.itflow.ui.screens.quotes.*
 import com.foleyit.itflow.ui.screens.tickets.*
 import com.foleyit.itflow.ui.screens.search.SearchScreen
@@ -44,7 +45,7 @@ private val ROOT_ROUTES = setOf(
     Screen.Assets.route, Screen.Appointments.route,
     Screen.Credentials.route, Screen.Quotes.route,
     Screen.Invoices.route, Screen.Expenses.route,
-    Screen.Notifications.route
+    Screen.Notifications.route, Screen.Alerts.route
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,6 +103,9 @@ fun MainScreen(
                     actions = {
                         IconButton(onClick = { navController.navigate(Screen.Search.route) }) {
                             Icon(Icons.Outlined.Search, "Search")
+                        }
+                        IconButton(onClick = { navController.navigate(Screen.Alerts.route) }) {
+                            Icon(Icons.Outlined.Warning, "Alerts")
                         }
                         IconButton(onClick = { navController.navigate(Screen.Notifications.route) }) {
                             Icon(Icons.Outlined.Notifications, "Notifications")
@@ -197,6 +201,7 @@ fun MainScreen(
             composable(Screen.Expenses.route) { ExpensesScreen(navController) }
             composable(Screen.AddExpense.route) { AddExpenseScreen { navController.popBackStack() } }
             composable(Screen.Notifications.route) { NotificationsScreen() }
+            composable(Screen.Alerts.route) { AlertsScreen(navController) }
             composable(Screen.Profile.route) { ProfileScreen(navController, prefs) }
             composable(Screen.KnowledgeBase.route) { KnowledgeBaseScreen(navController) }
             composable(Screen.KbArticleDetail.route) {

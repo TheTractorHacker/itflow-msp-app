@@ -254,6 +254,17 @@ interface ApiService {
 
     @POST("notifications/read-all")
     suspend fun markAllRead()
+
+    @GET("alerts")
+    suspend fun getAlerts(
+        @Query("status") status: String = "new",
+        @Query("severity") severity: String? = null,
+        @Query("source") source: String? = null,
+        @Query("client_id") clientId: Int? = null
+    ): AlertsResponse
+
+    @POST("alerts")
+    suspend fun actOnAlert(@Body body: AlertActionRequest)
 }
 
 // Extension helpers

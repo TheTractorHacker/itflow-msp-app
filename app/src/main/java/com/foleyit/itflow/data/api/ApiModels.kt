@@ -405,3 +405,22 @@ data class SavedTicketView(
     val id: Int, val name: String, val icon: String?,
     val params: Map<String, String>
 )
+
+// ── Alerts (RMM + backup) ───────────────────────────────────────────────────
+data class AlertItem(
+    val source: String, // "rmm" | "backup"
+    val id: Int,
+    val severity: String,
+    val message: String?,
+    val subject: String?,
+    @SerializedName("client_id") val clientId: Int?,
+    @SerializedName("client_name") val clientName: String?,
+    val status: String,
+    @SerializedName("created_at") val createdAt: String?,
+    @SerializedName("ticket_id") val ticketId: Int?,
+    @SerializedName("ticket_label") val ticketLabel: String?
+)
+
+data class AlertsResponse(val data: List<AlertItem>, val total: Int)
+
+data class AlertActionRequest(val source: String, val id: Int, val action: String)
