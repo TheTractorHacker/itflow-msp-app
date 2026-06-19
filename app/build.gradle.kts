@@ -12,8 +12,8 @@ android {
         applicationId = "com.foleyit.itflow"
         minSdk = 34
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.10.0"
+        versionCode = 14
+        versionName = "1.10.1"
     }
 
     buildTypes {

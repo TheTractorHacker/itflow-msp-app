@@ -15,10 +15,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
+import android.app.Activity
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.PublicKeyCredential
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialUnsupportedException
 import androidx.credentials.exceptions.NoCredentialException
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.FcmTokenRequest
@@ -27,6 +30,9 @@ import com.foleyit.itflow.data.api.PasskeyCompleteRequest
 import com.foleyit.itflow.data.local.AppPreferences
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.gson.Gson
+import org.json.JSONArray
+import org.json.JSONObject
+import retrofit2.HttpException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -87,39 +93,34 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
         loading = true; error = null
         scope.launch {
             try {
-                // 1. Get challenge from server
                 val beginResp = withContext(Dispatchers.IO) { ApiClient.service().passkeyBegin() }
 
-                // 2. Build options JSON in WebAuthn format
-                val optionsJson = """
-                    {
-                      "challenge": "${beginResp.challenge}",
-                      "timeout": ${beginResp.timeout},
-                      "rpId": "${beginResp.rpId}",
-                      "userVerification": "${beginResp.userVerification}",
-                      "allowCredentials": []
-                    }
-                """.trimIndent()
+                val optionsJson = JSONObject().apply {
+                    put("challenge", beginResp.challenge)
+                    put("timeout", beginResp.timeout)
+                    put("rpId", beginResp.rpId)
+                    put("userVerification", beginResp.userVerification)
+                    put("allowCredentials", JSONArray())
+                }.toString()
 
-                // 3. Invoke OS passkey picker
-                val credentialManager = CredentialManager.create(context)
+                val activity = context as? Activity
+                    ?: run { error = "Cannot show credential picker"; loading = false; return@launch }
+                val credentialManager = CredentialManager.create(activity)
                 val request = GetCredentialRequest(listOf(
                     GetPublicKeyCredentialOption(requestJson = optionsJson)
                 ))
-                val result = credentialManager.getCredential(context, request)
+                val result = credentialManager.getCredential(activity, request)
                 val credential = result.credential
                 if (credential !is PublicKeyCredential) {
-                    error = "Unexpected credential type"
+                    error = "Unexpected credential type: ${credential.type}"
                     loading = false
                     return@launch
                 }
 
-                // 4. Parse assertion JSON from Android
                 @Suppress("UNCHECKED_CAST")
                 val assertionMap = Gson().fromJson(credential.authenticationResponseJson, Map::class.java)
                     as Map<String, Any>
 
-                // 5. Send to server, get API token
                 val completeResp = withContext(Dispatchers.IO) {
                     ApiClient.service().passkeyComplete(PasskeyCompleteRequest(
                         challengeToken = beginResp.challengeToken,
@@ -127,13 +128,23 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
                     ))
                 }
                 finishLogin(completeResp)
+            } catch (e: GetCredentialCancellationException) {
+                // user dismissed the picker
             } catch (e: NoCredentialException) {
-                error = "No passkeys found for this server. Sign in with your password first."
+                error = "No passkeys found. Register one at Settings → Security on the web portal."
+            } catch (e: GetCredentialUnsupportedException) {
+                error = "Passkeys not available. In Android Settings, enable your password manager as a credential provider."
+            } catch (e: HttpException) {
+                val body = runCatching { e.response()?.errorBody()?.string() }.getOrNull()
+                val serverMsg = runCatching {
+                    @Suppress("UNCHECKED_CAST")
+                    (Gson().fromJson(body, Map::class.java) as? Map<String, Any>)?.get("error")?.toString()
+                }.getOrNull()
+                error = serverMsg ?: "Server rejected the passkey (HTTP ${e.code()})"
             } catch (e: Exception) {
-                val msg = e.message ?: ""
-                error = when {
-                    msg.contains("cancel", ignoreCase = true) -> null
-                    else -> "Passkey sign-in failed"
+                val msg = e.message ?: e.javaClass.simpleName
+                if (!msg.contains("cancel", ignoreCase = true)) {
+                    error = "Passkey sign-in failed: $msg"
                 }
             } finally { loading = false }
         }
