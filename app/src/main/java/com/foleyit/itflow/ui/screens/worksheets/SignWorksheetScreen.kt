@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -39,6 +40,7 @@ fun SignWorksheetScreen(worksheetId: Int, navController: NavController) {
     var signedName by remember { mutableStateOf("") }
     var paths by remember { mutableStateOf<List<List<Offset>>>(emptyList()) }
     var currentPath by remember { mutableStateOf<List<Offset>>(emptyList()) }
+    var termsAgreed by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var canvasSize by remember { mutableStateOf(android.util.Size(0, 0)) }
@@ -84,6 +86,7 @@ fun SignWorksheetScreen(worksheetId: Int, navController: NavController) {
         if (signedName.isBlank()) { error = "Name is required"; return }
         val allPaths = paths + if (currentPath.size > 1) listOf(currentPath) else emptyList()
         if (allPaths.isEmpty()) { error = "Please draw your signature"; return }
+        if (!termsAgreed) { error = "Please agree to the Terms & Conditions"; return }
         loading = true; error = null
         scope.launch {
             try {
@@ -241,6 +244,24 @@ fun SignWorksheetScreen(worksheetId: Int, navController: NavController) {
                                                 )
                                             }
                                     }
+                                }
+                            }
+                        }
+
+                        // Terms agreement
+                        item {
+                            val uriHandler = LocalUriHandler.current
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Checkbox(checked = termsAgreed, onCheckedChange = { termsAgreed = it })
+                                Text("I agree to the ", style = MaterialTheme.typography.bodySmall)
+                                TextButton(
+                                    onClick = { uriHandler.openUri("https://foleyit.com/ticket-terms") },
+                                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp)
+                                ) {
+                                    Text("Terms & Conditions", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
