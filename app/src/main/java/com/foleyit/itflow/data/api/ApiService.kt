@@ -130,13 +130,15 @@ interface ApiService {
     @GET("assets/{id}")
     suspend fun getAsset(@Path("id") id: Int): AssetDetail
 
-    // Credentials
+    // Credentials — never cache: responses contain decrypted passwords
+    @Headers("Cache-Control: no-store")
     @GET("credentials")
     suspend fun getCredentials(
         @Query("search") search: String = "",
         @Query("page") page: Int = 1
     ): CredentialsResponse
 
+    @Headers("Cache-Control: no-store")
     @GET("credentials/{id}")
     suspend fun getCredential(
         @Path("id") id: Int,
