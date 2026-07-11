@@ -29,6 +29,14 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Crash reporting itself is unaffected; this only disables the automatic upload of
+            // the R8 mapping file, which requires Firebase CI credentials we don't have set up
+            // yet. Without this, :app:uploadCrashlyticsMappingFileRelease fails release builds
+            // in any environment lacking that auth (CI, CodeQL, local machines). Re-enable once
+            // a Firebase CI token is configured, so crash stack traces show deobfuscated symbols.
+            configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+                mappingFileUploadEnabled = false
+            }
         }
     }
 
