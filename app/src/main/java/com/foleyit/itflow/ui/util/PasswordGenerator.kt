@@ -1,6 +1,8 @@
 package com.foleyit.itflow.ui.util
 
-import kotlin.random.Random
+import java.security.SecureRandom
+
+private val secureRandom = SecureRandom()
 
 fun generatePassword(
     length: Int = 16,
@@ -18,5 +20,5 @@ fun generatePassword(
     if (digits) charset += nums
     if (symbols) charset += syms
 
-    return (1..length).map { charset[Random.nextInt(charset.length)] }.joinToString("")
+    return (1..length).map { charset[secureRandom.nextInt(charset.length)] }.joinToString("")
 }

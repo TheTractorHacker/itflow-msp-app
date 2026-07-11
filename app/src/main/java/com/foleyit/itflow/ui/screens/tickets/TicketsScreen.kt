@@ -19,13 +19,14 @@ import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.SavedTicketView
 import com.foleyit.itflow.data.api.TicketCategory
 import com.foleyit.itflow.data.api.TicketSummary
-import com.foleyit.itflow.data.api.TicketsResponse
 import com.foleyit.itflow.ui.components.EmptyScreen
 import com.foleyit.itflow.ui.components.ErrorScreen
+import com.foleyit.itflow.ui.components.LoadMoreRow
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.util.fmtDate
-import kotlinx.coroutines.launch
+import com.foleyit.itflow.ui.util.rememberPagedList
+import com.foleyit.itflow.ui.util.userMessage
 
 private fun ticketStatusColor(hex: String?): Color = try {
     Color(android.graphics.Color.parseColor(if (hex?.startsWith("#") == true) hex else "#${hex}"))
@@ -44,45 +45,36 @@ fun TicketsScreen(navController: NavController) {
     var savedViews by remember { mutableStateOf<List<SavedTicketView>>(emptyList()) }
     var activeView by remember { mutableStateOf<SavedTicketView?>(null) }
     var showViewsMenu by remember { mutableStateOf(false) }
-    var state by remember { mutableStateOf<Result<TicketsResponse>?>(null) }
-    val scope = rememberCoroutineScope()
 
-    fun load() {
-        activeView = null
-        scope.launch {
-            state = runCatching {
-                ApiClient.service().getTickets(
-                    status = if (selectedTab == 0) "open" else "closed",
-                    mine = if (mineOnly) 1 else 0,
-                    search = search,
-                    priority = priorityFilter?.takeIf { it.isNotBlank() },
-                    onsite = onsiteFilter,
-                    categoryId = categoryFilter
-                )
-            }
+    val list = rememberPagedList(selectedTab, mineOnly, priorityFilter, onsiteFilter, categoryFilter, activeView) { page, q ->
+        val view = activeView
+        if (view != null) {
+            val p = view.params
+            ApiClient.service().getTickets(
+                status = p["status"] ?: "open",
+                mine = p["mine"]?.toIntOrNull() ?: 0,
+                search = p["search"] ?: q,
+                priority = p["priority"]?.takeIf { it.isNotBlank() },
+                onsite = p["onsite"]?.toIntOrNull(),
+                categoryId = p["category_id"]?.toIntOrNull(),
+                overdue = p["overdue"]?.toIntOrNull(),
+                dueToday = p["due_today"]?.toIntOrNull(),
+                page = page
+            )
+        } else {
+            ApiClient.service().getTickets(
+                status = if (selectedTab == 0) "open" else "closed",
+                mine = if (mineOnly) 1 else 0,
+                search = q,
+                priority = priorityFilter?.takeIf { it.isNotBlank() },
+                onsite = onsiteFilter,
+                categoryId = categoryFilter,
+                page = page
+            )
         }
     }
 
-    fun applyView(view: SavedTicketView) {
-        activeView = view
-        val p = view.params
-        scope.launch {
-            state = runCatching {
-                ApiClient.service().getTickets(
-                    status = p["status"] ?: "open",
-                    mine = p["mine"]?.toIntOrNull() ?: 0,
-                    search = p["search"] ?: "",
-                    priority = p["priority"]?.takeIf { it.isNotBlank() },
-                    onsite = p["onsite"]?.toIntOrNull(),
-                    categoryId = p["category_id"]?.toIntOrNull(),
-                    overdue = p["overdue"]?.toIntOrNull(),
-                    dueToday = p["due_today"]?.toIntOrNull()
-                )
-            }
-        }
-    }
-
-    LaunchedEffect(selectedTab, mineOnly) { load() }
+    fun applyView(view: SavedTicketView) { activeView = view }
 
     LaunchedEffect(Unit) {
         runCatching { categories = ApiClient.service().getTicketCategories() }
@@ -106,14 +98,14 @@ fun TicketsScreen(navController: NavController) {
         ) {
             OutlinedTextField(
                 value = search,
-                onValueChange = { search = it },
+                onValueChange = { search = it; list.onSearchChanged(it) },
                 modifier = Modifier.weight(1f).height(48.dp),
                 placeholder = { Text("Search tickets…", style = MaterialTheme.typography.bodyMedium) },
                 leadingIcon = { Icon(Icons.Outlined.Search, null, Modifier.size(18.dp)) },
                 trailingIcon = {
                     if (search.isNotEmpty()) {
-                        IconButton(onClick = { search = ""; load() }, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Outlined.Clear, "Clear", Modifier.size(16.dp))
+                        IconButton(onClick = { search = ""; list.onSearchChanged("") }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Outlined.Clear, "Clear search", Modifier.size(16.dp))
                         }
                     }
                 },
@@ -156,7 +148,7 @@ fun TicketsScreen(navController: NavController) {
                         Text(view.name, modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer)
-                        IconButton(onClick = { load() }, modifier = Modifier.size(28.dp)) {
+                        IconButton(onClick = { activeView = null }, modifier = Modifier.size(28.dp)) {
                             Icon(Icons.Outlined.Close, "Clear view", Modifier.size(14.dp))
                         }
                     }
@@ -165,9 +157,9 @@ fun TicketsScreen(navController: NavController) {
         }
 
         TabRow(selectedTabIndex = selectedTab) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0; load() },
+            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 },
                 text = { Text("Open") })
-            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1; load() },
+            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 },
                 text = { Text("Closed") })
         }
 
@@ -184,20 +176,20 @@ fun TicketsScreen(navController: NavController) {
                    "medium" to "Medium", "low" to "Low").forEach { (value, label) ->
                 FilterChip(
                     selected = priorityFilter == value,
-                    onClick = { priorityFilter = if (priorityFilter == value && value != null) null else value; load() },
+                    onClick = { priorityFilter = if (priorityFilter == value && value != null) null else value },
                     label = { Text(label) }
                 )
             }
             VerticalDivider(modifier = Modifier.height(32.dp).padding(horizontal = 4.dp))
             FilterChip(
                 selected = onsiteFilter == 1,
-                onClick = { onsiteFilter = if (onsiteFilter == 1) null else 1; load() },
+                onClick = { onsiteFilter = if (onsiteFilter == 1) null else 1 },
                 label = { Text("On-Site") },
                 leadingIcon = { Icon(Icons.Outlined.LocationOn, null, Modifier.size(14.dp)) }
             )
             FilterChip(
                 selected = onsiteFilter == 0,
-                onClick = { onsiteFilter = if (onsiteFilter == 0) null else 0; load() },
+                onClick = { onsiteFilter = if (onsiteFilter == 0) null else 0 },
                 label = { Text("Remote") },
                 leadingIcon = { Icon(Icons.Outlined.Wifi, null, Modifier.size(14.dp)) }
             )
@@ -206,7 +198,7 @@ fun TicketsScreen(navController: NavController) {
                 categories.forEach { cat ->
                     FilterChip(
                         selected = categoryFilter == cat.id,
-                        onClick = { categoryFilter = if (categoryFilter == cat.id) null else cat.id; load() },
+                        onClick = { categoryFilter = if (categoryFilter == cat.id) null else cat.id },
                         label = { Text(cat.name) },
                         leadingIcon = {
                             Surface(
@@ -220,55 +212,64 @@ fun TicketsScreen(navController: NavController) {
             }
         }
 
+        val ls = list.state
         when {
-            state == null -> LoadingScreen()
-            state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "Error", onRetry = ::load)
-            else -> {
-                val tickets = state!!.getOrThrow().data
-                if (tickets.isEmpty()) {
-                    EmptyScreen("No tickets found", Icons.Outlined.ConfirmationNumber)
-                } else if (selectedTab == 0) {
-                    // Open tickets — grouped by status
-                    val statusOrder = tickets.map { it.status ?: "Unknown" }.distinct()
-                    val grouped = tickets.groupBy { it.status ?: "Unknown" }
-                    LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
-                        statusOrder.forEach { status ->
-                            val group = grouped[status] ?: return@forEach
-                            val color = group.firstOrNull()?.statusColor
-                            item(key = "header_$status") {
-                                Row(
-                                    Modifier.fillMaxWidth()
-                                        .padding(top = 12.dp, bottom = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Surface(
-                                        color = ticketStatusColor(color),
-                                        shape = MaterialTheme.shapes.extraSmall,
-                                        modifier = Modifier.size(10.dp)
-                                    ) {}
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        "$status  ·  ${group.size}",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            items(group, key = { it.id }) { t ->
-                                TicketCard(t) { navController.navigate(Screen.TicketDetail.go(t.id)) }
-                                Spacer(Modifier.height(8.dp))
+            ls.isRefreshing -> LoadingScreen()
+            ls.error != null -> ErrorScreen(userMessage(ls.error), onRetry = list::retry)
+            ls.items.isEmpty() -> EmptyScreen("No tickets found", Icons.Outlined.ConfirmationNumber)
+            selectedTab == 0 -> {
+                // Open tickets — grouped by status
+                val tickets = ls.items
+                val statusOrder = tickets.map { it.status ?: "Unknown" }.distinct()
+                val grouped = tickets.groupBy { it.status ?: "Unknown" }
+                LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
+                    statusOrder.forEach { status ->
+                        val group = grouped[status] ?: return@forEach
+                        val color = group.firstOrNull()?.statusColor
+                        item(key = "header_$status") {
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .padding(top = 12.dp, bottom = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    color = ticketStatusColor(color),
+                                    shape = MaterialTheme.shapes.extraSmall,
+                                    modifier = Modifier.size(10.dp)
+                                ) {}
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "$status  ·  ${group.size}",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
-                    }
-                } else {
-                    // Closed tickets — simple flat list
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(tickets, key = { it.id }) { t ->
+                        items(group, key = { it.id }) { t ->
                             TicketCard(t) { navController.navigate(Screen.TicketDetail.go(t.id)) }
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
+                    if (ls.hasMore) {
+                        item(key = "load_more") {
+                            LoadMoreRow(ls.isLoadingMore, list::loadMore)
+                        }
+                    }
+                }
+            }
+            else -> {
+                // Closed tickets — simple flat list
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(ls.items, key = { it.id }) { t ->
+                        TicketCard(t) { navController.navigate(Screen.TicketDetail.go(t.id)) }
+                    }
+                    if (ls.hasMore) {
+                        item(key = "load_more") {
+                            LoadMoreRow(ls.isLoadingMore, list::loadMore)
                         }
                     }
                 }

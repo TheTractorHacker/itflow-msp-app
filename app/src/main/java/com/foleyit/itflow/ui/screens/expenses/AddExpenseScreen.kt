@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.foleyit.itflow.data.api.ApiClient
+import com.foleyit.itflow.ui.util.userMessage
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -73,11 +74,11 @@ fun AddExpenseScreen(onDone: () -> Unit) {
                 }
                 ApiClient.service().createExpense(descBody, amtBody, dateBody, currBody, refBody, pmBody, receiptPart)
                 onDone()
-            } catch (e: Exception) { error = e.message } finally { loading = false }
+            } catch (e: Exception) { error = userMessage(e) } finally { loading = false }
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Add Expense") }, navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.Outlined.Close, null) } }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Add Expense") }, navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.Outlined.Close, "Close") } }) }) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") }, leadingIcon = { Icon(Icons.Outlined.Description, null) }, modifier = Modifier.fillMaxWidth()) }
             item {

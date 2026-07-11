@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.InvoiceDetail
 import com.foleyit.itflow.ui.components.ErrorScreen
@@ -23,20 +25,33 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InvoiceDetailScreen(id: Int) {
+fun InvoiceDetailScreen(id: Int, navController: NavController) {
     var state by remember { mutableStateOf<Result<InvoiceDetail>?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val currency = NumberFormat.getCurrencyInstance(Locale.US)
-    LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getInvoice(id) } } }
+    fun load() { scope.launch { state = runCatching { ApiClient.service().getInvoice(id) } } }
+    LaunchedEffect(Unit) { load() }
 
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(state?.getOrNull()?.let { "Invoice #${it.number}" } ?: "Invoice") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
     when {
-        state == null -> LoadingScreen()
-        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "")
+        state == null -> Box(Modifier.fillMaxSize().padding(padding)) { LoadingScreen() }
+        state!!.isFailure -> Box(Modifier.fillMaxSize().padding(padding)) { ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load) }
         else -> {
             val inv = state!!.getOrThrow()
             val statusColor: Color = when (inv.status) { "Paid" -> Color(0xFF2E7D32); "Overdue" -> MaterialTheme.colorScheme.error; else -> MaterialTheme.colorScheme.outline }
-            LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
@@ -44,7 +59,7 @@ fun InvoiceDetailScreen(id: Int) {
                                 Text("Invoice #${inv.number}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                                 Row {
                                     Surface(color = statusColor.copy(alpha = 0.12f), shape = MaterialTheme.shapes.small) { Text(inv.status ?: "", modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), color = statusColor, fontWeight = FontWeight.SemiBold) }
-                                    inv.guestUrl?.let { url -> IconButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("${ApiClient.serverUrl}$url"))) }) { Icon(Icons.Outlined.OpenInBrowser, null) } }
+                                    inv.guestUrl?.let { url -> IconButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("${ApiClient.serverUrl}$url"))) }) { Icon(Icons.Outlined.OpenInBrowser, "Open in browser") } }
                                 }
                             }
                             Text(inv.client ?: "", color = MaterialTheme.colorScheme.primary)
@@ -83,5 +98,6 @@ fun InvoiceDetailScreen(id: Int) {
                 }
             }
         }
+    }
     }
 }

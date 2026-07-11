@@ -18,14 +18,15 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.KbArticleSummary
-import com.foleyit.itflow.data.api.KbArticlesResponse
 import com.foleyit.itflow.data.api.KbCategory
 import com.foleyit.itflow.ui.components.EmptyScreen
 import com.foleyit.itflow.ui.components.ErrorScreen
+import com.foleyit.itflow.ui.components.LoadMoreRow
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.util.fmtDate
-import kotlinx.coroutines.launch
+import com.foleyit.itflow.ui.util.rememberPagedList
+import com.foleyit.itflow.ui.util.userMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,23 +34,13 @@ fun KnowledgeBaseScreen(navController: NavController) {
     var search by remember { mutableStateOf("") }
     var categories by remember { mutableStateOf<List<KbCategory>>(emptyList()) }
     var selectedCategory by remember { mutableStateOf<Int?>(null) }
-    var state by remember { mutableStateOf<Result<KbArticlesResponse>?>(null) }
-    val scope = rememberCoroutineScope()
 
-    fun load() {
-        scope.launch {
-            state = runCatching {
-                ApiClient.service().getKbArticles(
-                    categoryId = selectedCategory,
-                    search = search
-                )
-            }
-        }
+    val list = rememberPagedList(selectedCategory) { page, q ->
+        ApiClient.service().getKbArticles(categoryId = selectedCategory, search = q, page = page)
     }
 
     LaunchedEffect(Unit) {
         runCatching { categories = ApiClient.service().getKbCategories() }
-        load()
     }
 
     Scaffold(
@@ -71,21 +62,21 @@ fun KnowledgeBaseScreen(navController: NavController) {
             ) {
                 OutlinedTextField(
                     value = search,
-                    onValueChange = { search = it },
+                    onValueChange = { search = it; list.onSearchChanged(it) },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     placeholder = { Text("Search articles…", style = MaterialTheme.typography.bodyMedium) },
                     leadingIcon = { Icon(Icons.Outlined.Search, null, Modifier.size(18.dp)) },
                     trailingIcon = {
                         if (search.isNotEmpty()) {
-                            IconButton(onClick = { search = ""; load() }, modifier = Modifier.size(36.dp)) {
-                                Icon(Icons.Outlined.Clear, "Clear", Modifier.size(16.dp))
+                            IconButton(onClick = { search = ""; list.onSearchChanged("") }, modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Outlined.Clear, "Clear search", Modifier.size(16.dp))
                             }
                         }
                     },
                     singleLine = true,
                     shape = MaterialTheme.shapes.extraLarge,
                     textStyle = MaterialTheme.typography.bodyMedium,
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { load() }),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { list.refresh() }),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                         imeAction = androidx.compose.ui.text.input.ImeAction.Search
                     )
@@ -102,44 +93,40 @@ fun KnowledgeBaseScreen(navController: NavController) {
                 ) {
                     FilterChip(
                         selected = selectedCategory == null,
-                        onClick = { selectedCategory = null; load() },
+                        onClick = { selectedCategory = null },
                         label = { Text("All") }
                     )
                     categories.forEach { cat ->
                         FilterChip(
                             selected = selectedCategory == cat.id,
-                            onClick = {
-                                selectedCategory = if (selectedCategory == cat.id) null else cat.id
-                                load()
-                            },
+                            onClick = { selectedCategory = if (selectedCategory == cat.id) null else cat.id },
                             label = { Text(cat.name) }
                         )
                     }
                 }
             }
 
-            when (val result = state) {
-                null -> LoadingScreen()
-                else -> result.fold(
-                    onSuccess = { resp ->
-                        if (resp.data.isEmpty()) {
-                            EmptyScreen("No articles found", Icons.AutoMirrored.Outlined.Article)
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                items(resp.data, key = { it.id }) { article ->
-                                    KbArticleCard(article) {
-                                        navController.navigate(Screen.KbArticleDetail.go(article.id))
-                                    }
-                                }
+            val ls = list.state
+            when {
+                ls.isRefreshing -> LoadingScreen()
+                ls.error != null -> ErrorScreen(userMessage(ls.error), onRetry = list::retry)
+                ls.items.isEmpty() -> EmptyScreen("No articles found", Icons.AutoMirrored.Outlined.Article)
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(ls.items, key = { it.id }) { article ->
+                            KbArticleCard(article) {
+                                navController.navigate(Screen.KbArticleDetail.go(article.id))
                             }
                         }
-                    },
-                    onFailure = { ErrorScreen(it.message ?: "Failed to load articles") { load() } }
-                )
+                        if (ls.hasMore) {
+                            item(key = "load_more") { LoadMoreRow(ls.isLoadingMore, list::loadMore) }
+                        }
+                    }
+                }
             }
         }
     }

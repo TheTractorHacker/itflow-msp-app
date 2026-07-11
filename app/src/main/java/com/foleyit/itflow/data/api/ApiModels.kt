@@ -1,5 +1,6 @@
 package com.foleyit.itflow.data.api
 
+import com.foleyit.itflow.ui.util.PagedResponse
 import com.google.gson.annotations.SerializedName
 
 // ── Auth ────────────────────────────────────────────────────────────────────
@@ -37,7 +38,7 @@ data class DashboardResponse(
 )
 
 // ── Tickets ──────────────────────────────────────────────────────────────────
-data class TicketsResponse(val data: List<TicketSummary>, val total: Int)
+data class TicketsResponse(override val data: List<TicketSummary>, override val total: Int) : PagedResponse<TicketSummary>
 
 data class TicketSummary(
     val id: Int,
@@ -83,7 +84,7 @@ data class TicketStatus(val id: Int, val name: String, val color: String)
 data class LogTimeRequest(val time_worked: String, val note: String)
 
 // ── Clients ──────────────────────────────────────────────────────────────────
-data class ClientsResponse(val data: List<ClientSummary>, val total: Int)
+data class ClientsResponse(override val data: List<ClientSummary>, override val total: Int) : PagedResponse<ClientSummary>
 
 data class ClientSummary(
     val id: Int, val name: String, val phone: String?,
@@ -105,7 +106,7 @@ data class Contact(
 )
 
 // ── Assets ───────────────────────────────────────────────────────────────────
-data class AssetsResponse(val data: List<AssetSummary>, val total: Int)
+data class AssetsResponse(override val data: List<AssetSummary>, override val total: Int) : PagedResponse<AssetSummary>
 
 data class AssetSummary(
     val id: Int, val name: String, val type: String?,
@@ -131,7 +132,7 @@ data class AssetDetail(
 )
 
 // ── Credentials ──────────────────────────────────────────────────────────────
-data class CredentialsResponse(val data: List<CredentialSummary>, val total: Int)
+data class CredentialsResponse(override val data: List<CredentialSummary>, override val total: Int) : PagedResponse<CredentialSummary>
 
 data class CredentialSummary(
     val id: Int, val name: String,
@@ -140,12 +141,12 @@ data class CredentialSummary(
 
 data class CredentialDetail(
     val id: Int, val name: String, val username: String?, val password: String?,
-    val uri: String?, val uri2: String?, val otpSecret: String?,
+    val uri: String?, val uri2: String?,
     val note: String?, val client: String?
 )
 
 // ── Quotes ───────────────────────────────────────────────────────────────────
-data class QuotesResponse(val data: List<QuoteSummary>, val total: Int)
+data class QuotesResponse(override val data: List<QuoteSummary>, override val total: Int) : PagedResponse<QuoteSummary>
 
 data class QuoteSummary(
     val id: Int, val number: String?, val subject: String?,
@@ -165,7 +166,7 @@ data class QuoteDetail(
 )
 
 // ── Invoices ─────────────────────────────────────────────────────────────────
-data class InvoicesResponse(val data: List<InvoiceSummary>, val total: Int)
+data class InvoicesResponse(override val data: List<InvoiceSummary>, override val total: Int) : PagedResponse<InvoiceSummary>
 
 data class InvoiceSummary(
     val id: Int, val number: String?, val date: String?,
@@ -193,7 +194,7 @@ data class LineItem(
 )
 
 // ── Expenses ─────────────────────────────────────────────────────────────────
-data class ExpensesResponse(val data: List<ExpenseSummary>, val total: Int)
+data class ExpensesResponse(override val data: List<ExpenseSummary>, override val total: Int) : PagedResponse<ExpenseSummary>
 
 data class ExpenseSummary(
     val id: Int, val description: String?, val amount: Double?,
@@ -333,6 +334,89 @@ data class TimeReportEntry(
     @SerializedName("ticket_count") val ticketCount: Int
 )
 
+// ── Reports (extended) ────────────────────────────────────────────────────────
+data class MonthCount(val month: Int, val count: Int)
+data class TicketVolumeResponse(val year: Int, val months: List<MonthCount>)
+
+data class TicketsByClientResponse(val year: Int, val month: Int?, val clients: List<ClientTicketStats>)
+data class ClientTicketStats(
+    @SerializedName("client_id") val clientId: Int,
+    val client: String,
+    val raised: Int,
+    val resolved: Int,
+    @SerializedName("priority_low") val priorityLow: Int,
+    @SerializedName("priority_medium") val priorityMedium: Int,
+    @SerializedName("priority_high") val priorityHigh: Int,
+    @SerializedName("seconds_worked") val secondsWorked: Long,
+    @SerializedName("avg_response_seconds") val avgResponseSeconds: Long?,
+    @SerializedName("avg_resolve_seconds") val avgResolveSeconds: Long?
+)
+
+data class TimeByTechResponse(val year: Int, val technicians: List<TechTimeStats>)
+data class TechTimeStats(
+    @SerializedName("user_id") val userId: Int,
+    val name: String,
+    @SerializedName("tickets_assigned") val ticketsAssigned: Int,
+    @SerializedName("tickets_touched") val ticketsTouched: Int,
+    @SerializedName("seconds_worked") val secondsWorked: Long
+)
+
+data class TechPerformanceResponse(val year: Int, val technicians: List<TechPerformanceStats>)
+data class TechPerformanceStats(
+    val name: String,
+    @SerializedName("open_tickets") val openTickets: Int,
+    @SerializedName("resolved_this_year") val resolvedThisYear: Int
+)
+
+data class UnbilledTicketsResponse(val year: Int, val clients: List<UnbilledClientStats>)
+data class UnbilledClientStats(
+    @SerializedName("client_id") val clientId: Int,
+    val client: String,
+    val raised: Int,
+    @SerializedName("billable_closed") val billableClosed: Int,
+    val unbilled: Int
+)
+
+data class ClientsWithBalanceResponse(val clients: List<ClientBalance>)
+data class ClientBalance(
+    @SerializedName("client_id") val clientId: Int,
+    @SerializedName("client_name") val clientName: String,
+    val balance: Double
+)
+
+data class FinancialSummaryResponse(
+    val year: Int,
+    val categories: List<CategoryMonths>,
+    @SerializedName("grand_total") val grandTotal: Double
+)
+data class CategoryMonths(
+    @SerializedName("category_id") val categoryId: Int,
+    @SerializedName("category_name") val categoryName: String,
+    val months: List<Double>,
+    val total: Double
+)
+
+data class ProfitLossResponse(val year: Int, val months: List<ProfitLossMonth>)
+data class ProfitLossMonth(val month: Int, val income: Double, val expense: Double, val profit: Double)
+
+data class ExpiringResponse(val type: String, val days: Int, val items: List<ExpiringItem>)
+data class ExpiringItem(
+    val id: Int, val name: String,
+    @SerializedName("expire_date") val expireDate: String?,
+    @SerializedName("client_name") val clientName: String?
+)
+
+data class OverviewResponse(
+    val year: Int,
+    @SerializedName("by_priority") val byPriority: List<PriorityCount>,
+    @SerializedName("by_status") val byStatus: List<StatusCount>,
+    @SerializedName("by_category") val byCategory: List<CategoryCount>,
+    @SerializedName("avg_resolution_hours") val avgResolutionHours: Double?
+)
+data class PriorityCount(val priority: String, val count: Int)
+data class StatusCount(val status: String, val color: String, val count: Int)
+data class CategoryCount(val category: String, val color: String, val count: Int)
+
 // ── Outtake Forms ────────────────────────────────────────────────────────────
 data class OuttakeSummary(
     val id: Int,
@@ -387,7 +471,7 @@ data class KbCategory(
     @SerializedName("client_id") val clientId: Int
 )
 
-data class KbArticlesResponse(val data: List<KbArticleSummary>, val total: Int)
+data class KbArticlesResponse(override val data: List<KbArticleSummary>, override val total: Int) : PagedResponse<KbArticleSummary>
 
 data class KbArticleSummary(
     val id: Int, val title: String,

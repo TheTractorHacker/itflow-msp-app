@@ -27,6 +27,7 @@ import com.foleyit.itflow.data.local.AppPreferences
 import com.foleyit.itflow.data.ssl.FingerprintTrustManager
 import com.foleyit.itflow.data.ssl.probeCertificate
 import com.foleyit.itflow.data.ssl.sha256Fingerprint
+import com.foleyit.itflow.ui.util.userMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -76,10 +77,10 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
                 if (cert != null) {
                     pendingCert = cert
                 } else {
-                    error = "SSL error and could not retrieve certificate.\n${e.message}"
+                    error = "SSL error and could not retrieve certificate.\n${userMessage(e)}"
                 }
             } catch (e: Exception) {
-                error = "Cannot reach server. Check the URL.\n${e.message}"
+                error = "Cannot reach server. Check the URL.\n${userMessage(e)}"
             } finally {
                 loading = false
             }
@@ -89,14 +90,22 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
     // Self-signed certificate acceptance dialog
     pendingCert?.let { cert ->
         val fingerprint = cert.sha256Fingerprint()
+        val lastSix = remember(fingerprint) { fingerprint.replace(":", "").takeLast(6) }
+        var confirmInput by remember(fingerprint) { mutableStateOf("") }
+        val confirmed = confirmInput.trim().equals(lastSix, ignoreCase = true)
         AlertDialog(
             onDismissRequest = { pendingCert = null },
             icon = { Icon(Icons.Outlined.Warning, null, tint = MaterialTheme.colorScheme.error) },
             title = { Text("Untrusted Certificate") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("This server uses a certificate not signed by a trusted authority. " +
-                         "Only continue if you trust this server.")
+                    Text(
+                        "This server's certificate is not signed by a trusted authority. If you " +
+                        "did not set up this server yourself, or you're on a network you don't " +
+                        "fully trust (e.g. public Wi-Fi), someone could be intercepting your " +
+                        "connection. Only continue if you personally recognize this server.",
+                        color = MaterialTheme.colorScheme.error
+                    )
                     Text("Issued to: ${cert.subjectX500Principal.name.substringAfter("CN=").substringBefore(",")}")
                     Text("Expires: ${cert.notAfter}")
                     Spacer(Modifier.height(4.dp))
@@ -116,6 +125,20 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "To confirm you've verified this fingerprint (e.g. against your server admin), " +
+                        "type its last 6 characters: ${lastSix.chunked(2).joinToString(":")}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = confirmInput,
+                        onValueChange = { confirmInput = it },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
+                    )
                 }
             },
             confirmButton = {
@@ -125,6 +148,7 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
                         pendingCert = null
                         connect(trustedSha = sha)
                     },
+                    enabled = confirmed,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )

@@ -114,7 +114,7 @@ fun OuttakeSignScreen(outtakeId: Int, navController: NavController) {
                 title = { Text("Outtake Form") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, null)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
                     }
                 }
             )

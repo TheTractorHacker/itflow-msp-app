@@ -17,6 +17,7 @@ import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.ClientsResponse
 import com.foleyit.itflow.data.api.CreateTicketRequest
 import com.foleyit.itflow.data.api.TicketCategory
+import com.foleyit.itflow.ui.util.userMessage
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,7 +99,7 @@ fun CreateTicketScreen(navController: NavController) {
                 title = { Text("New Ticket") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, null)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
                     }
                 },
                 actions = {
@@ -118,7 +119,7 @@ fun CreateTicketScreen(navController: NavController) {
                                 )
                                 navController.popBackStack()
                             } catch (e: Exception) {
-                                error = e.message ?: "Failed to create"
+                                error = userMessage(e)
                             } finally { saving = false }
                         }
                     }, enabled = !saving) {

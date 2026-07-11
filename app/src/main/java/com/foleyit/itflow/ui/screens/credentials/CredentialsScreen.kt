@@ -21,19 +21,19 @@ import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.ui.components.*
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.util.BiometricCrypto
-import kotlinx.coroutines.launch
+import com.foleyit.itflow.ui.util.rememberPagedList
+import com.foleyit.itflow.ui.util.userMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CredentialsScreen(navController: NavController) {
     var authenticated by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
-    var state by remember { mutableStateOf<Result<com.foleyit.itflow.data.api.CredentialsResponse>?>(null) }
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val localActivity = androidx.activity.compose.LocalActivity.current
 
     fun authenticate() {
-        val activity = context as? FragmentActivity ?: return
+        val activity = localActivity as? FragmentActivity ?: return
         val crypto = try { BiometricCrypto.cryptoObject() } catch (_: Exception) { return }
         val executor = ContextCompat.getMainExecutor(context)
         val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
@@ -50,10 +50,8 @@ fun CredentialsScreen(navController: NavController) {
         prompt.authenticate(info, crypto)
     }
 
-    fun load() { scope.launch { state = runCatching { ApiClient.service().getCredentials(search = search) } } }
-
     if (!authenticated) {
-        Scaffold(topBar = { TopAppBar(title = { Text("Credentials") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) } }) }) { padding ->
+        Scaffold(topBar = { TopAppBar(title = { Text("Credentials") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") } }) }) { padding ->
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Outlined.Fingerprint, null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.primary)
@@ -69,30 +67,32 @@ fun CredentialsScreen(navController: NavController) {
         return
     }
 
-    LaunchedEffect(search) { load() }
+    val list = rememberPagedList<com.foleyit.itflow.data.api.CredentialSummary> { page, q ->
+        ApiClient.service().getCredentials(search = q, page = page)
+    }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Credentials") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) } }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Credentials") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") } }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             OutlinedTextField(
                 value = search,
-                onValueChange = { search = it },
+                onValueChange = { search = it; list.onSearchChanged(it) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 placeholder = { Text("Search credentials…") },
                 leadingIcon = { Icon(Icons.Outlined.Search, null) },
                 trailingIcon = {
-                    if (search.isNotEmpty()) IconButton(onClick = { search = ""; load() }) { Icon(Icons.Outlined.Clear, null) }
+                    if (search.isNotEmpty()) IconButton(onClick = { search = ""; list.onSearchChanged("") }) { Icon(Icons.Outlined.Clear, "Clear search") }
                 },
                 singleLine = true,
                 shape = MaterialTheme.shapes.extraLarge,
             )
+            val ls = list.state
             when {
-                state == null -> LoadingScreen()
-                state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
+                ls.isRefreshing -> LoadingScreen()
+                ls.error != null -> ErrorScreen(userMessage(ls.error), onRetry = list::retry)
+                ls.items.isEmpty() -> EmptyScreen("No credentials found", Icons.Outlined.Lock)
                 else -> {
-                    val creds = state!!.getOrThrow().data
-                    if (creds.isEmpty()) EmptyScreen("No credentials found", Icons.Outlined.Lock)
-                    else LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(creds) { c ->
+                    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(ls.items, key = { it.id }) { c ->
                             Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.CredDetail.go(c.id)) }) {
                                 ListItem(
                                     headlineContent = { Text(c.name, fontWeight = FontWeight.Medium) },
@@ -105,6 +105,9 @@ fun CredentialsScreen(navController: NavController) {
                                     trailingContent = { Column(horizontalAlignment = Alignment.End) { Text(c.client ?: "", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline); Icon(Icons.Outlined.ChevronRight, null) } }
                                 )
                             }
+                        }
+                        if (ls.hasMore) {
+                            item(key = "load_more") { LoadMoreRow(ls.isLoadingMore, list::loadMore) }
                         }
                     }
                 }

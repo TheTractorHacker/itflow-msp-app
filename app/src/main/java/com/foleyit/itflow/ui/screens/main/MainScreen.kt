@@ -13,7 +13,9 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.*
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.local.AppPreferences
+import com.foleyit.itflow.ui.components.OfflineBanner
 import com.foleyit.itflow.ui.navigation.*
+import com.foleyit.itflow.ui.util.rememberIsOnline
 import com.foleyit.itflow.ui.screens.appointments.AppointmentsScreen
 import com.foleyit.itflow.ui.screens.worksheets.SignWorksheetScreen
 import com.foleyit.itflow.ui.screens.worksheets.FillWorksheetScreen
@@ -32,7 +34,7 @@ import com.foleyit.itflow.ui.screens.alerts.AlertsScreen
 import com.foleyit.itflow.ui.screens.quotes.*
 import com.foleyit.itflow.ui.screens.tickets.*
 import com.foleyit.itflow.ui.screens.search.SearchScreen
-import com.foleyit.itflow.ui.screens.reports.TimeSummaryScreen
+import com.foleyit.itflow.ui.screens.reports.*
 import com.foleyit.itflow.ui.screens.scan.ScanBarcodeScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -54,7 +56,8 @@ fun MainScreen(
     prefs: AppPreferences,
     onLoggedOut: () -> Unit,
     deepLinkRoute: String? = null,
-    onDeepLinkConsumed: () -> Unit = {}
+    onDeepLinkConsumed: () -> Unit = {},
+    onChangeServer: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
@@ -65,7 +68,13 @@ fun MainScreen(
 
     LaunchedEffect(deepLinkRoute) {
         deepLinkRoute?.let {
-            navController.navigate(it) { launchSingleTop = true }
+            if (DeepLinks.ALLOWED_ROUTE.matches(it)) {
+                try {
+                    navController.navigate(it) { launchSingleTop = true }
+                } catch (_: IllegalArgumentException) {
+                    // Unknown route — silently ignore rather than crash
+                }
+            }
             onDeepLinkConsumed()
         }
     }
@@ -133,6 +142,7 @@ fun MainScreen(
                                         showUserMenu = false
                                         scope.launch {
                                             withContext(Dispatchers.IO) {
+                                                try { ApiClient.service().registerFcmToken(com.foleyit.itflow.data.api.FcmTokenRequest("")) } catch (_: Exception) {}
                                                 try { ApiClient.service().logout() } catch (_: Exception) {}
                                             }
                                             prefs.clearAuth()
@@ -164,10 +174,15 @@ fun MainScreen(
             }
         }
     ) { padding ->
+        val isOnline by rememberIsOnline()
+        Column(if (isRootScreen) Modifier.padding(padding) else Modifier.padding(bottom = padding.calculateBottomPadding())) {
+        if (!isOnline) {
+            OfflineBanner()
+        }
         NavHost(
             navController,
             startDestination = Screen.Dashboard.route,
-            modifier = if (isRootScreen) Modifier.padding(padding) else Modifier.padding(bottom = padding.calculateBottomPadding())
+            modifier = Modifier.weight(1f)
         ) {
             composable(Screen.Dashboard.route) { DashboardScreen(navController) }
             composable(Screen.Tickets.route) { TicketsScreen(navController) }
@@ -183,26 +198,26 @@ fun MainScreen(
             }
             composable(Screen.Assets.route) { AssetsScreen(navController) }
             composable(Screen.AssetDetail.route) {
-                AssetDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0)
+                AssetDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
             }
             composable(Screen.Appointments.route) { AppointmentsScreen(navController) }
             composable(Screen.Credentials.route) { CredentialsScreen(navController) }
             composable(Screen.CredDetail.route) {
-                CredentialDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0)
+                CredentialDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
             }
             composable(Screen.Quotes.route) { QuotesScreen(navController) }
             composable(Screen.QuoteDetail.route) {
-                QuoteDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0)
+                QuoteDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
             }
             composable(Screen.Invoices.route) { InvoicesScreen(navController) }
             composable(Screen.InvoiceDetail.route) {
-                InvoiceDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0)
+                InvoiceDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
             }
             composable(Screen.Expenses.route) { ExpensesScreen(navController) }
             composable(Screen.AddExpense.route) { AddExpenseScreen { navController.popBackStack() } }
             composable(Screen.Notifications.route) { NotificationsScreen() }
             composable(Screen.Alerts.route) { AlertsScreen(navController) }
-            composable(Screen.Profile.route) { ProfileScreen(navController, prefs) }
+            composable(Screen.Profile.route) { ProfileScreen(navController, prefs, onChangeServer) }
             composable(Screen.KnowledgeBase.route) { KnowledgeBaseScreen(navController) }
             composable(Screen.KbArticleDetail.route) {
                 KbArticleDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
@@ -219,7 +234,20 @@ fun MainScreen(
             composable(Screen.CreateTicket.route) { CreateTicketScreen(navController) }
             composable(Screen.Search.route) { SearchScreen(navController) }
             composable(Screen.TimeReport.route) { TimeSummaryScreen(navController) }
+            composable(Screen.ReportsHub.route) { ReportsHubScreen(navController) }
+            composable(Screen.TicketVolumeReport.route) { TicketVolumeReportScreen(navController) }
+            composable(Screen.TicketsByClientReport.route) { TicketsByClientReportScreen(navController) }
+            composable(Screen.TimeByTechReport.route) { TimeByTechReportScreen(navController) }
+            composable(Screen.TechPerformanceReport.route) { TechPerformanceReportScreen(navController) }
+            composable(Screen.OverviewReport.route) { OverviewReportScreen(navController) }
+            composable(Screen.UnbilledTicketsReport.route) { UnbilledTicketsReportScreen(navController) }
+            composable(Screen.ClientsWithBalanceReport.route) { ClientsWithBalanceReportScreen(navController) }
+            composable(Screen.IncomeSummaryReport.route) { IncomeSummaryReportScreen(navController) }
+            composable(Screen.ExpenseSummaryReport.route) { ExpenseSummaryReportScreen(navController) }
+            composable(Screen.ProfitLossReport.route) { ProfitLossReportScreen(navController) }
+            composable(Screen.ExpiringReport.route) { ExpiringReportScreen(navController) }
             composable(Screen.ScanBarcode.route) { ScanBarcodeScreen(navController) }
+        }
         }
     }
 }

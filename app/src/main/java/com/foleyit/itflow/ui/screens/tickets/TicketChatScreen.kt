@@ -14,6 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.ChatMessage
@@ -35,13 +38,15 @@ fun TicketChatScreen(ticketId: Int, navController: NavController) {
     var sending by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     suspend fun poll() {
         try {
             val sinceId = messages.lastOrNull()?.id ?: 0
             val resp = ApiClient.service().getChatMessages(ticketId, sinceId)
-            if (resp.data.isNotEmpty()) {
-                messages.addAll(resp.data)
+            val newOnes = resp.data.filterNot { incoming -> messages.any { it.id == incoming.id } }
+            if (newOnes.isNotEmpty()) {
+                messages.addAll(newOnes)
                 scope.launch { listState.animateScrollToItem(messages.size - 1) }
             }
             chatDisabled = false
@@ -57,9 +62,12 @@ fun TicketChatScreen(ticketId: Int, navController: NavController) {
     }
 
     LaunchedEffect(ticketId) {
-        while (true) {
-            poll()
-            delay(1500)
+        // Stop polling while the app/screen is backgrounded to save battery and data.
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                poll()
+                delay(1500)
+            }
         }
     }
 

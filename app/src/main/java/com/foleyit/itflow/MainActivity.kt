@@ -5,9 +5,11 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Fingerprint
@@ -34,7 +36,6 @@ import com.foleyit.itflow.ui.util.BiometricCrypto
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.io.File
 
 class MainActivity : FragmentActivity() {
@@ -68,8 +69,9 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
-        if (isRooted()) android.util.Log.w("ITFlow", "Device appears rooted.")
+        if (isRooted() && BuildConfig.DEBUG) android.util.Log.w("ITFlow", "Device appears rooted.")
         window.setFlags(
             android.view.WindowManager.LayoutParams.FLAG_SECURE,
             android.view.WindowManager.LayoutParams.FLAG_SECURE
@@ -78,10 +80,12 @@ class MainActivity : FragmentActivity() {
 
         val prefs = (application as ITFlowApplication).prefs
 
-        val startDestination = runBlocking {
+        var startDestination by mutableStateOf<String?>(null)
+        splashScreen.setKeepOnScreenCondition { startDestination == null }
+        lifecycleScope.launch {
             val url   = prefs.serverUrl.first()
             val token = prefs.authToken.first()
-            when {
+            startDestination = when {
                 url.isBlank() -> Screen.Setup.route
                 token == null -> Screen.Login.route
                 else          -> Screen.Dashboard.route
@@ -91,6 +95,7 @@ class MainActivity : FragmentActivity() {
         intent?.getStringExtra("deep_link_route")?.let { pendingDeepLink.value = it }
 
         setContent {
+            val resolvedStart = startDestination ?: return@setContent
             ITFlowTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
@@ -101,6 +106,7 @@ class MainActivity : FragmentActivity() {
                     LaunchedEffect(Unit) {
                         ApiClient.onUnauthorized = {
                             MainScope().launch {
+                                runCatching { ApiClient.service().registerFcmToken(com.foleyit.itflow.data.api.FcmTokenRequest("")) }
                                 prefs.clearAuth()
                                 ApiClient.clearToken()
                                 navController.navigate(Screen.Login.route) {
@@ -127,11 +133,25 @@ class MainActivity : FragmentActivity() {
                     }
 
                     if (isLocked) {
-                        BiometricLockScreen(prefs) { isLocked = false }
+                        BiometricLockScreen(
+                            prefs = prefs,
+                            onUnlocked = { isLocked = false },
+                            onSignOut = {
+                                MainScope().launch {
+                                    runCatching { ApiClient.service().registerFcmToken(com.foleyit.itflow.data.api.FcmTokenRequest("")) }
+                                    prefs.clearAuth()
+                                    ApiClient.clearToken()
+                                    isLocked = false
+                                    navController.navigate(Screen.Login.route) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                }
+                            }
+                        )
                         return@Surface
                     }
 
-                    NavHost(navController, startDestination = startDestination) {
+                    NavHost(navController, startDestination = resolvedStart) {
                         composable(Screen.Setup.route) {
                             ServerSetupScreen(prefs = prefs, onDone = {
                                 navController.navigate(Screen.Login.route) {
@@ -163,6 +183,16 @@ class MainActivity : FragmentActivity() {
                                     navController.navigate(Screen.Login.route) {
                                         popUpTo(0) { inclusive = true }
                                     }
+                                },
+                                onChangeServer = {
+                                    lifecycleScope.launch {
+                                        runCatching { ApiClient.service().registerFcmToken(com.foleyit.itflow.data.api.FcmTokenRequest("")) }
+                                        prefs.clearAuth()
+                                        ApiClient.clearToken()
+                                        navController.navigate(Screen.Setup.route) {
+                                            popUpTo(0) { inclusive = true }
+                                        }
+                                    }
                                 })
                         }
                     }
@@ -173,9 +203,8 @@ class MainActivity : FragmentActivity() {
 }
 
 @Composable
-private fun BiometricLockScreen(prefs: AppPreferences, onUnlocked: () -> Unit) {
-    val activity = androidx.compose.ui.platform.LocalContext.current as FragmentActivity
-    val scope = rememberCoroutineScope()
+private fun BiometricLockScreen(prefs: AppPreferences, onUnlocked: () -> Unit, onSignOut: () -> Unit) {
+    val activity = androidx.activity.compose.LocalActivity.current as? FragmentActivity ?: return
 
     fun authenticate() {
         val crypto = try { BiometricCrypto.cryptoObject() } catch (_: Exception) { return }
@@ -183,6 +212,9 @@ private fun BiometricLockScreen(prefs: AppPreferences, onUnlocked: () -> Unit) {
         val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 if (BiometricCrypto.confirm(result)) onUnlocked()
+            }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) onSignOut()
             }
         })
         prompt.authenticate(
@@ -208,10 +240,7 @@ private fun BiometricLockScreen(prefs: AppPreferences, onUnlocked: () -> Unit) {
             Text("Authentication required", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(8.dp))
             Button(onClick = { authenticate() }) { Text("Unlock") }
-            TextButton(onClick = {
-                scope.launch { prefs.clearAuth() }
-                ApiClient.clearToken()
-            }) { Text("Sign out") }
+            TextButton(onClick = onSignOut) { Text("Sign out") }
         }
     }
 }

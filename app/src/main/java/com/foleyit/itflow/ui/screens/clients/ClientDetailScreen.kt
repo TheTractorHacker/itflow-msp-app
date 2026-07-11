@@ -33,7 +33,8 @@ fun ClientDetailScreen(id: Int, navController: NavController) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) { scope.launch { clientState = runCatching { ApiClient.service().getClient(id) } } }
+    fun loadClient() { scope.launch { clientState = runCatching { ApiClient.service().getClient(id) } } }
+    LaunchedEffect(Unit) { loadClient() }
 
     val tabs = listOf("Info", "Tickets", "Contacts", "Assets", "Locations", "Credentials", "Contracts")
 
@@ -43,7 +44,7 @@ fun ClientDetailScreen(id: Int, navController: NavController) {
                 title = { clientState?.getOrNull()?.let { Text(it.name) } ?: Text("Client") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, null)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
                     }
                 }
             )
@@ -51,7 +52,7 @@ fun ClientDetailScreen(id: Int, navController: NavController) {
     ) { padding ->
         when {
             clientState == null -> LoadingScreen()
-            clientState!!.isFailure -> ErrorScreen(clientState!!.exceptionOrNull()?.message ?: "")
+            clientState!!.isFailure -> ErrorScreen(clientState!!.exceptionOrNull()?.message ?: "", onRetry = ::loadClient)
             else -> {
                 val client = clientState!!.getOrThrow()
                 Column(Modifier.fillMaxSize().padding(padding)) {
@@ -158,10 +159,11 @@ private fun ClientInfoTab(client: ClientDetail) {
 private fun ClientTicketsTab(clientId: Int, navController: NavController) {
     var state by remember { mutableStateOf<Result<List<TicketSummary>>?>(null) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getClientTickets(clientId) } } }
+    fun load() { scope.launch { state = runCatching { ApiClient.service().getClientTickets(clientId) } } }
+    LaunchedEffect(Unit) { load() }
     when {
         state == null -> LoadingScreen()
-        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "")
+        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
         else -> {
             val tickets = state!!.getOrThrow()
             if (tickets.isEmpty()) { EmptyScreen("No tickets", Icons.Outlined.ConfirmationNumber); return }
@@ -214,7 +216,7 @@ private fun ClientContactsTab(contacts: List<Contact>, context: android.content.
                     },
                     trailingContent = c.phone?.takeIf { it.isNotBlank() }?.let { phone -> {
                         IconButton(onClick = { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))) }) {
-                            Icon(Icons.Outlined.Phone, null)
+                            Icon(Icons.Outlined.Phone, "Call")
                         }
                     }}
                 )
@@ -227,10 +229,11 @@ private fun ClientContactsTab(contacts: List<Contact>, context: android.content.
 private fun ClientAssetsTab(clientId: Int, navController: NavController) {
     var state by remember { mutableStateOf<Result<List<AssetSummary>>?>(null) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getClientAssets(clientId) } } }
+    fun load() { scope.launch { state = runCatching { ApiClient.service().getClientAssets(clientId) } } }
+    LaunchedEffect(Unit) { load() }
     when {
         state == null -> LoadingScreen()
-        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "")
+        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
         else -> {
             val assets = state!!.getOrThrow()
             if (assets.isEmpty()) { EmptyScreen("No assets", Icons.Outlined.Devices); return }
@@ -259,10 +262,11 @@ private fun ClientAssetsTab(clientId: Int, navController: NavController) {
 private fun ClientLocationsTab(clientId: Int, context: android.content.Context) {
     var state by remember { mutableStateOf<Result<List<ClientLocation>>?>(null) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getClientLocations(clientId) } } }
+    fun load() { scope.launch { state = runCatching { ApiClient.service().getClientLocations(clientId) } } }
+    LaunchedEffect(Unit) { load() }
     when {
         state == null -> LoadingScreen()
-        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "")
+        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
         else -> {
             val locs = state!!.getOrThrow()
             if (locs.isEmpty()) { EmptyScreen("No locations", Icons.Outlined.LocationOn); return }
@@ -303,6 +307,8 @@ private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
     var state by remember { mutableStateOf<Result<List<CredentialSummary>>?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val localActivity = androidx.activity.compose.LocalActivity.current
+    fun load() { scope.launch { state = runCatching { ApiClient.service().getClientCredentials(clientId) } } }
 
     // Biometric gate — must pass before fetching or showing any credentials
     if (!biometricPassed) {
@@ -316,7 +322,7 @@ private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = {
-                    val activity = context as? androidx.fragment.app.FragmentActivity ?: return@Button
+                    val activity = localActivity as? androidx.fragment.app.FragmentActivity ?: return@Button
                     val crypto = try { BiometricCrypto.cryptoObject() } catch (_: Exception) { return@Button }
                     val executor = androidx.core.content.ContextCompat.getMainExecutor(context)
                     val prompt = androidx.biometric.BiometricPrompt(activity, executor,
@@ -324,7 +330,7 @@ private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
                             override fun onAuthenticationSucceeded(result: androidx.biometric.BiometricPrompt.AuthenticationResult) {
                                 if (BiometricCrypto.confirm(result)) {
                                     biometricPassed = true
-                                    scope.launch { state = runCatching { ApiClient.service().getClientCredentials(clientId) } }
+                                    load()
                                 }
                             }
                         })
@@ -347,7 +353,7 @@ private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
     // Only reaches here after biometric success
     when {
         state == null -> LoadingScreen()
-        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "")
+        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
         else -> {
             val creds = state!!.getOrThrow()
             if (creds.isEmpty()) { EmptyScreen("No credentials", Icons.Outlined.Lock); return }
@@ -372,10 +378,11 @@ private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
 private fun ClientContractsTab(clientId: Int) {
     var state by remember { mutableStateOf<Result<List<ClientContract>>?>(null) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getClientContracts(clientId) } } }
+    fun load() { scope.launch { state = runCatching { ApiClient.service().getClientContracts(clientId) } } }
+    LaunchedEffect(Unit) { load() }
     when {
         state == null -> LoadingScreen()
-        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "")
+        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
         else -> {
             val contracts = state!!.getOrThrow()
             if (contracts.isEmpty()) { EmptyScreen("No contracts", Icons.Outlined.Description); return }

@@ -39,6 +39,51 @@ interface ApiService {
         @Query("mine") mine: Int = 0
     ): TimeReportResponse
 
+    // Reports (extended) — operational reports are cacheable; financial ones are not.
+    @GET("reports/tickets")
+    suspend fun getTicketVolumeReport(@Query("year") year: Int? = null): TicketVolumeResponse
+
+    @GET("reports/tickets-by-client")
+    suspend fun getTicketsByClientReport(
+        @Query("year") year: Int? = null,
+        @Query("month") month: Int? = null
+    ): TicketsByClientResponse
+
+    @GET("reports/time-by-tech")
+    suspend fun getTimeByTechReport(@Query("year") year: Int? = null): TimeByTechResponse
+
+    @GET("reports/tech-performance")
+    suspend fun getTechPerformanceReport(@Query("year") year: Int? = null): TechPerformanceResponse
+
+    @GET("reports/expiring")
+    suspend fun getExpiringReport(
+        @Query("type") type: String = "domains",
+        @Query("days") days: Int = 30
+    ): ExpiringResponse
+
+    @GET("reports/overview")
+    suspend fun getOverviewReport(@Query("year") year: Int? = null): OverviewResponse
+
+    @Headers("Cache-Control: no-store")
+    @GET("reports/unbilled-tickets")
+    suspend fun getUnbilledTicketsReport(@Query("year") year: Int? = null): UnbilledTicketsResponse
+
+    @Headers("Cache-Control: no-store")
+    @GET("reports/clients-with-balance")
+    suspend fun getClientsWithBalanceReport(): ClientsWithBalanceResponse
+
+    @Headers("Cache-Control: no-store")
+    @GET("reports/income-summary")
+    suspend fun getIncomeSummaryReport(@Query("year") year: Int? = null): FinancialSummaryResponse
+
+    @Headers("Cache-Control: no-store")
+    @GET("reports/expense-summary")
+    suspend fun getExpenseSummaryReport(@Query("year") year: Int? = null): FinancialSummaryResponse
+
+    @Headers("Cache-Control: no-store")
+    @GET("reports/profit-loss")
+    suspend fun getProfitLossReport(@Query("year") year: Int? = null): ProfitLossResponse
+
     // Ticket attachment upload
     @Multipart
     @POST("tickets/{id}/attachments")
@@ -117,6 +162,7 @@ interface ApiService {
         @Query("page") page: Int = 1
     ): ClientsResponse
 
+    @Headers("Cache-Control: no-store")
     @GET("clients/{id}")
     suspend fun getClient(@Path("id") id: Int): ClientDetail
 
@@ -127,6 +173,7 @@ interface ApiService {
         @Query("page") page: Int = 1
     ): AssetsResponse
 
+    @Headers("Cache-Control: no-store")
     @GET("assets/{id}")
     suspend fun getAsset(@Path("id") id: Int): AssetDetail
 
@@ -145,21 +192,26 @@ interface ApiService {
         @Header("X-Biometric") biometric: String = "1"
     ): CredentialDetail
 
-    // Quotes
+    // Quotes — no-store: responses contain guest_url, a bearer-token-like public link
+    @Headers("Cache-Control: no-store")
     @GET("quotes")
     suspend fun getQuotes(@Query("page") page: Int = 1): QuotesResponse
 
+    @Headers("Cache-Control: no-store")
     @GET("quotes/{id}")
     suspend fun getQuote(@Path("id") id: Int): QuoteDetail
 
-    // Invoices
+    // Invoices — no-store: responses contain guest_url, a bearer-token-like public link
+    @Headers("Cache-Control: no-store")
     @GET("invoices")
     suspend fun getInvoices(@Query("page") page: Int = 1): InvoicesResponse
 
+    @Headers("Cache-Control: no-store")
     @GET("invoices/{id}")
     suspend fun getInvoice(@Path("id") id: Int): InvoiceDetail
 
     // Expenses
+    @Headers("Cache-Control: no-store")
     @GET("expenses")
     suspend fun getExpenses(@Query("page") page: Int = 1): ExpensesResponse
 
@@ -236,24 +288,30 @@ interface ApiService {
     suspend fun saveResponses(@Path("id") id: Int, @Body body: SaveResponsesRequest)
 
 
+    @Headers("Cache-Control: no-store")
     @GET("appointments")
     suspend fun getAppointments(
         @Query("when") when_: String = "future",
         @Query("mine") mine: Int = 0
     ): List<Appointment>
 
+    @Headers("Cache-Control: no-store")
     @GET("clients/{id}/tickets")
     suspend fun getClientTickets(@Path("id") id: Int): List<TicketSummary>
 
+    @Headers("Cache-Control: no-store")
     @GET("clients/{id}/assets")
     suspend fun getClientAssets(@Path("id") id: Int): List<AssetSummary>
 
+    @Headers("Cache-Control: no-store")
     @GET("clients/{id}/locations")
     suspend fun getClientLocations(@Path("id") id: Int): List<ClientLocation>
 
+    @Headers("Cache-Control: no-store")
     @GET("clients/{id}/credentials")
     suspend fun getClientCredentials(@Path("id") id: Int): List<CredentialSummary>
 
+    @Headers("Cache-Control: no-store")
     @GET("clients/{id}/contracts")
     suspend fun getClientContracts(@Path("id") id: Int): List<ClientContract>
 

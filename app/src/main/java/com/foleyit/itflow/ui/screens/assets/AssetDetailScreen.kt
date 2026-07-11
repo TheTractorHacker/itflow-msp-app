@@ -3,6 +3,7 @@ package com.foleyit.itflow.ui.screens.assets
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,6 +14,7 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.AssetDetail
 import com.foleyit.itflow.ui.util.fmtDate
@@ -22,18 +24,31 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AssetDetailScreen(id: Int) {
+fun AssetDetailScreen(id: Int, navController: NavController) {
     var state by remember { mutableStateOf<Result<AssetDetail>?>(null) }
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
     val snackbar = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getAsset(id) } } }
+    fun load() { scope.launch { state = runCatching { ApiClient.service().getAsset(id) } } }
+    LaunchedEffect(Unit) { load() }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(state?.getOrNull()?.name ?: "Asset") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
+                    }
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbar) }
+    ) { padding ->
         when {
             state == null -> LoadingScreen()
-            state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "Error")
+            state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "Error", onRetry = ::load)
             else -> {
                 val a = state!!.getOrThrow()
                 LazyColumn(

@@ -28,6 +28,7 @@ import java.util.Locale
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.components.PriorityBadge
+import com.foleyit.itflow.ui.util.userMessage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -42,6 +43,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     var state by remember { mutableStateOf<Result<TicketDetail>?>(null) }
     var statuses by remember { mutableStateOf<List<TicketStatus>>(emptyList()) }
     val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
 
     // Timer
     var timerRunning by remember { mutableStateOf(false) }
@@ -95,7 +97,8 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
         AddChargeSheet(onDismiss = { showAddCharge = false }, onSave = { name, desc, qty, price ->
             scope.launch {
                 runCatching { ApiClient.service().addCharge(id, AddChargeRequest(name, desc, qty, price)) }
-                load()
+                    .onSuccess { load() }
+                    .onFailure { snackbar.showSnackbar("Failed to add charge: ${userMessage(it)}") }
             }
             showAddCharge = false
         })
@@ -107,11 +110,14 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
             onDismiss = { showAddWorksheet = false },
             onCreate = { templateId ->
                 scope.launch {
-                    val ws = runCatching {
+                    runCatching {
                         ApiClient.service().createWorksheet(id, CreateWorksheetRequest(templateId, 0))
-                    }.getOrNull()
-                    load()
-                    ws?.get("id")?.let { wsId -> navController.navigate(Screen.FillWorksheet.go(wsId)) }
+                    }.onSuccess { ws ->
+                        load()
+                        ws["id"]?.let { wsId -> navController.navigate(Screen.FillWorksheet.go(wsId)) }
+                    }.onFailure {
+                        snackbar.showSnackbar("Failed to create worksheet: ${userMessage(it)}")
+                    }
                 }
                 showAddWorksheet = false
             }
@@ -123,11 +129,14 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
             onDismiss = { showAddOuttake = false },
             onCreate = {
                 scope.launch {
-                    val form = runCatching {
+                    runCatching {
                         ApiClient.service().createOuttake(id, CreateWorksheetRequest())
-                    }.getOrNull()
-                    load()
-                    form?.get("id")?.let { formId -> navController.navigate(Screen.OuttakeSign.go(formId)) }
+                    }.onSuccess { form ->
+                        load()
+                        form["id"]?.let { formId -> navController.navigate(Screen.OuttakeSign.go(formId)) }
+                    }.onFailure {
+                        snackbar.showSnackbar("Failed to create outtake form: ${userMessage(it)}")
+                    }
                 }
                 showAddOuttake = false
             }
@@ -144,9 +153,12 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                     runCatching {
                         ApiClient.service().addReply(id, reply, type = type,
                             timeWorked = timeWorked.ifBlank { null }, onsite = onsite)
+                    }.onSuccess {
+                        load()
+                        if (elapsed > 0) elapsed = 0L
+                    }.onFailure {
+                        snackbar.showSnackbar("Failed to save ${if (replyType == "note") "note" else "reply"}: ${userMessage(it)}")
                     }
-                    load()
-                    if (elapsed > 0) elapsed = 0L
                 }
                 showReply = false
             }
@@ -165,8 +177,12 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                         onClick = {
                             showStatusPicker = false
                             scope.launch {
-                                runCatching { ApiClient.service().updateTicketStatus(id, mapOf("status_id" to s.id)) }
-                                load()
+                                try {
+                                    ApiClient.service().updateTicketStatus(id, mapOf("status_id" to s.id))
+                                    load()
+                                } catch (e: Exception) {
+                                    snackbar.showSnackbar("Failed to update status: ${userMessage(e)}")
+                                }
                             }
                         },
                         color = if (isCurrentStatus) MaterialTheme.colorScheme.secondaryContainer
@@ -194,6 +210,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { state?.getOrNull()?.let { Text("#${it.number}") } ?: Text("Ticket") },
@@ -250,7 +267,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     ) { padding ->
         when {
             state == null -> LoadingScreen()
-            state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "Error")
+            state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "Error", onRetry = ::load)
             else -> {
                 val ticket = state!!.getOrThrow()
                 LazyColumn(
@@ -357,13 +374,15 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                             onDeleteWorksheet = { wsId ->
                                 scope.launch {
                                     runCatching { ApiClient.service().deleteWorksheet(wsId) }
-                                    load()
+                                        .onSuccess { load() }
+                                        .onFailure { snackbar.showSnackbar("Failed to delete worksheet: ${userMessage(it)}") }
                                 }
                             },
                             onDeleteOuttake = { otId ->
                                 scope.launch {
                                     runCatching { ApiClient.service().deleteOuttake(otId) }
-                                    load()
+                                        .onSuccess { load() }
+                                        .onFailure { snackbar.showSnackbar("Failed to delete outtake form: ${userMessage(it)}") }
                                 }
                             }
                         )
@@ -381,7 +400,13 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
 
                     // Replies
                     items(ticket.replies) { reply ->
-                        ReplyCard(reply, ticketId = id, onDeleted = { refresh++ })
+                        ReplyCard(
+                            reply, ticketId = id,
+                            onDeleted = { refresh++ },
+                            onDeleteFailed = { msg ->
+                                scope.launch { snackbar.showSnackbar("Failed to delete: $msg") }
+                            }
+                        )
                     }
                 }
             }
@@ -477,7 +502,7 @@ private fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text:
 }
 
 @Composable
-private fun ReplyCard(reply: TicketReply, ticketId: Int, onDeleted: () -> Unit) {
+private fun ReplyCard(reply: TicketReply, ticketId: Int, onDeleted: () -> Unit, onDeleteFailed: (String) -> Unit = {}) {
     val isNote = reply.type == "note"
     val scope = rememberCoroutineScope()
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -492,7 +517,8 @@ private fun ReplyCard(reply: TicketReply, ticketId: Int, onDeleted: () -> Unit) 
                     showDeleteDialog = false
                     scope.launch {
                         runCatching { ApiClient.service().deleteReply(ticketId, reply.id) }
-                        onDeleted()
+                            .onSuccess { onDeleted() }
+                            .onFailure { onDeleteFailed(userMessage(it)) }
                     }
                 }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },
@@ -893,7 +919,7 @@ private fun AddChargeSheet(
                     trailingIcon = {
                         if (productSearch.isNotEmpty()) {
                             IconButton(onClick = { productSearch = "" }) {
-                                Icon(Icons.Outlined.Clear, null)
+                                Icon(Icons.Outlined.Clear, "Clear search")
                             }
                         }
                     },

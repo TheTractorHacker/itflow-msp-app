@@ -6,6 +6,7 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.CredentialDetail
 import com.foleyit.itflow.ui.components.ErrorScreen
@@ -28,17 +30,18 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CredentialDetailScreen(id: Int) {
+fun CredentialDetailScreen(id: Int, navController: NavController) {
     var authenticated by remember { mutableStateOf(false) }
     var state by remember { mutableStateOf<Result<CredentialDetail>?>(null) }
     var showPassword by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
     val context = LocalContext.current
+    val localActivity = androidx.activity.compose.LocalActivity.current
     val snackbarHost = remember { SnackbarHostState() }
 
     fun authenticate() {
-        val activity = context as? FragmentActivity ?: return
+        val activity = localActivity as? FragmentActivity ?: return
         val crypto = try { BiometricCrypto.cryptoObject() } catch (_: Exception) { return }
         val executor = ContextCompat.getMainExecutor(context)
         val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
@@ -55,10 +58,9 @@ fun CredentialDetailScreen(id: Int) {
         prompt.authenticate(info, crypto)
     }
 
+    fun load() { scope.launch { state = runCatching { ApiClient.service().getCredential(id) } } }
     LaunchedEffect(authenticated) {
-        if (authenticated) {
-            scope.launch { state = runCatching { ApiClient.service().getCredential(id) } }
-        }
+        if (authenticated) load()
     }
 
     fun copy(value: String, label: String, sensitive: Boolean = false) {
@@ -71,11 +73,31 @@ fun CredentialDetailScreen(id: Int) {
             }
             clipboard.setClipEntry(ClipEntry(clip))
             snackbarHost.showSnackbar("$label copied")
+            if (sensitive) {
+                kotlinx.coroutines.delay(60_000)
+                val stillSameValue = clipboard.getClipEntry()?.clipData
+                    ?.takeIf { it.itemCount > 0 }
+                    ?.getItemAt(0)?.text?.toString() == value
+                if (stillSameValue) {
+                    clipboard.setClipEntry(ClipEntry(android.content.ClipData.newPlainText("", "")))
+                }
+            }
         }
     }
 
     if (!authenticated) {
-        Scaffold { padding ->
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Credential") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
+                        }
+                    }
+                )
+            }
+        ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Outlined.Fingerprint, null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.primary)
@@ -95,10 +117,22 @@ fun CredentialDetailScreen(id: Int) {
         return
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }) { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(state?.getOrNull()?.name ?: "Credential") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
+                    }
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHost) }
+    ) { padding ->
         when {
             state == null -> LoadingScreen()
-            state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "")
+            state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
             else -> {
                 val c = state!!.getOrThrow()
                 LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

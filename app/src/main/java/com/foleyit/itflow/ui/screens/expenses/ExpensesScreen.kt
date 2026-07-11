@@ -16,21 +16,21 @@ import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.ui.components.*
 import com.foleyit.itflow.ui.navigation.Screen
-import kotlinx.coroutines.launch
+import com.foleyit.itflow.ui.util.rememberPagedList
+import com.foleyit.itflow.ui.util.userMessage
 import java.text.NumberFormat
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpensesScreen(navController: NavController) {
-    var state by remember { mutableStateOf<Result<com.foleyit.itflow.data.api.ExpensesResponse>?>(null) }
-    val scope = rememberCoroutineScope()
     val currency = NumberFormat.getCurrencyInstance(Locale.US)
-    fun load() { scope.launch { state = runCatching { ApiClient.service().getExpenses() } } }
-    LaunchedEffect(Unit) { load() }
+    val list = rememberPagedList<com.foleyit.itflow.data.api.ExpenseSummary> { page, _ ->
+        ApiClient.service().getExpenses(page = page)
+    }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Expenses") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) } }) },
+        topBar = { TopAppBar(title = { Text("Expenses") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") } }) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { navController.navigate(Screen.AddExpense.route) },
@@ -39,14 +39,14 @@ fun ExpensesScreen(navController: NavController) {
             )
         }
     ) { padding ->
+        val ls = list.state
         when {
-            state == null -> LoadingScreen()
-            state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
+            ls.isRefreshing -> LoadingScreen()
+            ls.error != null -> ErrorScreen(userMessage(ls.error), onRetry = list::retry)
+            ls.items.isEmpty() -> EmptyScreen("No expenses. Tap + to add one.", Icons.Outlined.Receipt)
             else -> {
-                val expenses = state!!.getOrThrow().data
-                if (expenses.isEmpty()) EmptyScreen("No expenses. Tap + to add one.", Icons.Outlined.Receipt)
-                else LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(expenses) { e ->
+                LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(ls.items, key = { it.id }) { e ->
                         Card(modifier = Modifier.fillMaxWidth()) {
                             ListItem(
                                 headlineContent = { Text(e.description ?: "", fontWeight = FontWeight.Medium) },
@@ -64,6 +64,9 @@ fun ExpensesScreen(navController: NavController) {
                                 }
                             )
                         }
+                    }
+                    if (ls.hasMore) {
+                        item(key = "load_more") { LoadMoreRow(ls.isLoadingMore, list::loadMore) }
                     }
                 }
             }

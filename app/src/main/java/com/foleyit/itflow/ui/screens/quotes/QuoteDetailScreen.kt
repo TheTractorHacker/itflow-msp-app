@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.QuoteDetail
 import com.foleyit.itflow.ui.components.ErrorScreen
@@ -22,19 +24,32 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuoteDetailScreen(id: Int) {
+fun QuoteDetailScreen(id: Int, navController: NavController) {
     var state by remember { mutableStateOf<Result<QuoteDetail>?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val currency = NumberFormat.getCurrencyInstance(Locale.US)
-    LaunchedEffect(Unit) { scope.launch { state = runCatching { ApiClient.service().getQuote(id) } } }
+    fun load() { scope.launch { state = runCatching { ApiClient.service().getQuote(id) } } }
+    LaunchedEffect(Unit) { load() }
 
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(state?.getOrNull()?.subject?.takeIf { it.isNotBlank() } ?: "Quote") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
     when {
-        state == null -> LoadingScreen()
-        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "")
+        state == null -> Box(Modifier.fillMaxSize().padding(padding)) { LoadingScreen() }
+        state!!.isFailure -> Box(Modifier.fillMaxSize().padding(padding)) { ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load) }
         else -> {
             val q = state!!.getOrThrow()
-            LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
@@ -42,7 +57,7 @@ fun QuoteDetailScreen(id: Int) {
                                 Text(q.subject ?: "", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                                 q.guestUrl?.let {
                                     val url = "${ApiClient.serverUrl}$it"
-                                    IconButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }) { Icon(Icons.Outlined.OpenInBrowser, null) }
+                                    IconButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }) { Icon(Icons.Outlined.OpenInBrowser, "Open in browser") }
                                 }
                             }
                             Text(q.client ?: "", color = MaterialTheme.colorScheme.primary)
@@ -81,5 +96,6 @@ fun QuoteDetailScreen(id: Int) {
                 }
             }
         }
+    }
     }
 }

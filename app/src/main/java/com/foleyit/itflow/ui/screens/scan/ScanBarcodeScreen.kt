@@ -84,7 +84,7 @@ fun ScanBarcodeScreen(navController: NavController) {
                 title = { Text("Scan Barcode") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, null)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
                     }
                 }
             )

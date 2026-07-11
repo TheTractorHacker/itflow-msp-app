@@ -28,6 +28,7 @@ import com.foleyit.itflow.data.api.FcmTokenRequest
 import com.foleyit.itflow.data.api.LoginRequest
 import com.foleyit.itflow.data.api.PasskeyCompleteRequest
 import com.foleyit.itflow.data.local.AppPreferences
+import com.foleyit.itflow.ui.util.userMessage
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.gson.Gson
 import org.json.JSONArray
@@ -51,6 +52,7 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
     var requires2fa by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val localActivity = androidx.activity.compose.LocalActivity.current
     var serverUrl by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) { serverUrl = prefs.serverUrl.first() }
@@ -103,7 +105,7 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
                     put("allowCredentials", JSONArray())
                 }.toString()
 
-                val activity = context as? Activity
+                val activity = localActivity
                     ?: run { error = "Cannot show credential picker"; loading = false; return@launch }
                 val credentialManager = CredentialManager.create(activity)
                 val request = GetCredentialRequest(listOf(
@@ -135,16 +137,10 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
             } catch (e: GetCredentialUnsupportedException) {
                 error = "Passkey error: ${e.message ?: "passkeys not supported — enable your password manager as a credential provider in Android Settings"}"
             } catch (e: HttpException) {
-                val body = runCatching { e.response()?.errorBody()?.string() }.getOrNull()
-                val serverMsg = runCatching {
-                    @Suppress("UNCHECKED_CAST")
-                    (Gson().fromJson(body, Map::class.java) as? Map<String, Any>)?.get("error")?.toString()
-                }.getOrNull()
-                error = serverMsg ?: "Server rejected the passkey (HTTP ${e.code()})"
+                error = userMessage(e)
             } catch (e: Exception) {
-                val msg = e.message ?: e.javaClass.simpleName
-                if (!msg.contains("cancel", ignoreCase = true)) {
-                    error = "Passkey sign-in failed: $msg"
+                if (e.message?.contains("cancel", ignoreCase = true) != true) {
+                    error = "Passkey sign-in failed: ${userMessage(e)}"
                 }
             } finally { loading = false }
         }
@@ -182,7 +178,7 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
             OutlinedTextField(value = password, onValueChange = { password = it },
                 label = { Text("Password") }, leadingIcon = { Icon(Icons.Outlined.Lock, null) },
                 trailingIcon = { IconButton(onClick = { obscure = !obscure }) {
-                    Icon(if (obscure) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null)
+                    Icon(if (obscure) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, if (obscure) "Show password" else "Hide password")
                 }},
                 visualTransformation = if (obscure) PasswordVisualTransformation() else VisualTransformation.None,
                 modifier = Modifier.fillMaxWidth(), singleLine = true,

@@ -1,6 +1,8 @@
 package com.foleyit.itflow.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -70,6 +72,40 @@ fun PriorityBadge(priority: String?) {
             style = MaterialTheme.typography.labelSmall,
             color = textColor
         )
+    }
+}
+
+/** Shown while the device has no internet connection, so cached/stale reads aren't mistaken for live data. */
+@Composable
+fun OfflineBanner() {
+    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Outlined.CloudOff, null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "You're offline — showing saved data",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+        }
+    }
+}
+
+/** Footer row for paged lists — shows a spinner while loading the next page, otherwise a tappable "Load more". */
+@Composable
+fun LoadMoreRow(loading: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (loading) {
+            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+        } else {
+            TextButton(onClick = onClick) { Text("Load more") }
+        }
     }
 }
 

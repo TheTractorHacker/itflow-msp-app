@@ -1,5 +1,7 @@
 package com.foleyit.itflow.ui.screens.kb
 
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.webkit.WebResourceRequest
@@ -78,7 +80,7 @@ private fun ArticleContent(article: KbArticleDetail, modifier: Modifier = Modifi
                     settings.useWideViewPort = true
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, request.url))
+                            openExternalUrl(context, request.url)
                             return true
                         }
                     }
@@ -114,15 +116,26 @@ private fun ArticleContent(article: KbArticleDetail, modifier: Modifier = Modifi
                         Icon(Icons.Outlined.AttachFile, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(att.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        IconButton(onClick = {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                            context.startActivity(intent)
-                        }) {
+                        IconButton(onClick = { openExternalUrl(context, Uri.parse(url)) }) {
                             Icon(Icons.AutoMirrored.Outlined.OpenInNew, "Open")
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * Opens a URL sourced from KB article HTML/attachments in an external app. Restricted to http(s)
+ * only — article content originates from the trusted backend today, but this is defense-in-depth
+ * against a stored-HTML/URL injection issue rejecting schemes like `intent://`, `file://`, `javascript:`.
+ */
+private fun openExternalUrl(context: Context, uri: Uri?) {
+    if (uri == null || uri.scheme?.lowercase() !in setOf("http", "https")) return
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+    } catch (_: ActivityNotFoundException) {
+        android.widget.Toast.makeText(context, "No app found to open this link", android.widget.Toast.LENGTH_SHORT).show()
     }
 }

@@ -1,5 +1,7 @@
 package com.foleyit.itflow.ui.screens.profile
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -17,9 +19,11 @@ import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.foleyit.itflow.BuildConfig
 import com.foleyit.itflow.data.api.*
 import com.foleyit.itflow.data.local.AppPreferences
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.util.userMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -27,7 +31,7 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
+fun ProfileScreen(navController: NavController, prefs: AppPreferences, onChangeServer: () -> Unit = {}) {
     var profile by remember { mutableStateOf<UserProfile?>(null) }
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -40,8 +44,10 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
     var loading by remember { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var showChangeServerConfirm by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         profile = runCatching { ApiClient.service().getProfile() }.getOrNull()
@@ -68,11 +74,25 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                 currentPass = ""; newPass = ""; confirmPass = ""
                 snackbar.showSnackbar("Profile updated successfully")
             } catch (e: Exception) {
-                error = e.message ?: "Failed to save"
+                error = userMessage(e)
             } finally {
                 saving = false
             }
         }
+    }
+
+    if (showChangeServerConfirm) {
+        AlertDialog(
+            onDismissRequest = { showChangeServerConfirm = false },
+            title = { Text("Change Server?") },
+            text = { Text("You'll be signed out of ${ApiClient.serverUrl} to connect to a different server.") },
+            confirmButton = {
+                TextButton(onClick = { showChangeServerConfirm = false; onChangeServer() }) { Text("Sign Out & Change") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showChangeServerConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 
     Scaffold(
@@ -81,7 +101,7 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                 title = { Text("Profile") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, null)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
                     }
                 }
             )
@@ -198,7 +218,7 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                             leadingIcon = { Icon(Icons.Outlined.LockOpen, null) },
                             trailingIcon = {
                                 IconButton(onClick = { obscureCur = !obscureCur }) {
-                                    Icon(if (obscureCur) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null)
+                                    Icon(if (obscureCur) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, if (obscureCur) "Show password" else "Hide password")
                                 }
                             },
                             visualTransformation = if (obscureCur) PasswordVisualTransformation() else VisualTransformation.None,
@@ -211,7 +231,7 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                             leadingIcon = { Icon(Icons.Outlined.Lock, null) },
                             trailingIcon = {
                                 IconButton(onClick = { obscureNew = !obscureNew }) {
-                                    Icon(if (obscureNew) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null)
+                                    Icon(if (obscureNew) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, if (obscureNew) "Show password" else "Hide password")
                                 }
                             },
                             visualTransformation = if (obscureNew) PasswordVisualTransformation() else VisualTransformation.None,
@@ -224,7 +244,7 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                             leadingIcon = { Icon(Icons.Outlined.Lock, null) },
                             trailingIcon = {
                                 IconButton(onClick = { obscureConfirm = !obscureConfirm }) {
-                                    Icon(if (obscureConfirm) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null)
+                                    Icon(if (obscureConfirm) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, if (obscureConfirm) "Show password" else "Hide password")
                                 }
                             },
                             visualTransformation = if (obscureConfirm) PasswordVisualTransformation() else VisualTransformation.None,
@@ -310,12 +330,12 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
 
                         Spacer(Modifier.height(8.dp))
 
-                        // Time Report row
+                        // Reports row
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             shape = MaterialTheme.shapes.medium,
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = { navController.navigate(Screen.TimeReport.route) }
+                            onClick = { navController.navigate(Screen.ReportsHub.route) }
                         ) {
                             Row(
                                 Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -327,17 +347,17 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                                     modifier = Modifier.size(36.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Outlined.Timer, null,
+                                        Icon(Icons.Outlined.BarChart, null,
                                             Modifier.size(20.dp),
                                             tint = MaterialTheme.colorScheme.onSecondaryContainer)
                                     }
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text("Time Summary",
+                                    Text("Reports",
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Medium)
-                                    Text("Hours logged by client",
+                                    Text("Tickets, financials, and more",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.outline)
                                 }
@@ -383,10 +403,98 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences) {
                             }
                         }
                         Spacer(Modifier.height(8.dp))
+
+                        // Notifications row
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                })
+                            }
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = MaterialTheme.shapes.small,
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Outlined.Notifications, null,
+                                            Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                    }
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("Notifications",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium)
+                                    Text("Manage push notification settings",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline)
+                                }
+                                Icon(Icons.AutoMirrored.Outlined.OpenInNew, null,
+                                    tint = MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.size(18.dp))
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+
+                        // Server row
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { showChangeServerConfirm = true }
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = MaterialTheme.shapes.small,
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Outlined.Dns, null,
+                                            Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                    }
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("Server",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium)
+                                    Text(ApiClient.serverUrl,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                        maxLines = 1)
+                                }
+                                Text("Change", style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
                     }
                 }
 
                 Spacer(Modifier.height(8.dp))
+
+                Text(
+                    "ITFlow MSP ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
             }
         }
     }
