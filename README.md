@@ -1,9 +1,30 @@
 # ITFlow MSP — Android App
 
+[![Latest release](https://img.shields.io/github/v/release/TheTractorHacker/itflow-msp-app?include_prereleases&label=release)](https://github.com/TheTractorHacker/itflow-msp-app/releases/latest)
+[![Build APK](https://github.com/TheTractorHacker/itflow-msp-app/actions/workflows/build.yml/badge.svg)](https://github.com/TheTractorHacker/itflow-msp-app/actions/workflows/build.yml)
+![Platform](https://img.shields.io/badge/platform-Android-3ddc84)
+
 > **By [TractorHacker](https://github.com/TheTractorHacker)** — the native Android companion for [ITFlow MSP Edition](https://github.com/TheTractorHacker/itflow).
 > This is **not** the official ITFlow app and is not affiliated with or endorsed by ITFlow LLC.
 
 Built with Kotlin + Jetpack Compose + Material 3.
+
+---
+
+## Screenshots
+
+<table>
+<tr>
+<td align="center" width="34%"><b>New Ticket</b></td>
+<td align="center" width="33%"><b>Tickets</b></td>
+<td align="center" width="33%"><b>Live Chat</b></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/create_ticket.png" width="100%"></td>
+<td><img src="docs/screenshots/tickets.png" width="100%"></td>
+<td><img src="docs/screenshots/ticket_chat.png" width="100%"></td>
+</tr>
+</table>
 
 ---
 
