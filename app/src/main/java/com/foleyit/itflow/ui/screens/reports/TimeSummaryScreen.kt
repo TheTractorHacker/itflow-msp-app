@@ -42,7 +42,7 @@ fun TimeSummaryScreen(navController: NavController) {
                 title = { Text("Time Summary") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, null)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
                     }
                 }
             )
