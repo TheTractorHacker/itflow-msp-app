@@ -224,6 +224,15 @@ data class ClientContract(
     val id: Int, val name: String?, val status: String?, val type: String?
 )
 
+data class ClientFile(
+    val id: Int,
+    @SerializedName("ticket_id") val ticketId: Int,
+    @SerializedName("ticket_number") val ticketNumber: Int,
+    @SerializedName("ticket_subject") val ticketSubject: String?,
+    @SerializedName("signed_name") val signedName: String?,
+    @SerializedName("signed_at") val signedAt: String?
+)
+
 // ── Charges & Worksheets ─────────────────────────────────────────────────────
 data class TicketCharge(
     val id: Int, val name: String, val description: String?,
@@ -265,6 +274,8 @@ data class SignRequest(
     @SerializedName("signed_name") val signedName: String,
     val signature: String
 )
+
+data class CompleteWorksheetRequest(val completed: Boolean)
 
 // ── Profile ──────────────────────────────────────────────────────────────────
 data class UserProfile(
@@ -493,7 +504,7 @@ data class KbArticleDetail(
     @SerializedName("client_name") val clientName: String?,
     @SerializedName("client_visible") val clientVisible: Int,
     @SerializedName("updated_at") val updatedAt: String?,
-    val attachments: List<KbArticleAttachment>
+    val attachments: List<KbArticleAttachment>?
 )
 
 // ── Ticket categories & saved views ─────────────────────────────────────────

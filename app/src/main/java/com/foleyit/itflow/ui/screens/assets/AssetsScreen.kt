@@ -2,6 +2,7 @@ package com.foleyit.itflow.ui.screens.assets
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.*
@@ -26,8 +27,15 @@ import com.foleyit.itflow.ui.util.userMessage
 @Composable
 fun AssetsScreen(navController: NavController) {
     var search by remember { mutableStateOf("") }
-    val list = rememberPagedList<com.foleyit.itflow.data.api.AssetSummary> { page, q ->
-        ApiClient.service().getAssets(search = q, page = page)
+    var selectedType by remember { mutableStateOf<String?>(null) }
+    var types by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        types = runCatching { ApiClient.service().getAssetTypes() }.getOrDefault(emptyList())
+    }
+
+    val list = rememberPagedList<com.foleyit.itflow.data.api.AssetSummary>(selectedType) { page, q ->
+        ApiClient.service().getAssets(search = q, page = page, type = selectedType ?: "")
     }
 
     Scaffold(
@@ -55,6 +63,28 @@ fun AssetsScreen(navController: NavController) {
                 shape = MaterialTheme.shapes.extraLarge,
                 textStyle = MaterialTheme.typography.bodyMedium
             )
+            if (types.isNotEmpty()) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        FilterChip(
+                            selected = selectedType == null,
+                            onClick = { selectedType = null },
+                            label = { Text("All") }
+                        )
+                    }
+                    items(types) { t ->
+                        FilterChip(
+                            selected = selectedType == t,
+                            onClick = { selectedType = if (selectedType == t) null else t },
+                            label = { Text(t) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+            }
             val ls = list.state
             when {
                 ls.isRefreshing -> LoadingScreen()

@@ -1,6 +1,7 @@
 package com.foleyit.itflow.ui.screens.tickets
 
 import android.text.Html
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +20,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.*
 import com.foleyit.itflow.ui.navigation.Screen
@@ -52,11 +56,11 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
 
     // Sheets
     var showReply by remember { mutableStateOf(false) }
-    var replyType by remember { mutableStateOf("reply") }
     var showStatusPicker by remember { mutableStateOf(false) }
     var showAddCharge by remember { mutableStateOf(false) }
     var showAddWorksheet by remember { mutableStateOf(false) }
     var showAddOuttake by remember { mutableStateOf(false) }
+    var showResolveConfirm by remember { mutableStateOf(false) }
     var charges by remember { mutableStateOf<ChargesResponse?>(null) }
     var worksheets by remember { mutableStateOf<List<WorksheetSummary>>(emptyList()) }
     var outtakes by remember { mutableStateOf<List<OuttakeSummary>>(emptyList()) }
@@ -92,6 +96,17 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
         }
     }
     LaunchedEffect(refresh) { load() }
+
+    // Reload whenever this screen comes back to the foreground — e.g. returning from signing a
+    // worksheet/outtake or the fill-worksheet screen, none of which otherwise trigger a refresh.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) load()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     if (showAddCharge) {
         AddChargeSheet(onDismiss = { showAddCharge = false }, onSave = { name, desc, qty, price ->
@@ -145,7 +160,6 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
 
     if (showReply) {
         ReplySheet(
-            type = replyType,
             defaultTimeWorked = if (elapsed > 0) timeWorkedString else "",
             onDismiss = { showReply = false },
             onSubmit = { reply, type, timeWorked, onsite ->
@@ -157,10 +171,38 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                         load()
                         if (elapsed > 0) elapsed = 0L
                     }.onFailure {
-                        snackbar.showSnackbar("Failed to save ${if (replyType == "note") "note" else "reply"}: ${userMessage(it)}")
+                        snackbar.showSnackbar("Failed to save note: ${userMessage(it)}")
                     }
                 }
                 showReply = false
+            }
+        )
+    }
+
+    // "Closed" is the one status name the backend treats specially (sets resolved/closed
+    // timestamps); matched by exact name here to mirror that server-side check.
+    val closedStatusId = statuses.firstOrNull { it.name == "Closed" }?.id
+    val isResolved = state?.getOrNull()?.status == "Closed"
+
+    if (showResolveConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResolveConfirm = false },
+            title = { Text("Resolve Ticket?") },
+            text = { Text("This will mark the ticket as Closed.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showResolveConfirm = false
+                    closedStatusId?.let { csid ->
+                        scope.launch {
+                            runCatching { ApiClient.service().updateTicketStatus(id, mapOf("status_id" to csid)) }
+                                .onSuccess { load(); snackbar.showSnackbar("Ticket resolved") }
+                                .onFailure { snackbar.showSnackbar("Failed to resolve ticket: ${userMessage(it)}") }
+                        }
+                    }
+                }) { Text("Resolve") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResolveConfirm = false }) { Text("Cancel") }
             }
         )
     }
@@ -247,19 +289,21 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                         .navigationBarsPadding(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = { replyType = "note"; showReply = true },
+                    if (!isResolved && closedStatusId != null) {
+                        OutlinedButton(
+                            onClick = { showResolveConfirm = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Outlined.CheckCircle, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp)); Text("Resolve")
+                        }
+                    }
+                    Button(
+                        onClick = { showReply = true },
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.AutoMirrored.Outlined.StickyNote2, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp)); Text("Note")
-                    }
-                    Button(
-                        onClick = { replyType = "reply"; showReply = true },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.AutoMirrored.Outlined.Reply, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp)); Text("Reply")
+                        Spacer(Modifier.width(6.dp)); Text("Add Note")
                     }
                 }
             }
@@ -290,8 +334,8 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                                         fontSize = MaterialTheme.typography.titleLarge.fontSize,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer)
                                     Spacer(Modifier.weight(1f))
-                                    TextButton(onClick = { replyType = "reply"; showReply = true }) {
-                                        Text("Log & Reply")
+                                    TextButton(onClick = { showReply = true }) {
+                                        Text("Log Time")
                                     }
                                 }
                             }
@@ -378,6 +422,13 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                                         .onFailure { snackbar.showSnackbar("Failed to delete worksheet: ${userMessage(it)}") }
                                 }
                             },
+                            onToggleWorksheetComplete = { wsId, completed ->
+                                scope.launch {
+                                    runCatching { ApiClient.service().completeWorksheet(wsId, CompleteWorksheetRequest(completed)) }
+                                        .onSuccess { load() }
+                                        .onFailure { snackbar.showSnackbar("Failed to update worksheet: ${userMessage(it)}") }
+                                }
+                            },
                             onDeleteOuttake = { otId ->
                                 scope.launch {
                                     runCatching { ApiClient.service().deleteOuttake(otId) }
@@ -421,14 +472,14 @@ fun parseStatusColor(hex: String): Color = try {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ReplySheet(
-    type: String,
     defaultTimeWorked: String,
     onDismiss: () -> Unit,
     onSubmit: (reply: String, type: String, timeWorked: String, onsite: Boolean) -> Unit
 ) {
     var reply by remember { mutableStateOf("") }
-    var timeWorked by remember { mutableStateOf(defaultTimeWorked) }
-    var selectedType by remember { mutableStateOf(type) }
+    val (initialH, initialM) = remember(defaultTimeWorked) { parseHoursMinutes(defaultTimeWorked) }
+    var hours by remember { mutableIntStateOf(initialH) }
+    var minutes by remember { mutableIntStateOf(initialM) }
     var onsite by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -436,17 +487,8 @@ private fun ReplySheet(
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
             .navigationBarsPadding()) {
-            Text(if (selectedType == "note") "Add Internal Note" else "Add Reply",
-                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(8.dp))
-            // Reply type toggle
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = selectedType == "reply",
-                    onClick = { selectedType = "reply" }, label = { Text("Public Reply") })
-                FilterChip(selected = selectedType == "note",
-                    onClick = { selectedType = "note" }, label = { Text("Internal Note") })
-            }
-            Spacer(Modifier.height(8.dp))
+            Text("Add Note", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(12.dp))
             // Remote / On-Site toggle
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
@@ -466,28 +508,61 @@ private fun ReplySheet(
             OutlinedTextField(
                 value = reply, onValueChange = { reply = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Message") },
+                label = { Text("Note") },
                 minLines = 4, maxLines = 8
             )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = timeWorked, onValueChange = { timeWorked = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Time worked (HH:MM:SS)") },
-                leadingIcon = { Icon(Icons.Outlined.Timer, null) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-            )
+            Spacer(Modifier.height(16.dp))
+            Text("Time worked", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                TimeStepper(label = "hr", value = hours, step = 1, range = 0..23, onChange = { hours = it })
+                TimeStepper(label = "min", value = minutes, step = 5, range = 0..59, onChange = { minutes = it })
+            }
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = onDismiss) { Text("Cancel") }
                 Spacer(Modifier.width(8.dp))
                 Button(
-                    onClick = { if (reply.isNotBlank()) onSubmit(reply, selectedType, timeWorked, onsite) },
+                    onClick = {
+                        if (reply.isNotBlank()) {
+                            val timeWorked = if (hours > 0 || minutes > 0)
+                                "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00"
+                            else ""
+                            onSubmit(reply, "note", timeWorked, onsite)
+                        }
+                    },
                     enabled = reply.isNotBlank()
-                ) { Text(if (selectedType == "note") "Add Note" else "Send Reply") }
+                ) { Text("Add Note") }
             }
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+private fun parseHoursMinutes(hhmmss: String): Pair<Int, Int> {
+    val parts = hhmmss.split(":")
+    val h = parts.getOrNull(0)?.toIntOrNull() ?: 0
+    val m = parts.getOrNull(1)?.toIntOrNull() ?: 0
+    return h to m
+}
+
+@Composable
+private fun TimeStepper(label: String, value: Int, step: Int, range: IntRange, onChange: (Int) -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), shape = MaterialTheme.shapes.medium) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
+            IconButton(onClick = { onChange((value - step).coerceIn(range)) }, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Outlined.Remove, "Decrease $label", Modifier.size(18.dp))
+            }
+            Text(
+                "$value $label",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.widthIn(min = 48.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            IconButton(onClick = { onChange((value + step).coerceIn(range)) }, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Outlined.Add, "Increase $label", Modifier.size(18.dp))
+            }
         }
     }
 }
@@ -503,7 +578,10 @@ private fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text:
 
 @Composable
 private fun ReplyCard(reply: TicketReply, ticketId: Int, onDeleted: () -> Unit, onDeleteFailed: (String) -> Unit = {}) {
-    val isNote = reply.type == "note"
+    // Backend type is 'Internal' going forward (matches the web app's own customer-hiding
+    // filter); 'note' is kept for reading older entries created before that fix.
+    val isNote = reply.type.equals("note", ignoreCase = true) || reply.type.equals("Internal", ignoreCase = true)
+    val isFromCustomer = reply.type.equals("Client", ignoreCase = true)
     val scope = rememberCoroutineScope()
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -562,6 +640,14 @@ private fun ReplyCard(reply: TicketReply, ticketId: Int, onDeleted: () -> Unit, 
                         Text("Note", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    }
+                }
+                if (isFromCustomer) {
+                    Surface(color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.extraSmall) {
+                        Text("Customer", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer)
                     }
                 }
                 reply.onsite?.let { ons ->
@@ -685,7 +771,8 @@ private fun WorksheetsCard(
     onAddWorksheet: (() -> Unit)? = null,
     onAddOuttake: (() -> Unit)? = null,
     onDeleteWorksheet: ((Int) -> Unit)? = null,
-    onDeleteOuttake: ((Int) -> Unit)? = null
+    onDeleteOuttake: ((Int) -> Unit)? = null,
+    onToggleWorksheetComplete: ((Int, Boolean) -> Unit)? = null
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
@@ -705,7 +792,7 @@ private fun WorksheetsCard(
                     color = MaterialTheme.colorScheme.outline)
             } else {
                 Spacer(Modifier.height(8.dp))
-                WorksheetItems(worksheets, navController, onDeleteWorksheet)
+                WorksheetItems(worksheets, navController, onDeleteWorksheet, onToggleWorksheetComplete)
             }
 
             Spacer(Modifier.height(16.dp))
@@ -742,7 +829,8 @@ private fun WorksheetsCard(
 private fun WorksheetItems(
     entries: List<WorksheetSummary>,
     navController: NavController,
-    onDelete: ((Int) -> Unit)? = null
+    onDelete: ((Int) -> Unit)? = null,
+    onToggleComplete: ((Int, Boolean) -> Unit)? = null
 ) {
     var deleteTarget by remember { mutableStateOf<WorksheetSummary?>(null) }
 
@@ -764,35 +852,31 @@ private fun WorksheetItems(
     }
 
     entries.forEachIndexed { i, ws ->
-        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                if (ws.signed) Icons.Outlined.CheckCircle else Icons.AutoMirrored.Outlined.Assignment,
-                null, modifier = Modifier.size(20.dp),
-                tint = if (ws.signed) MaterialTheme.colorScheme.primary
-                       else MaterialTheme.colorScheme.outline
+        val completed = ws.completedAt != null
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable { navController.navigate(Screen.FillWorksheet.go(ws.id)) }
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = completed,
+                onCheckedChange = { onToggleComplete?.invoke(ws.id, it) },
+                enabled = !ws.signed
             )
-            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(ws.templateName ?: "Worksheet", fontWeight = FontWeight.Medium)
                 Text(
-                    if (ws.signed) "Signed by ${ws.signedName}"
-                    else "Not signed · by ${ws.createdBy ?: ""}",
+                    when {
+                        ws.signed -> "Signed by ${ws.signedName}"
+                        completed -> "Completed · by ${ws.createdBy ?: ""}"
+                        else -> "Not started · by ${ws.createdBy ?: ""}"
+                    },
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (ws.signed) MaterialTheme.colorScheme.primary
+                    color = if (completed) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.outline
                 )
-            }
-            if (!ws.signed) {
-                FilledTonalButton(
-                    onClick = { navController.navigate(Screen.SignWorksheet.go(ws.id)) },
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Icon(Icons.Outlined.Draw, null, Modifier.size(15.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Sign", style = MaterialTheme.typography.labelMedium)
-                }
-                Spacer(Modifier.width(4.dp))
             }
             IconButton(onClick = { deleteTarget = ws }, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Outlined.DeleteOutline, "Delete",
@@ -876,23 +960,24 @@ private fun AddChargeSheet(
 ) {
     var name by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
-    var qty by remember { mutableStateOf("1") }
+    var qty by remember { mutableIntStateOf(1) }
     var price by remember { mutableStateOf("") }
     var productSearch by remember { mutableStateOf("") }
     var products by remember { mutableStateOf<List<Product>>(emptyList()) }
-    val total = remember(qty, price) { (qty.toDoubleOrNull() ?: 0.0) * (price.toDoubleOrNull() ?: 0.0) }
+    val total = remember(qty, price) { qty * (price.toDoubleOrNull() ?: 0.0) }
     val currency = NumberFormat.getCurrencyInstance(Locale.US)
 
     LaunchedEffect(Unit) {
         products = runCatching { ApiClient.service().getProducts() }.getOrDefault(emptyList())
     }
 
+    // Show the first several products as quick picks even before typing; narrow to a text match once searching.
     val filteredProducts = remember(productSearch, products) {
-        if (productSearch.isBlank()) emptyList()
+        if (productSearch.isBlank()) products.take(8)
         else products.filter {
             it.name.contains(productSearch, ignoreCase = true) ||
             it.description?.contains(productSearch, ignoreCase = true) == true
-        }.take(5)
+        }.take(8)
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -934,6 +1019,7 @@ private fun AddChargeSheet(
                                 name = product.name
                                 desc = product.description ?: ""
                                 price = product.price.toString()
+                                qty = 1
                                 productSearch = ""
                             },
                             shape = MaterialTheme.shapes.medium,
@@ -965,23 +1051,36 @@ private fun AddChargeSheet(
             OutlinedTextField(value = desc, onValueChange = { desc = it },
                 label = { Text("Description") },
                 modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 3)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = qty, onValueChange = { qty = it }, label = { Text("Qty") },
-                    modifier = Modifier.weight(1f), singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column {
+                    Text("Quantity", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(4.dp))
+                    QtyStepper(value = qty, onChange = { qty = it })
+                }
                 OutlinedTextField(
                     value = price, onValueChange = { price = it }, label = { Text("Unit Price") },
-                    leadingIcon = { Text("$") }, modifier = Modifier.weight(2f), singleLine = true,
+                    leadingIcon = { Text("$") }, modifier = Modifier.weight(1f), singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
             }
-            if (total > 0) {
-                Spacer(Modifier.height(8.dp))
-                Text("Total: ${currency.format(total)}", fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Total", style = MaterialTheme.typography.labelLarge)
+                    Text(currency.format(total), fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary)
+                }
             }
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -989,12 +1088,28 @@ private fun AddChargeSheet(
                 Spacer(Modifier.width(8.dp))
                 Button(
                     onClick = {
-                        if (name.isNotBlank()) onSave(name, desc, qty.toDoubleOrNull() ?: 1.0, price.toDoubleOrNull() ?: 0.0)
+                        if (name.isNotBlank()) onSave(name, desc, qty.toDouble(), price.toDoubleOrNull() ?: 0.0)
                     },
                     enabled = name.isNotBlank()
                 ) { Text("Add Charge") }
             }
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun QtyStepper(value: Int, onChange: (Int) -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), shape = MaterialTheme.shapes.medium) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
+            IconButton(onClick = { onChange((value - 1).coerceAtLeast(1)) }, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Outlined.Remove, "Decrease quantity", Modifier.size(18.dp))
+            }
+            Text("$value", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.widthIn(min = 28.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            IconButton(onClick = { onChange(value + 1) }, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Outlined.Add, "Increase quantity", Modifier.size(18.dp))
+            }
         }
     }
 }

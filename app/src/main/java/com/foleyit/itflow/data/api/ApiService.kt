@@ -170,8 +170,12 @@ interface ApiService {
     @GET("assets")
     suspend fun getAssets(
         @Query("search") search: String = "",
-        @Query("page") page: Int = 1
+        @Query("page") page: Int = 1,
+        @Query("type") type: String = ""
     ): AssetsResponse
+
+    @GET("assets/types")
+    suspend fun getAssetTypes(): List<String>
 
     @Headers("Cache-Control: no-store")
     @GET("assets/{id}")
@@ -231,15 +235,21 @@ interface ApiService {
     @GET("notifications")
     suspend fun getNotifications(@Query("page") page: Int = 1): NotificationsResponse
 
+    // no-store: these mutate frequently (add/delete/sign) and must never be served from the
+    // 5-minute disk cache, or the ticket detail screen shows stale state after an edit.
+    @Headers("Cache-Control: no-store")
     @GET("tickets/{id}/charges")
     suspend fun getTicketCharges(@Path("id") id: Int): ChargesResponse
 
+    @Headers("Cache-Control: no-store")
     @GET("tickets/{id}/worksheets")
     suspend fun getTicketWorksheets(@Path("id") id: Int): List<WorksheetSummary>
 
+    @Headers("Cache-Control: no-store")
     @GET("tickets/{id}/outtakes")
     suspend fun getTicketOuttakes(@Path("id") id: Int): List<OuttakeSummary>
 
+    @Headers("Cache-Control: no-store")
     @GET("outtakes/{id}")
     suspend fun getOuttake(@Path("id") id: Int): OuttakeDetail
 
@@ -252,11 +262,12 @@ interface ApiService {
     @DELETE("worksheets/{id}")
     suspend fun deleteWorksheet(@Path("id") id: Int)
 
+    @Headers("Cache-Control: no-store")
     @GET("worksheets/{id}")
     suspend fun getWorksheet(@Path("id") id: Int): WorksheetDetail
 
-    @POST("worksheets/{id}/sign")
-    suspend fun signWorksheet(@Path("id") id: Int, @Body body: SignRequest)
+    @POST("worksheets/{id}/complete")
+    suspend fun completeWorksheet(@Path("id") id: Int, @Body body: CompleteWorksheetRequest)
 
     @GET("worksheet-templates")
     suspend fun getWorksheetTemplates(): List<WorksheetTemplate>
@@ -288,6 +299,9 @@ interface ApiService {
     suspend fun saveResponses(@Path("id") id: Int, @Body body: SaveResponsesRequest)
 
 
+    @POST("appointments")
+    suspend fun createAppointment(@Body body: CreateAppointmentRequest): Map<String, Int>
+
     @Headers("Cache-Control: no-store")
     @GET("appointments")
     suspend fun getAppointments(
@@ -315,6 +329,10 @@ interface ApiService {
     @GET("clients/{id}/contracts")
     suspend fun getClientContracts(@Path("id") id: Int): List<ClientContract>
 
+    @Headers("Cache-Control: no-store")
+    @GET("clients/{id}/files")
+    suspend fun getClientFiles(@Path("id") id: Int): List<ClientFile>
+
 
     @POST("notifications/{id}/read")
     suspend fun markRead(@Path("id") id: Int)
@@ -341,10 +359,20 @@ suspend fun ApiService.addReply(id: Int, reply: String, type: String = "reply", 
 
 // ── Appointments ─────────────────────────────────────────────────────────────
 data class Appointment(
-    val id: Int, val number: Int, val subject: String,
+    val id: Int,
+    @com.google.gson.annotations.SerializedName("ticket_id") val ticketId: Int,
+    val number: Int, val subject: String,
     val schedule: String?, @com.google.gson.annotations.SerializedName("schedule_end") val scheduleEnd: String?,
     val onsite: Boolean, val notes: String?,
     val priority: String?, val status: String?,
     @com.google.gson.annotations.SerializedName("status_color") val statusColor: String?,
     val client: String?, @com.google.gson.annotations.SerializedName("assigned_to") val assignedTo: String?
+)
+
+data class CreateAppointmentRequest(
+    @com.google.gson.annotations.SerializedName("ticket_id") val ticketId: Int,
+    @com.google.gson.annotations.SerializedName("schedule_start") val scheduleStart: String,
+    @com.google.gson.annotations.SerializedName("schedule_end") val scheduleEnd: String? = null,
+    val onsite: Boolean = false,
+    val notes: String = ""
 )

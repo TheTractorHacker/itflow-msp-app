@@ -16,7 +16,6 @@ import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.*
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
-import com.foleyit.itflow.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,7 +45,7 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
     }
     LaunchedEffect(Unit) { load() }
 
-    fun saveResponses(thenNavigate: (() -> Unit)? = null) {
+    fun saveResponses() {
         saving = true
         scope.launch {
             try {
@@ -54,10 +53,8 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
                 withContext(Dispatchers.IO) {
                     ApiClient.service().saveResponses(worksheetId, SaveResponsesRequest(responses))
                 }
-                thenNavigate?.invoke() ?: run {
-                    snackbar.showSnackbar("Worksheet saved")
-                    navController.popBackStack()
-                }
+                snackbar.showSnackbar("Worksheet saved")
+                navController.popBackStack()
             } catch (e: Exception) {
                 snackbar.showSnackbar("Failed: ${e.message}")
             } finally {
@@ -79,18 +76,10 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
         },
         bottomBar = {
             Surface(shadowElevation = 4.dp) {
-                Row(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = { saveResponses() }, modifier = Modifier.weight(1f), enabled = !saving) {
-                        Text("Save")
-                    }
-                    Button(
-                        onClick = { saveResponses { navController.navigate(Screen.SignWorksheet.go(worksheetId)) } },
-                        modifier = Modifier.weight(1f), enabled = !saving
-                    ) {
-                        Icon(Icons.Outlined.Draw, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Save & Sign")
+                Row(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding()) {
+                    Button(onClick = { saveResponses() }, modifier = Modifier.fillMaxWidth(), enabled = !saving) {
+                        if (saving) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        else { Icon(Icons.Outlined.Check, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Save") }
                     }
                 }
             }
@@ -152,7 +141,7 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
                             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Outlined.Draw, null, tint = MaterialTheme.colorScheme.outline)
                                 Spacer(Modifier.width(8.dp))
-                                Text("${field.name} — tap \"Save & Sign\" to draw signature",
+                                Text("${field.name} — not collected on mobile",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.outline)
                             }

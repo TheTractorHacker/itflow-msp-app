@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.*
@@ -17,7 +18,6 @@ import com.foleyit.itflow.ui.components.OfflineBanner
 import com.foleyit.itflow.ui.navigation.*
 import com.foleyit.itflow.ui.util.rememberIsOnline
 import com.foleyit.itflow.ui.screens.appointments.AppointmentsScreen
-import com.foleyit.itflow.ui.screens.worksheets.SignWorksheetScreen
 import com.foleyit.itflow.ui.screens.worksheets.FillWorksheetScreen
 import com.foleyit.itflow.ui.screens.worksheets.OuttakeSignScreen
 import com.foleyit.itflow.ui.screens.profile.ProfileScreen
@@ -62,9 +62,13 @@ fun MainScreen(
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     var userName by remember { mutableStateOf("") }
+    var userEmail by remember { mutableStateOf("") }
     var showUserMenu by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { userName = prefs.userName.first() ?: "" }
+    LaunchedEffect(Unit) {
+        userName = prefs.userName.first() ?: ""
+        userEmail = prefs.userEmail.first() ?: ""
+    }
 
     LaunchedEffect(deepLinkRoute) {
         deepLinkRoute?.let {
@@ -123,21 +127,49 @@ fun MainScreen(
                             IconButton(onClick = { showUserMenu = true }) {
                                 Icon(Icons.Outlined.AccountCircle, "Account")
                             }
-                            DropdownMenu(expanded = showUserMenu, onDismissRequest = { showUserMenu = false }) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(userName, style = MaterialTheme.typography.labelLarge)
-                                            Text("Signed in", style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.outline)
+                            DropdownMenu(
+                                expanded = showUserMenu,
+                                onDismissRequest = { showUserMenu = false },
+                                shape = MaterialTheme.shapes.large,
+                                modifier = Modifier.width(280.dp)
+                            ) {
+                                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Surface(
+                                            shape = MaterialTheme.shapes.extraLarge,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(48.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    userName.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onPrimary
+                                                )
+                                            }
                                         }
-                                    },
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Text(userName.ifBlank { "Account" }, style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                            Text(userEmail.ifBlank { "Signed in" }, style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.outline, maxLines = 1)
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                DropdownMenuItem(
+                                    text = { Text("View Profile") },
                                     onClick = { showUserMenu = false; navController.navigate(Screen.Profile.route) },
                                     leadingIcon = { Icon(Icons.Outlined.Person, null) }
                                 )
-                                HorizontalDivider()
+                                HorizontalDivider(Modifier.padding(vertical = 4.dp))
                                 DropdownMenuItem(
-                                    text = { Text("Sign out") },
+                                    text = { Text("Sign out", color = MaterialTheme.colorScheme.error) },
                                     onClick = {
                                         showUserMenu = false
                                         scope.launch {
@@ -150,8 +182,12 @@ fun MainScreen(
                                             onLoggedOut()
                                         }
                                     },
-                                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Logout, null) }
+                                    leadingIcon = {
+                                        Icon(Icons.AutoMirrored.Outlined.Logout, null,
+                                            tint = MaterialTheme.colorScheme.error)
+                                    }
                                 )
+                                Spacer(Modifier.height(4.dp))
                             }
                         }
                     }
@@ -217,16 +253,13 @@ fun MainScreen(
             composable(Screen.AddExpense.route) { AddExpenseScreen { navController.popBackStack() } }
             composable(Screen.Notifications.route) { NotificationsScreen() }
             composable(Screen.Alerts.route) { AlertsScreen(navController) }
-            composable(Screen.Profile.route) { ProfileScreen(navController, prefs, onChangeServer) }
+            composable(Screen.Profile.route) { ProfileScreen(navController, prefs, onChangeServer, onLoggedOut) }
             composable(Screen.KnowledgeBase.route) { KnowledgeBaseScreen(navController) }
             composable(Screen.KbArticleDetail.route) {
                 KbArticleDetailScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
             }
             composable(Screen.FillWorksheet.route) {
                 FillWorksheetScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
-            }
-            composable(Screen.SignWorksheet.route) {
-                SignWorksheetScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)
             }
             composable(Screen.OuttakeSign.route) {
                 OuttakeSignScreen(it.arguments?.getString("id")?.toIntOrNull() ?: 0, navController)

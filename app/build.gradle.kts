@@ -13,9 +13,24 @@ android {
         applicationId = "com.foleyit.itflow"
         minSdk = 34
         targetSdk = 36
-        versionCode = 16
-        versionName = "1.11.0"
+        versionCode = 17
+        versionName = "1.12.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            // Checked-in, stable debug key (standard well-known debug password, never used for
+            // the production release identity) so every debug/beta build — local or CI — has the
+            // same signing fingerprint. Required for Digital Asset Links / passkey origin
+            // verification against the beta app's fixed fingerprint in assetlinks.json; Gradle's
+            // default auto-generated debug key is regenerated per machine/CI run and would never
+            // match.
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -24,6 +39,7 @@ android {
             applicationIdSuffix = ".beta"
             versionNameSuffix = "-beta"
             resValue("string", "app_name", "ITFlow Beta")
+            signingConfig = signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = true

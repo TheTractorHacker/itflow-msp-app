@@ -1,11 +1,16 @@
 package com.foleyit.itflow.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+
+/** Stored theme preference values (see AppPreferences.THEME_MODE). */
+object ThemeMode {
+    const val SYSTEM = "system"
+    const val LIGHT = "light"
+    const val DARK = "dark"
+}
 
 // M3 tonal palette derived from ITFlow MSP seed #006875 (teal)
 private val light_primary              = Color(0xFF006875)
@@ -125,18 +130,15 @@ private val DarkColors = darkColorScheme(
 )
 
 @Composable
-fun ITFlowTheme(content: @Composable () -> Unit) {
-    val darkTheme = isSystemInDarkTheme()
-
-    // Material You dynamic color on Android 12+, fallback to ITFlow teal
-    val colorScheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val ctx = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
-        }
-        darkTheme -> DarkColors
-        else      -> LightColors
+fun ITFlowTheme(themeMode: String = ThemeMode.SYSTEM, content: @Composable () -> Unit) {
+    // Always the branded ITFlow teal palette — no Material You dynamic/wallpaper-derived
+    // color, so the app looks the same (and deliberately designed) on every device.
+    val darkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        else -> isSystemInDarkTheme()
     }
+    val colorScheme = if (darkTheme) DarkColors else LightColors
 
     MaterialTheme(colorScheme = colorScheme, content = content)
 }

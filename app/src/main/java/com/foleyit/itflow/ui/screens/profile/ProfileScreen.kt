@@ -2,6 +2,7 @@ package com.foleyit.itflow.ui.screens.profile
 
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,15 +24,59 @@ import com.foleyit.itflow.BuildConfig
 import com.foleyit.itflow.data.api.*
 import com.foleyit.itflow.data.local.AppPreferences
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.theme.ThemeMode
 import com.foleyit.itflow.ui.util.userMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@Composable
+private fun SettingsRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    iconBg: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.secondaryContainer,
+    iconTint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSecondaryContainer,
+    titleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable () -> Unit = {
+        Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.outline)
+    }
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick ?: {}
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(shape = MaterialTheme.shapes.small, color = iconBg, modifier = Modifier.size(36.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, null, Modifier.size(20.dp), tint = iconTint)
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = titleColor)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            trailing()
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(navController: NavController, prefs: AppPreferences, onChangeServer: () -> Unit = {}) {
+fun ProfileScreen(
+    navController: NavController,
+    prefs: AppPreferences,
+    onChangeServer: () -> Unit = {},
+    onLoggedOut: () -> Unit = {}
+) {
     var profile by remember { mutableStateOf<UserProfile?>(null) }
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -45,6 +90,8 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences, onChangeS
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var showChangeServerConfirm by remember { mutableStateOf(false) }
+    var showSignOutConfirm by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -91,6 +138,69 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences, onChangeS
             },
             dismissButton = {
                 TextButton(onClick = { showChangeServerConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showSignOutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showSignOutConfirm = false },
+            title = { Text("Sign Out?") },
+            text = { Text("You'll need to sign in again to access your account.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSignOutConfirm = false
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            try { ApiClient.service().registerFcmToken(FcmTokenRequest("")) } catch (_: Exception) {}
+                            try { ApiClient.service().logout() } catch (_: Exception) {}
+                        }
+                        prefs.clearAuth()
+                        ApiClient.clearToken()
+                        onLoggedOut()
+                    }
+                }) { Text("Sign Out", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    val themeMode by prefs.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            title = { Text("Theme") },
+            text = {
+                Column {
+                    listOf(
+                        ThemeMode.SYSTEM to "System default",
+                        ThemeMode.LIGHT to "Light",
+                        ThemeMode.DARK to "Dark"
+                    ).forEach { (mode, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    scope.launch { prefs.setThemeMode(mode) }
+                                    showThemeDialog = false
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = themeMode == mode, onClick = {
+                                scope.launch { prefs.setThemeMode(mode) }
+                                showThemeDialog = false
+                            })
+                            Spacer(Modifier.width(8.dp))
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showThemeDialog = false }) { Text("Close") }
             }
         )
     }
@@ -292,197 +402,92 @@ fun ProfileScreen(navController: NavController, prefs: AppPreferences, onChangeS
                             modifier = Modifier.padding(bottom = 12.dp))
 
                         // Biometric Lock row
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.small,
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Outlined.Fingerprint, null,
-                                            Modifier.size(20.dp),
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                                    }
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text("Biometric Lock",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium)
-                                    Text("Lock after 5 min in background",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline)
-                                }
+                        SettingsRow(
+                            icon = Icons.Outlined.Fingerprint,
+                            title = "Biometric Lock",
+                            subtitle = "Lock after 5 min in background",
+                            iconBg = MaterialTheme.colorScheme.primaryContainer,
+                            iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            trailing = {
                                 Switch(
                                     checked = biometricEnabled,
                                     onCheckedChange = { scope.launch { prefs.setBiometricLock(it) } }
                                 )
                             }
-                        }
-
+                        )
                         Spacer(Modifier.height(8.dp))
 
-                        // Reports row
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.fillMaxWidth(),
+                        SettingsRow(
+                            icon = Icons.Outlined.Palette,
+                            title = "Theme",
+                            subtitle = when (themeMode) {
+                                ThemeMode.LIGHT -> "Light"
+                                ThemeMode.DARK -> "Dark"
+                                else -> "System default"
+                            },
+                            onClick = { showThemeDialog = true }
+                        )
+                        Spacer(Modifier.height(8.dp))
+
+                        SettingsRow(
+                            icon = Icons.Outlined.BarChart,
+                            title = "Reports",
+                            subtitle = "Tickets, financials, and more",
                             onClick = { navController.navigate(Screen.ReportsHub.route) }
-                        ) {
-                            Row(
-                                Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.small,
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Outlined.BarChart, null,
-                                            Modifier.size(20.dp),
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                                    }
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text("Reports",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium)
-                                    Text("Tickets, financials, and more",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline)
-                                }
-                                Icon(Icons.Outlined.ChevronRight, null,
-                                    tint = MaterialTheme.colorScheme.outline)
-                            }
-                        }
+                        )
                         Spacer(Modifier.height(8.dp))
 
-                        // Knowledge Base row
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.fillMaxWidth(),
+                        SettingsRow(
+                            icon = Icons.AutoMirrored.Outlined.Article,
+                            title = "Knowledge Base",
+                            subtitle = "Browse help articles",
                             onClick = { navController.navigate(Screen.KnowledgeBase.route) }
-                        ) {
-                            Row(
-                                Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.small,
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.AutoMirrored.Outlined.Article, null,
-                                            Modifier.size(20.dp),
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                                    }
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text("Knowledge Base",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium)
-                                    Text("Browse help articles",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline)
-                                }
-                                Icon(Icons.Outlined.ChevronRight, null,
-                                    tint = MaterialTheme.colorScheme.outline)
-                            }
-                        }
+                        )
                         Spacer(Modifier.height(8.dp))
 
-                        // Notifications row
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.fillMaxWidth(),
+                        SettingsRow(
+                            icon = Icons.Outlined.Notifications,
+                            title = "Notifications",
+                            subtitle = "Manage push notification settings",
                             onClick = {
                                 context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                                     putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                                 })
-                            }
-                        ) {
-                            Row(
-                                Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.small,
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Outlined.Notifications, null,
-                                            Modifier.size(20.dp),
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                                    }
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text("Notifications",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium)
-                                    Text("Manage push notification settings",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline)
-                                }
+                            },
+                            trailing = {
                                 Icon(Icons.AutoMirrored.Outlined.OpenInNew, null,
-                                    tint = MaterialTheme.colorScheme.outline,
-                                    modifier = Modifier.size(18.dp))
+                                    tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
                             }
-                        }
+                        )
                         Spacer(Modifier.height(8.dp))
 
-                        // Server row
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { showChangeServerConfirm = true }
-                        ) {
-                            Row(
-                                Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.small,
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Outlined.Dns, null,
-                                            Modifier.size(20.dp),
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                                    }
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text("Server",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium)
-                                    Text(ApiClient.serverUrl,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline,
-                                        maxLines = 1)
-                                }
+                        SettingsRow(
+                            icon = Icons.Outlined.Dns,
+                            title = "Server",
+                            subtitle = ApiClient.serverUrl,
+                            onClick = { showChangeServerConfirm = true },
+                            trailing = {
                                 Text("Change", style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.primary)
                             }
-                        }
+                        )
                         Spacer(Modifier.height(8.dp))
+                    }
+                }
+
+                // ── Sign out ─────────────────────────────────────────────────
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        SettingsRow(
+                            icon = Icons.AutoMirrored.Outlined.Logout,
+                            title = "Sign Out",
+                            subtitle = "Log out of this account on this device",
+                            iconBg = MaterialTheme.colorScheme.errorContainer,
+                            iconTint = MaterialTheme.colorScheme.error,
+                            titleColor = MaterialTheme.colorScheme.error,
+                            onClick = { showSignOutConfirm = true },
+                            trailing = {}
+                        )
                     }
                 }
 

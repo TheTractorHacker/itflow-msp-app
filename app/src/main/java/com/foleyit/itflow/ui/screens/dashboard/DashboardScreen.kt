@@ -17,17 +17,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
+import com.foleyit.itflow.data.api.Appointment
 import com.foleyit.itflow.data.api.DashboardResponse
 import com.foleyit.itflow.data.api.TicketSummary
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.util.fmtDate
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
 @Composable
 fun DashboardScreen(navController: NavController) {
     var state by remember { mutableStateOf<Result<DashboardResponse>?>(null) }
+    var appointmentsToday by remember { mutableStateOf<List<Appointment>>(emptyList()) }
+    var activeAlerts by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -44,6 +48,14 @@ fun DashboardScreen(navController: NavController) {
                 val intent = android.content.Intent("android.appwidget.action.APPWIDGET_UPDATE")
                 context.sendBroadcast(intent)
             }
+        }
+        scope.launch {
+            appointmentsToday = runCatching {
+                ApiClient.service().getAppointments(when_ = "today", mine = 1)
+            }.getOrDefault(emptyList())
+        }
+        scope.launch {
+            activeAlerts = runCatching { ApiClient.service().getAlerts(status = "new").total }.getOrDefault(0)
         }
     }
 
@@ -171,6 +183,50 @@ fun DashboardScreen(navController: NavController) {
                     }
                 }
 
+                // Today: appointments + active alerts — the "while on the go" summary
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        StatCard(
+                            label = "Today's Appts",
+                            value = appointmentsToday.size.toString(),
+                            icon = Icons.Outlined.CalendarMonth,
+                            bg = if (appointmentsToday.isNotEmpty()) MaterialTheme.colorScheme.tertiaryContainer
+                                 else MaterialTheme.colorScheme.surfaceVariant,
+                            fg = if (appointmentsToday.isNotEmpty()) MaterialTheme.colorScheme.onTertiaryContainer
+                                 else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                            onClick = { navController.navigate(Screen.Appointments.route) }
+                        )
+                        StatCard(
+                            label = "Active Alerts",
+                            value = activeAlerts.toString(),
+                            icon = Icons.Outlined.NotificationImportant,
+                            bg = if (activeAlerts > 0) MaterialTheme.colorScheme.errorContainer
+                                 else MaterialTheme.colorScheme.surfaceVariant,
+                            fg = if (activeAlerts > 0) MaterialTheme.colorScheme.onErrorContainer
+                                 else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                            onClick = { navController.navigate(Screen.Alerts.route) }
+                        )
+                    }
+                }
+
+                if (appointmentsToday.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Today's Schedule",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    items(appointmentsToday) { appt ->
+                        AppointmentSummaryCard(appt) {
+                            navController.navigate(Screen.TicketDetail.go(appt.ticketId))
+                        }
+                    }
+                }
+
                 // My Queue section header
                 item {
                     Row(
@@ -254,6 +310,33 @@ private fun StatCard(
                 color = fg
             )
             Text(label, style = MaterialTheme.typography.labelSmall, color = fg.copy(alpha = 0.75f))
+        }
+    }
+}
+
+@Composable
+private fun AppointmentSummaryCard(appt: Appointment, onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                if (appt.onsite) Icons.Outlined.LocationOn else Icons.Outlined.VideoCall,
+                null, modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.tertiary
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                appt.schedule?.let {
+                    Text(fmtDate(it), style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.SemiBold)
+                }
+                Text(appt.subject, style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium, maxLines = 1)
+                appt.client?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline)
+                }
+            }
+            Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.outline)
         }
     }
 }

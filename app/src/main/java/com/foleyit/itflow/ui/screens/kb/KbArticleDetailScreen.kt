@@ -102,7 +102,7 @@ private fun ArticleContent(article: KbArticleDetail, modifier: Modifier = Modifi
             }
         )
 
-        if (article.attachments.isNotEmpty()) {
+        if (!article.attachments.isNullOrEmpty()) {
             HorizontalDivider()
             Column(Modifier.padding(12.dp)) {
                 Text("Attachments", style = MaterialTheme.typography.labelLarge)

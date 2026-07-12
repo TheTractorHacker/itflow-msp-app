@@ -36,7 +36,7 @@ fun ClientDetailScreen(id: Int, navController: NavController) {
     fun loadClient() { scope.launch { clientState = runCatching { ApiClient.service().getClient(id) } } }
     LaunchedEffect(Unit) { loadClient() }
 
-    val tabs = listOf("Info", "Tickets", "Contacts", "Assets", "Locations", "Credentials", "Contracts")
+    val tabs = listOf("Info", "Tickets", "Contacts", "Assets", "Locations", "Credentials", "Contracts", "Files")
 
     Scaffold(
         topBar = {
@@ -114,6 +114,7 @@ fun ClientDetailScreen(id: Int, navController: NavController) {
                         4 -> ClientLocationsTab(id, context)
                         5 -> ClientCredentialsTab(id, navController)
                         6 -> ClientContractsTab(id)
+                        7 -> ClientFilesTab(id, navController)
                     }
                 }
             }
@@ -394,6 +395,44 @@ private fun ClientContractsTab(clientId: Int) {
                             supportingContent = { Text("${c.type ?: ""} · ${c.status ?: ""}") },
                             leadingContent = { Icon(Icons.Outlined.Description, null,
                                 tint = MaterialTheme.colorScheme.primary) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClientFilesTab(clientId: Int, navController: NavController) {
+    var state by remember { mutableStateOf<Result<List<ClientFile>>?>(null) }
+    val scope = rememberCoroutineScope()
+    fun load() { scope.launch { state = runCatching { ApiClient.service().getClientFiles(clientId) } } }
+    LaunchedEffect(Unit) { load() }
+    when {
+        state == null -> LoadingScreen()
+        state!!.isFailure -> ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load)
+        else -> {
+            val files = state!!.getOrThrow()
+            if (files.isEmpty()) { EmptyScreen("No signed forms yet", Icons.Outlined.Description); return }
+            LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(files) { f ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { navController.navigate(Screen.OuttakeSign.go(f.id)) }
+                    ) {
+                        ListItem(
+                            headlineContent = { Text("Outtake Form · #${f.ticketNumber}", fontWeight = FontWeight.Medium) },
+                            supportingContent = {
+                                Column {
+                                    f.ticketSubject?.let { Text(it, maxLines = 1) }
+                                    Text("Signed by ${f.signedName ?: "?"}", style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline)
+                                }
+                            },
+                            leadingContent = { Icon(Icons.Outlined.Draw, null,
+                                tint = MaterialTheme.colorScheme.primary) },
+                            trailingContent = { Icon(Icons.Outlined.ChevronRight, null) }
                         )
                     }
                 }

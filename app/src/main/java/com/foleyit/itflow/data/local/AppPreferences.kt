@@ -19,10 +19,12 @@ class AppPreferences(context: Context) {
     companion object {
         val SERVER_URL        = stringPreferencesKey("server_url")
         val USER_NAME         = stringPreferencesKey("user_name")
+        val USER_EMAIL        = stringPreferencesKey("user_email")
         val USER_ID           = intPreferencesKey("user_id")
         val USER_TYPE         = intPreferencesKey("user_type")
         val TRUSTED_CERT_SHA  = stringPreferencesKey("trusted_cert_sha")
         val BIOMETRIC_LOCK    = booleanPreferencesKey("biometric_lock")
+        val THEME_MODE        = stringPreferencesKey("theme_mode")
     }
 
     private val masterKey = MasterKey.Builder(ctx)
@@ -39,8 +41,12 @@ class AppPreferences(context: Context) {
 
     val serverUrl: Flow<String>        = ctx.dataStore.data.map { it[SERVER_URL] ?: "" }
     val userName: Flow<String?>        = ctx.dataStore.data.map { it[USER_NAME] }
+    val userEmail: Flow<String?>       = ctx.dataStore.data.map { it[USER_EMAIL] }
     val trustedCertSha: Flow<String?>  = ctx.dataStore.data.map { it[TRUSTED_CERT_SHA] }
     val biometricLock: Flow<Boolean>   = ctx.dataStore.data.map { it[BIOMETRIC_LOCK] ?: false }
+    // "system" (follow device setting), "light", or "dark" — always the branded ITFlow palette,
+    // never Material You dynamic/wallpaper-derived color.
+    val themeMode: Flow<String>        = ctx.dataStore.data.map { it[THEME_MODE] ?: "system" }
 
     val authToken: Flow<String?> = flow {
         emit(securePrefs.getString("auth_token", null))
@@ -53,9 +59,10 @@ class AppPreferences(context: Context) {
     suspend fun saveAuthData(token: String, user: UserInfo) {
         securePrefs.edit().putString("auth_token", token).apply()
         ctx.dataStore.edit {
-            it[USER_NAME] = user.name
-            it[USER_ID]   = user.id
-            it[USER_TYPE] = user.type
+            it[USER_NAME]  = user.name
+            it[USER_EMAIL] = user.email
+            it[USER_ID]    = user.id
+            it[USER_TYPE]  = user.type
         }
     }
 
@@ -63,6 +70,7 @@ class AppPreferences(context: Context) {
         securePrefs.edit().remove("auth_token").apply()
         ctx.dataStore.edit {
             it.remove(USER_NAME)
+            it.remove(USER_EMAIL)
             it.remove(USER_ID)
             it.remove(USER_TYPE)
         }
@@ -78,5 +86,9 @@ class AppPreferences(context: Context) {
 
     suspend fun setBiometricLock(enabled: Boolean) {
         ctx.dataStore.edit { it[BIOMETRIC_LOCK] = enabled }
+    }
+
+    suspend fun setThemeMode(mode: String) {
+        ctx.dataStore.edit { it[THEME_MODE] = mode }
     }
 }

@@ -96,7 +96,8 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val resolvedStart = startDestination ?: return@setContent
-            ITFlowTheme {
+            val themeMode by prefs.themeMode.collectAsState(initial = com.foleyit.itflow.ui.theme.ThemeMode.SYSTEM)
+            ITFlowTheme(themeMode = themeMode) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
                     var isLocked by remember { mutableStateOf(false) }
