@@ -10,7 +10,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.*
@@ -28,6 +27,7 @@ import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.ui.navigation.Screen
 import com.google.zxing.BinaryBitmap
+import com.google.zxing.DecodeHintType
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.common.HybridBinarizer
@@ -146,7 +146,7 @@ fun ScanBarcodeScreen(navController: NavController) {
                     // Viewfinder box
                     Box(
                         Modifier.align(Alignment.Center).size(240.dp)
-                            .border(2.dp, Color.White, RoundedCornerShape(12.dp))
+                            .border(2.dp, Color.White, MaterialTheme.shapes.medium)
                     )
                     // Status label
                     Surface(
@@ -167,7 +167,11 @@ fun ScanBarcodeScreen(navController: NavController) {
 }
 
 private class ZxingAnalyzer(private val onResult: (String) -> Unit) : ImageAnalysis.Analyzer {
-    private val reader = MultiFormatReader()
+    // TRY_HARDER trades a little decode latency for a real tolerance boost on skewed/lower
+    // quality captures — worthwhile here since we no longer bail after the first miss per frame.
+    private val reader = MultiFormatReader().apply {
+        setHints(mapOf(DecodeHintType.TRY_HARDER to true))
+    }
 
     @SuppressLint("UnsafeOptInUsageError")
     override fun analyze(imageProxy: ImageProxy) {
@@ -175,11 +179,52 @@ private class ZxingAnalyzer(private val onResult: (String) -> Unit) : ImageAnaly
         if (plane != null) {
             val buffer = plane.buffer
             val data = ByteArray(buffer.remaining()).also { buffer.get(it) }
-            val w = imageProxy.width
-            val h = imageProxy.height
-            val source = PlanarYUVLuminanceSource(data, w, h, 0, 0, w, h, false)
+            // CameraX delivers the Y-plane in sensor orientation; rotationDegrees is how much it
+            // must be rotated clockwise to appear upright. QR decodes fine without this because
+            // its finder patterns are orientation-invariant, but 1D linear barcodes (UPC/EAN/
+            // Code128/Codabar/ITF — what asset serial labels actually use) are direction-sensitive
+            // and fail outright when scanned sideways. This was the actual "only QR scans" bug.
+            val (rotated, w, h) = rotateYuvPlane(
+                data, imageProxy.width, imageProxy.height, imageProxy.imageInfo.rotationDegrees
+            )
+            val source = PlanarYUVLuminanceSource(rotated, w, h, 0, 0, w, h, false)
             runCatching { onResult(reader.decode(BinaryBitmap(HybridBinarizer(source))).text) }
         }
         imageProxy.close()
+    }
+}
+
+/**
+ * Rotates a single-byte-per-pixel plane (here, a YUV luma/Y plane) clockwise by
+ * [rotationDegrees], which must be one of 0/90/180/270 (the only values CameraX's
+ * `ImageInfo.rotationDegrees` ever reports). Returns the rotated buffer plus its new
+ * (width, height) — for 90/270 these are swapped versus the input.
+ *
+ * Assumes the plane is tightly packed (row stride == width), matching the assumption the
+ * pre-existing code already made by feeding the raw buffer straight into
+ * [PlanarYUVLuminanceSource] with `width` doubling as that source's row-stride parameter.
+ */
+private fun rotateYuvPlane(data: ByteArray, width: Int, height: Int, rotationDegrees: Int): Triple<ByteArray, Int, Int> {
+    if (rotationDegrees == 0) return Triple(data, width, height)
+    val out = ByteArray(data.size)
+    return when (rotationDegrees) {
+        90 -> {
+            for (y in 0 until height) for (x in 0 until width) {
+                out[x * height + (height - 1 - y)] = data[y * width + x]
+            }
+            Triple(out, height, width)
+        }
+        180 -> {
+            val last = data.size - 1
+            for (i in data.indices) out[last - i] = data[i]
+            Triple(out, width, height)
+        }
+        270 -> {
+            for (y in 0 until height) for (x in 0 until width) {
+                out[(width - 1 - x) * height + y] = data[y * width + x]
+            }
+            Triple(out, height, width)
+        }
+        else -> Triple(data, width, height) // defensive fallback; CameraX never reports other values
     }
 }

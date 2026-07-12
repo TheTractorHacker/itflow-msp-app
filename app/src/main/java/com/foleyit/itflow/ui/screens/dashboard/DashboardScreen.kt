@@ -23,6 +23,8 @@ import com.foleyit.itflow.data.api.TicketSummary
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.theme.forPriority
+import com.foleyit.itflow.ui.theme.statusColors
 import com.foleyit.itflow.ui.util.fmtDate
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -343,12 +345,7 @@ private fun AppointmentSummaryCard(appt: Appointment, onClick: () -> Unit) {
 
 @Composable
 private fun QueueTicketCard(ticket: TicketSummary, onClick: () -> Unit) {
-    val priorityColor = when (ticket.priority?.lowercase()) {
-        "critical" -> MaterialTheme.colorScheme.error
-        "high"     -> Color(0xFFBF360C)
-        "medium"   -> Color(0xFFF57C00)
-        else       -> MaterialTheme.colorScheme.outline
-    }
+    val priorityColor = MaterialTheme.statusColors.forPriority(ticket.priority)
     Card(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(

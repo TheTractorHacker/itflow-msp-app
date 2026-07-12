@@ -19,6 +19,8 @@ import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.InvoiceDetail
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
+import com.foleyit.itflow.ui.theme.forFinancialStatus
+import com.foleyit.itflow.ui.theme.statusColors
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
@@ -50,7 +52,7 @@ fun InvoiceDetailScreen(id: Int, navController: NavController) {
         state!!.isFailure -> Box(Modifier.fillMaxSize().padding(padding)) { ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load) }
         else -> {
             val inv = state!!.getOrThrow()
-            val statusColor: Color = when (inv.status) { "Paid" -> Color(0xFF2E7D32); "Overdue" -> MaterialTheme.colorScheme.error; else -> MaterialTheme.colorScheme.outline }
+            val statusColor: Color = MaterialTheme.statusColors.forFinancialStatus(inv.status)
             LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
                     Card(modifier = Modifier.fillMaxWidth()) {

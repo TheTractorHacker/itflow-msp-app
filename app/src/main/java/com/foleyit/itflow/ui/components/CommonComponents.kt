@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.foleyit.itflow.ui.theme.forPriority
+import com.foleyit.itflow.ui.theme.statusColors
 
 @Composable
 fun LoadingScreen() {
@@ -53,24 +55,17 @@ fun EmptyScreen(message: String, icon: ImageVector? = null) {
 
 @Composable
 fun PriorityBadge(priority: String?) {
-    val color = when (priority?.lowercase()) {
-        "critical" -> MaterialTheme.colorScheme.error
-        "high"     -> MaterialTheme.colorScheme.errorContainer
-        "medium"   -> MaterialTheme.colorScheme.tertiaryContainer
-        else       -> MaterialTheme.colorScheme.surfaceVariant
-    }
-    val textColor = when (priority?.lowercase()) {
-        "critical" -> MaterialTheme.colorScheme.onError
-        "high"     -> MaterialTheme.colorScheme.onErrorContainer
-        "medium"   -> MaterialTheme.colorScheme.onTertiaryContainer
-        else       -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Surface(color = color, shape = MaterialTheme.shapes.small) {
+    // Same tinted-container idiom, and the same underlying StatusColors tokens, as the
+    // priority strip on TicketCard/AppointmentCard/QueueTicketCard — previously this badge
+    // aliased colorScheme.errorContainer/tertiaryContainer instead, so "high priority" here
+    // (a red-pink) visually contradicted "high priority" on the list screens (an orange strip).
+    val color = MaterialTheme.statusColors.forPriority(priority)
+    Surface(color = color.copy(alpha = 0.15f), shape = MaterialTheme.shapes.small) {
         Text(
             priority ?: "Normal",
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             style = MaterialTheme.typography.labelSmall,
-            color = textColor
+            color = color
         )
     }
 }

@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.AlertActionRequest
@@ -20,6 +19,9 @@ import com.foleyit.itflow.ui.components.EmptyScreen
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.theme.forAlertSeverity
+import com.foleyit.itflow.ui.theme.forAlertStatus
+import com.foleyit.itflow.ui.theme.statusColors
 import kotlinx.coroutines.launch
 
 private val STATUS_TABS = listOf("new" to "New", "acknowledged" to "Acked", "resolved" to "Resolved", "all" to "All")
@@ -81,20 +83,6 @@ fun AlertsScreen(navController: NavController) {
     }
 }
 
-private fun severityColor(severity: String): Color = when (severity) {
-    "critical" -> Color(0xFFD32F2F)
-    "error"    -> Color(0xFFD32F2F)
-    "warning"  -> Color(0xFFF57C00)
-    else       -> Color(0xFF1976D2)
-}
-
-private fun statusColor(status: String): Color = when (status) {
-    "new"          -> Color(0xFFD32F2F)
-    "acknowledged" -> Color(0xFFF57C00)
-    "resolved"     -> Color(0xFF388E3C)
-    else           -> Color.Gray
-}
-
 @Composable
 private fun AlertRow(
     alert: AlertItem,
@@ -102,12 +90,14 @@ private fun AlertRow(
     onResolve: () -> Unit,
     onViewTicket: () -> Unit
 ) {
+    val severityColor = MaterialTheme.statusColors.forAlertSeverity(alert.severity)
+    val statusColor = MaterialTheme.statusColors.forAlertStatus(alert.status)
     ListItem(
         leadingContent = {
-            Surface(shape = MaterialTheme.shapes.extraLarge, color = severityColor(alert.severity).copy(alpha = 0.15f), modifier = Modifier.size(40.dp)) {
+            Surface(shape = MaterialTheme.shapes.extraLarge, color = severityColor.copy(alpha = 0.15f), modifier = Modifier.size(40.dp)) {
                 Box(contentAlignment = Alignment.Center) {
                     val icon = if (alert.source == "backup") Icons.Outlined.CloudUpload else Icons.Outlined.Dns
-                    Icon(icon, null, tint = severityColor(alert.severity), modifier = Modifier.size(20.dp))
+                    Icon(icon, null, tint = severityColor, modifier = Modifier.size(20.dp))
                 }
             }
         },
@@ -115,14 +105,19 @@ private fun AlertRow(
         supportingContent = {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = severityColor(alert.severity), shape = MaterialTheme.shapes.extraSmall) {
+                    // Both chips now share the same tinted-container + colored-text idiom used
+                    // everywhere else in the app (Invoices/Quotes/Tickets) — previously this
+                    // severity chip alone used a solid fill with hardcoded white text, which
+                    // silently broke (near-invisible white-on-pastel) once dark mode used a
+                    // light severity tone. A single shared idiom sidesteps that class of bug.
+                    Surface(color = severityColor.copy(alpha = 0.15f), shape = MaterialTheme.shapes.extraSmall) {
                         Text(alert.severity, modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-                            style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            style = MaterialTheme.typography.labelSmall, color = severityColor)
                     }
                     Spacer(Modifier.width(6.dp))
-                    Surface(color = statusColor(alert.status).copy(alpha = 0.15f), shape = MaterialTheme.shapes.extraSmall) {
+                    Surface(color = statusColor.copy(alpha = 0.15f), shape = MaterialTheme.shapes.extraSmall) {
                         Text(alert.status, modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-                            style = MaterialTheme.typography.labelSmall, color = statusColor(alert.status))
+                            style = MaterialTheme.typography.labelSmall, color = statusColor)
                     }
                 }
                 Spacer(Modifier.height(2.dp))

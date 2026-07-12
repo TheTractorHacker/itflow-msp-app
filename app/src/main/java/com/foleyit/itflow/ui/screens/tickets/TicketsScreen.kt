@@ -24,6 +24,8 @@ import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadMoreRow
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.theme.forPriority
+import com.foleyit.itflow.ui.theme.statusColors
 import com.foleyit.itflow.ui.util.fmtDate
 import com.foleyit.itflow.ui.util.rememberPagedList
 import com.foleyit.itflow.ui.util.userMessage
@@ -281,12 +283,7 @@ fun TicketsScreen(navController: NavController) {
 
 @Composable
 fun TicketCard(ticket: TicketSummary, onClick: () -> Unit) {
-    val priorityColor = when (ticket.priority?.lowercase()) {
-        "critical" -> MaterialTheme.colorScheme.error
-        "high"     -> Color(0xFFE65100)
-        "medium"   -> Color(0xFFF9A825)
-        else       -> MaterialTheme.colorScheme.outline
-    }
+    val priorityColor = MaterialTheme.statusColors.forPriority(ticket.priority)
     Card(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(modifier = Modifier.padding(16.dp)) {
             Surface(

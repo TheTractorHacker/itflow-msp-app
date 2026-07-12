@@ -13,7 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
@@ -28,6 +27,8 @@ import com.foleyit.itflow.data.api.TicketSummary
 import com.foleyit.itflow.ui.components.EmptyScreen
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
+import com.foleyit.itflow.ui.theme.forPriority
+import com.foleyit.itflow.ui.theme.statusColors
 import com.foleyit.itflow.ui.navigation.Screen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -130,12 +131,7 @@ fun AppointmentsScreen(navController: NavController) {
 
 @Composable
 private fun AppointmentCard(appt: Appointment, onClick: () -> Unit) {
-    val priorityColor = when (appt.priority?.lowercase()) {
-        "critical" -> MaterialTheme.colorScheme.error
-        "high" -> Color(0xFFE65100)
-        "medium" -> Color(0xFFF9A825)
-        else -> MaterialTheme.colorScheme.outline
-    }
+    val priorityColor = MaterialTheme.statusColors.forPriority(appt.priority)
     Card(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(Modifier.padding(16.dp)) {
             // Color strip

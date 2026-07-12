@@ -17,6 +17,8 @@ import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.ui.components.*
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.theme.forFinancialStatus
+import com.foleyit.itflow.ui.theme.statusColors
 import com.foleyit.itflow.ui.util.rememberPagedList
 import com.foleyit.itflow.ui.util.userMessage
 import java.text.NumberFormat
@@ -39,7 +41,7 @@ fun InvoicesScreen(navController: NavController) {
             else -> {
                 LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(ls.items, key = { it.id }) { inv ->
-                        val statusColor: Color = when (inv.status) { "Paid" -> Color(0xFF2E7D32); "Overdue" -> MaterialTheme.colorScheme.error; "Partial" -> Color(0xFFE65100); else -> MaterialTheme.colorScheme.outline }
+                        val statusColor: Color = MaterialTheme.statusColors.forFinancialStatus(inv.status)
                         Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.InvoiceDetail.go(inv.id)) }) {
                             ListItem(
                                 headlineContent = { Text("Invoice #${inv.number}", fontWeight = FontWeight.Medium) },

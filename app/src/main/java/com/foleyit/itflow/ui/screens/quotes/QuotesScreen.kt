@@ -10,13 +10,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.ui.components.*
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.theme.forFinancialStatus
+import com.foleyit.itflow.ui.theme.statusColors
 import com.foleyit.itflow.ui.util.rememberPagedList
 import com.foleyit.itflow.ui.util.userMessage
 import java.text.NumberFormat
@@ -39,7 +40,7 @@ fun QuotesScreen(navController: NavController) {
             else -> {
                 LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(ls.items, key = { it.id }) { q ->
-                        val statusColor = when (q.status) { "Accepted" -> Color(0xFF2E7D32); "Declined" -> MaterialTheme.colorScheme.error; else -> MaterialTheme.colorScheme.outline }
+                        val statusColor = MaterialTheme.statusColors.forFinancialStatus(q.status)
                         Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.QuoteDetail.go(q.id)) }) {
                             ListItem(
                                 headlineContent = { Text(q.subject ?: "", fontWeight = FontWeight.Medium) },
