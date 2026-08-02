@@ -428,6 +428,178 @@ data class PriorityCount(val priority: String, val count: Int)
 data class StatusCount(val status: String, val color: String, val count: Int)
 data class CategoryCount(val category: String, val color: String, val count: Int)
 
+// ── Reports: Support & Operations (CSAT / RMM Health / Service Desk / Tech Utilization) ────────
+data class CsatReportResponse(
+    @SerializedName("date_from") val dateFrom: String,
+    @SerializedName("date_to") val dateTo: String,
+    val summary: CsatSummary,
+    val distribution: Map<String, Int>,
+    val trend: List<CsatTrendPoint>,
+    @SerializedName("by_technician") val byTechnician: List<CsatTechStats>,
+    @SerializedName("by_client") val byClient: List<CsatClientStats>,
+    val feedback: List<CsatFeedbackItem>
+)
+data class CsatSummary(
+    @SerializedName("total_closed") val totalClosed: Int,
+    val rated: Int,
+    @SerializedName("response_rate_pct") val responseRatePct: Double?,
+    @SerializedName("avg_rating") val avgRating: Double?,
+    @SerializedName("satisfied_pct") val satisfiedPct: Double?,
+    @SerializedName("needs_followup_count") val needsFollowupCount: Int
+)
+data class CsatTrendPoint(val label: String, val count: Int, @SerializedName("avg_rating") val avgRating: Double?)
+data class CsatTechStats(
+    @SerializedName("user_id") val userId: Int,
+    val name: String,
+    @SerializedName("rated_count") val ratedCount: Int,
+    @SerializedName("avg_rating") val avgRating: Double?,
+    @SerializedName("satisfied_pct") val satisfiedPct: Double?
+)
+data class CsatClientStats(
+    @SerializedName("client_id") val clientId: Int,
+    val name: String,
+    @SerializedName("rated_count") val ratedCount: Int,
+    @SerializedName("avg_rating") val avgRating: Double?,
+    @SerializedName("satisfied_pct") val satisfiedPct: Double?
+)
+data class CsatFeedbackItem(
+    @SerializedName("ticket_id") val ticketId: Int,
+    @SerializedName("ticket_number") val ticketNumber: Int,
+    @SerializedName("client_name") val clientName: String?,
+    @SerializedName("tech_name") val techName: String?,
+    val rating: Int,
+    val comment: String?,
+    @SerializedName("rated_at") val ratedAt: String?
+)
+
+data class RmmHealthReportResponse(
+    @SerializedName("date_from") val dateFrom: String,
+    @SerializedName("date_to") val dateTo: String,
+    @SerializedName("have_data") val haveData: Boolean,
+    val totals: RmmHealthTotals,
+    @SerializedName("by_severity") val bySeverity: List<RmmCountByKey>,
+    @SerializedName("by_status") val byStatus: List<RmmCountByKey>,
+    val trend: RmmHealthTrend,
+    @SerializedName("noisiest_assets") val noisiestAssets: List<RmmNoisyAsset>,
+    @SerializedName("noisiest_clients") val noisiestClients: List<RmmNoisyClient>
+)
+data class RmmHealthTotals(
+    val total: Int,
+    val resolved: Int,
+    val acknowledged: Int,
+    val open: Int,
+    @SerializedName("with_ticket") val withTicket: Int,
+    @SerializedName("conversion_pct") val conversionPct: Double?,
+    @SerializedName("mtta_seconds") val mttaSeconds: Long?,
+    @SerializedName("mttr_seconds") val mttrSeconds: Long?
+)
+// Shared shape for both by_severity ({"severity":...}) and by_status ({"status":...}) list items.
+data class RmmCountByKey(
+    @SerializedName(value = "severity", alternate = ["status"]) val key: String,
+    val count: Int
+)
+data class RmmHealthTrend(val labels: List<String>, val counts: List<Int>)
+data class RmmNoisyAsset(
+    @SerializedName("asset_id") val assetId: Int,
+    @SerializedName("asset_name") val assetName: String,
+    val alerts: Int,
+    @SerializedName("mttr_seconds") val mttrSeconds: Long?
+)
+data class RmmNoisyClient(
+    @SerializedName("client_id") val clientId: Int,
+    @SerializedName("client_name") val clientName: String,
+    val alerts: Int,
+    @SerializedName("with_ticket") val withTicket: Int
+)
+
+data class ServiceDeskReportResponse(
+    @SerializedName("date_from") val dateFrom: String,
+    @SerializedName("date_to") val dateTo: String,
+    val totals: ServiceDeskTotals,
+    val volume: ServiceDeskVolume,
+    val aging: List<ServiceDeskAgingBucket>,
+    val sla: ServiceDeskSla,
+    val csat: ServiceDeskCsat,
+    @SerializedName("by_priority") val byPriority: List<ServiceDeskPriorityStats>,
+    @SerializedName("by_technician") val byTechnician: List<ServiceDeskTechStats>
+)
+data class ServiceDeskTotals(val opened: Int, val resolved: Int, @SerializedName("open_now") val openNow: Int)
+data class ServiceDeskVolume(
+    val labels: List<String>,
+    val opened: List<Int>,
+    val resolved: List<Int>,
+    val backlog: List<Int>
+)
+data class ServiceDeskAgingBucket(val label: String, val count: Int)
+data class ServiceDeskSla(
+    @SerializedName("response_total") val responseTotal: Int,
+    @SerializedName("response_met") val responseMet: Int,
+    @SerializedName("response_pct") val responsePct: Double?,
+    @SerializedName("resolution_total") val resolutionTotal: Int,
+    @SerializedName("resolution_met") val resolutionMet: Int,
+    @SerializedName("resolution_pct") val resolutionPct: Double?
+)
+data class ServiceDeskCsat(
+    val rated: Int,
+    @SerializedName("avg_rating") val avgRating: Double?,
+    val satisfied: Int,
+    @SerializedName("satisfied_pct") val satisfiedPct: Double?
+)
+data class ServiceDeskPriorityStats(
+    val priority: String,
+    val total: Int,
+    @SerializedName("avg_response_seconds") val avgResponseSeconds: Long?,
+    @SerializedName("avg_resolve_seconds") val avgResolveSeconds: Long?
+)
+data class ServiceDeskTechStats(
+    @SerializedName("user_id") val userId: Int,
+    val name: String,
+    val open: Int,
+    val resolved: Int,
+    @SerializedName("avg_resolve_seconds") val avgResolveSeconds: Long?
+)
+
+data class TechUtilizationReportResponse(
+    @SerializedName("date_from") val dateFrom: String,
+    @SerializedName("date_to") val dateTo: String,
+    val capacity: TechUtilizationCapacity,
+    val totals: TechUtilizationTotals,
+    val technicians: List<TechUtilizationStats>
+)
+data class TechUtilizationCapacity(
+    @SerializedName("hours_per_day") val hoursPerDay: Int,
+    @SerializedName("days_per_week") val daysPerWeek: Int,
+    @SerializedName("business_days") val businessDays: Int,
+    @SerializedName("capacity_seconds") val capacitySeconds: Long,
+    @SerializedName("capacity_hours_per_tech") val capacityHoursPerTech: Int
+)
+data class TechUtilizationTotals(
+    @SerializedName("billable_seconds") val billableSeconds: Long,
+    @SerializedName("nonbillable_seconds") val nonbillableSeconds: Long,
+    @SerializedName("total_seconds") val totalSeconds: Long,
+    @SerializedName("billable_value") val billableValue: Double,
+    @SerializedName("tickets_closed") val ticketsClosed: Int,
+    @SerializedName("csat_rated_count") val csatRatedCount: Int,
+    @SerializedName("team_utilization_pct") val teamUtilizationPct: Double?,
+    @SerializedName("csat_avg_rating") val csatAvgRating: Double?,
+    @SerializedName("csat_satisfied_pct") val csatSatisfiedPct: Double?
+)
+data class TechUtilizationStats(
+    @SerializedName("user_id") val userId: Int,
+    val name: String,
+    @SerializedName("billable_seconds") val billableSeconds: Long,
+    @SerializedName("nonbillable_seconds") val nonbillableSeconds: Long,
+    @SerializedName("total_seconds") val totalSeconds: Long,
+    @SerializedName("billable_value") val billableValue: Double,
+    @SerializedName("tickets_closed") val ticketsClosed: Int,
+    @SerializedName("avg_handle_seconds") val avgHandleSeconds: Long?,
+    @SerializedName("csat_rated_count") val csatRatedCount: Int,
+    @SerializedName("csat_avg_rating") val csatAvgRating: Double?,
+    @SerializedName("csat_satisfied_pct") val csatSatisfiedPct: Double?,
+    @SerializedName("csat_comment_count") val csatCommentCount: Int,
+    @SerializedName("utilization_pct") val utilizationPct: Double?
+)
+
 // ── Outtake Forms ────────────────────────────────────────────────────────────
 data class OuttakeSummary(
     val id: Int,

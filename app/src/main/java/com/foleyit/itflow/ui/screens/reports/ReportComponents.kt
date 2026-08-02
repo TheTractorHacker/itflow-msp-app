@@ -2,7 +2,9 @@ package com.foleyit.itflow.ui.screens.reports
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
@@ -15,7 +17,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 /** A labeled value with a bar proportional to [fraction] (0f..1f) of the series' max — used
  * for client/tech/category/priority/status breakdowns across the reports section. */
@@ -56,9 +62,16 @@ fun ReportBarRow(
 
 private val MONTH_LABELS = listOf("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
 
-/** Lightweight month-over-month bar chart (no external charting dependency). [values] must have 12 entries. */
+/** Lightweight month-over-month bar chart (no external charting dependency). [values] and
+ * [labels] must be the same length; [labels] defaults to the 12 fixed month initials used by
+ * the `?year=` reports — callers driven by a variable-length `from`/`to` range pass their own. */
 @Composable
-fun MonthlyTrendChart(values: List<Double>, modifier: Modifier = Modifier, barColor: Color = MaterialTheme.colorScheme.primary) {
+fun MonthlyTrendChart(
+    values: List<Double>,
+    labels: List<String> = MONTH_LABELS,
+    modifier: Modifier = Modifier,
+    barColor: Color = MaterialTheme.colorScheme.primary
+) {
     val max = (values.maxOrNull() ?: 0.0).coerceAtLeast(1.0)
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -86,12 +99,14 @@ fun MonthlyTrendChart(values: List<Double>, modifier: Modifier = Modifier, barCo
         }
         Spacer(Modifier.height(4.dp))
         Row(Modifier.fillMaxWidth()) {
-            MONTH_LABELS.forEach { m ->
+            labels.forEach { l ->
                 Text(
-                    m,
+                    l,
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.labelSmall,
                     color = labelColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
@@ -118,4 +133,49 @@ fun formatSeconds(seconds: Long?): String {
     val h = seconds / 3600
     val m = (seconds % 3600) / 60
     return if (h > 0) "${h}h ${m}m" else "${m}m"
+}
+
+/** Preset date ranges for the `from`/`to`-based reports (CSAT, RMM Health, Service Desk,
+ * Technician Utilization) — a lightweight alternative to a full calendar picker, consistent
+ * with the rest of the reports section's minimal chrome. */
+enum class DateRangePreset(val label: String) {
+    THIS_MONTH("This Month"),
+    LAST_30_DAYS("Last 30 Days"),
+    LAST_90_DAYS("Last 90 Days"),
+    THIS_YEAR("This Year")
+}
+
+private val reportDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+
+/** Computes the (from, to) 'yyyy-MM-dd' pair for a preset, anchored on "today". */
+fun DateRangePreset.toRange(): Pair<String, String> {
+    val to = Calendar.getInstance()
+    val from = Calendar.getInstance()
+    when (this) {
+        DateRangePreset.THIS_MONTH -> from.set(Calendar.DAY_OF_MONTH, 1)
+        DateRangePreset.LAST_30_DAYS -> from.add(Calendar.DAY_OF_YEAR, -30)
+        DateRangePreset.LAST_90_DAYS -> from.add(Calendar.DAY_OF_YEAR, -90)
+        DateRangePreset.THIS_YEAR -> from.set(Calendar.DAY_OF_YEAR, 1)
+    }
+    return reportDateFormat.format(from.time) to reportDateFormat.format(to.time)
+}
+
+/** Single-select preset chip row shared by every `from`/`to`-based report screen. */
+@Composable
+fun DateRangePresetPicker(selected: DateRangePreset, onSelect: (DateRangePreset) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        DateRangePreset.entries.forEach { preset ->
+            FilterChip(
+                selected = preset == selected,
+                onClick = { onSelect(preset) },
+                label = { Text(preset.label) }
+            )
+        }
+    }
 }

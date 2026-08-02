@@ -64,6 +64,30 @@ interface ApiService {
     @GET("reports/overview")
     suspend fun getOverviewReport(@Query("year") year: Int? = null): OverviewResponse
 
+    @GET("reports/csat")
+    suspend fun getCsatReport(
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null
+    ): CsatReportResponse
+
+    @GET("reports/rmm-health")
+    suspend fun getRmmHealthReport(
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null
+    ): RmmHealthReportResponse
+
+    @GET("reports/service-desk")
+    suspend fun getServiceDeskReport(
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null
+    ): ServiceDeskReportResponse
+
+    @GET("reports/technician-performance")
+    suspend fun getTechUtilizationReport(
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null
+    ): TechUtilizationReportResponse
+
     @Headers("Cache-Control: no-store")
     @GET("reports/unbilled-tickets")
     suspend fun getUnbilledTicketsReport(@Query("year") year: Int? = null): UnbilledTicketsResponse

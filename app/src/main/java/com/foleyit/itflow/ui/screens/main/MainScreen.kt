@@ -279,6 +279,10 @@ fun MainScreen(
             composable(Screen.ExpenseSummaryReport.route) { ExpenseSummaryReportScreen(navController) }
             composable(Screen.ProfitLossReport.route) { ProfitLossReportScreen(navController) }
             composable(Screen.ExpiringReport.route) { ExpiringReportScreen(navController) }
+            composable(Screen.CsatReport.route) { CsatReportScreen(navController) }
+            composable(Screen.RmmHealthReport.route) { RmmHealthReportScreen(navController) }
+            composable(Screen.ServiceDeskReport.route) { ServiceDeskReportScreen(navController) }
+            composable(Screen.TechUtilizationReport.route) { TechnicianUtilizationReportScreen(navController) }
             composable(Screen.ScanBarcode.route) { ScanBarcodeScreen(navController) }
         }
         }

@@ -45,6 +45,13 @@ private val OPERATIONS_REPORTS = listOf(
     ReportEntry("Expiring Domains & Certs", "Renewals due in the next 30 days", Icons.Outlined.EventBusy, Screen.ExpiringReport.route),
 )
 
+private val SUPPORT_OPERATIONS_REPORTS = listOf(
+    ReportEntry("Customer Satisfaction", "CSAT ratings, trend, feedback", Icons.Outlined.SentimentSatisfied, Screen.CsatReport.route),
+    ReportEntry("RMM Health", "Alert volume, MTTA/MTTR, noisiest assets", Icons.Outlined.Warning, Screen.RmmHealthReport.route),
+    ReportEntry("Service Desk", "Volume, backlog aging, SLA compliance", Icons.Outlined.SupportAgent, Screen.ServiceDeskReport.route),
+    ReportEntry("Technician Utilization", "Billable vs. non-billable, capacity", Icons.Outlined.Groups, Screen.TechUtilizationReport.route),
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportsHubScreen(navController: NavController) {
@@ -67,6 +74,9 @@ fun ReportsHubScreen(navController: NavController) {
         ) {
             item { ReportSectionHeader("Tickets") }
             items(TICKET_REPORTS) { ReportCard(it) { navController.navigate(it.route) } }
+
+            item { Spacer(Modifier.height(12.dp)); ReportSectionHeader("Support & Operations") }
+            items(SUPPORT_OPERATIONS_REPORTS) { ReportCard(it) { navController.navigate(it.route) } }
 
             item { Spacer(Modifier.height(12.dp)); ReportSectionHeader("Financial") }
             items(FINANCIAL_REPORTS) { ReportCard(it) { navController.navigate(it.route) } }
