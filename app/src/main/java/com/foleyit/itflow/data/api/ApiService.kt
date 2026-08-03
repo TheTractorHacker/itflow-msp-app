@@ -88,6 +88,12 @@ interface ApiService {
         @Query("to") to: String? = null
     ): TechUtilizationReportResponse
 
+    // Semi-public: server accepts this even without a valid token (see
+    // api/v1/crash_reports.php) - the interceptor still attaches one when present,
+    // but a missing/expired token must never block a crash report from going out.
+    @POST("crash-reports")
+    suspend fun reportCrash(@Body body: CrashReportRequest): Map<String, Boolean>
+
     @Headers("Cache-Control: no-store")
     @GET("reports/unbilled-tickets")
     suspend fun getUnbilledTicketsReport(@Query("year") year: Int? = null): UnbilledTicketsResponse

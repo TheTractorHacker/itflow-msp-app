@@ -600,6 +600,20 @@ data class TechUtilizationStats(
     @SerializedName("utilization_pct") val utilizationPct: Double?
 )
 
+// ── Crash Reporting ──────────────────────────────────────────────────────────
+data class CrashReportRequest(
+    val platform: String = "android",
+    @SerializedName("app_version_name") val appVersionName: String,
+    @SerializedName("app_version_code") val appVersionCode: Int,
+    @SerializedName("device_model") val deviceModel: String,
+    @SerializedName("os_version") val osVersion: String,
+    @SerializedName("sdk_int") val sdkInt: Int,
+    @SerializedName("thread_name") val threadName: String,
+    @SerializedName("is_fatal") val isFatal: Boolean = true,
+    @SerializedName("occurred_at") val occurredAt: String,
+    @SerializedName("stack_trace") val stackTrace: String
+)
+
 // ── Outtake Forms ────────────────────────────────────────────────────────────
 data class OuttakeSummary(
     val id: Int,
