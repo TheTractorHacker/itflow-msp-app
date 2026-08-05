@@ -1,5 +1,6 @@
 package com.foleyit.itflow.ui.theme
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -24,9 +25,11 @@ import androidx.compose.ui.graphics.Color
  * hex cannot satisfy that in both themes at once.
  *
  * Where a role's meaning already matches an existing [androidx.compose.material3.ColorScheme]
- * role, we alias it (critical -> error, info -> tertiary, neutral -> secondary) instead of
+ * role, we alias it (critical -> error, info -> primary, neutral -> outline) instead of
  * inventing a redundant new hue — one less palette to keep in sync, and it keeps these
- * "extra" states visually tied to the same teal-derived brand palette as everything else.
+ * "extra" states visually tied to the active brand seed. Because those three roles now vary
+ * per [ColorSeed] (not just per light/dark), [statusColorsFor] takes the active [ColorScheme]
+ * rather than this file exposing static per-theme constants.
  *
  * Domain mapping:
  * - **critical** — ticket/appointment priority "critical", alert severity "critical"/"error",
@@ -35,9 +38,9 @@ import androidx.compose.ui.graphics.Color
  *   alert status "acknowledged", financial status "partial"
  * - **caution**  — ticket/appointment priority "medium" (a calmer step below warning)
  * - **success**  — alert status "resolved", financial status "paid"/"accepted"
- * - **info**     — alert severity default/"info" (aliases [MaterialTheme]'s tertiary role)
+ * - **info**     — alert severity default/"info" (aliases [MaterialTheme]'s primary role)
  * - **neutral**  — ticket/appointment priority "low", any other unrecognized status
- *   (aliases [MaterialTheme]'s secondary role)
+ *   (aliases [MaterialTheme]'s outline role)
  *
  * Use via `MaterialTheme.statusColors`, and prefer the `for*` mapping helpers below over
  * re-writing the same `when` block in every screen.
@@ -52,25 +55,23 @@ data class StatusColors(
     val neutral: Color,
 )
 
-internal val LightStatusColors = StatusColors(
-    critical = light_error,          // alias — same red used for M3 error everywhere else
-    warning  = Color(0xFFA34E00),    // burnt orange — teal's classic complementary partner
-    caution  = Color(0xFF7A5900),    // deep gold, a calmer step below warning
-    success  = Color(0xFF146C43),    // teal-leaning green, analogous to the brand hue
-    info     = light_tertiary,       // alias — theme's existing muted blue-violet
-    neutral  = light_secondary,      // alias — theme's existing muted teal-gray
+/**
+ * warning/caution/success are seed-independent semantic colors (same across all five
+ * [ColorSeed]s, per the design reference) — only critical/info/neutral ride the active seed
+ * via the aliased [ColorScheme] roles.
+ */
+fun statusColorsFor(colorScheme: ColorScheme, darkTheme: Boolean): StatusColors = StatusColors(
+    critical = colorScheme.error,
+    warning  = if (darkTheme) Color(0xFFFFB77C) else Color(0xFFE65100),
+    caution  = if (darkTheme) Color(0xFFFFD968) else Color(0xFFF9A825),
+    success  = if (darkTheme) Color(0xFF8BC994) else Color(0xFF1E8E3E),
+    info     = colorScheme.primary,
+    neutral  = colorScheme.outline,
 )
 
-internal val DarkStatusColors = StatusColors(
-    critical = dark_error,
-    warning  = Color(0xFFFFB870),
-    caution  = Color(0xFFF2C14E),
-    success  = Color(0xFF82D9A6),
-    info     = dark_tertiary,
-    neutral  = dark_secondary,
-)
-
-internal val LocalStatusColors = staticCompositionLocalOf { LightStatusColors }
+internal val LocalStatusColors = staticCompositionLocalOf {
+    statusColorsFor(colorSchemeFor(ColorSeed.DEFAULT, darkTheme = false), darkTheme = false)
+}
 
 /** Analogous to `MaterialTheme.colorScheme` — reads the current theme's [StatusColors]. */
 val MaterialTheme.statusColors: StatusColors

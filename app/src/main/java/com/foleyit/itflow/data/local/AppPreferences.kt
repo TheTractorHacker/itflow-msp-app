@@ -25,6 +25,7 @@ class AppPreferences(context: Context) {
         val TRUSTED_CERT_SHA  = stringPreferencesKey("trusted_cert_sha")
         val BIOMETRIC_LOCK    = booleanPreferencesKey("biometric_lock")
         val THEME_MODE        = stringPreferencesKey("theme_mode")
+        val COLOR_SEED        = stringPreferencesKey("color_seed")
     }
 
     private val masterKey = MasterKey.Builder(ctx)
@@ -44,9 +45,11 @@ class AppPreferences(context: Context) {
     val userEmail: Flow<String?>       = ctx.dataStore.data.map { it[USER_EMAIL] }
     val trustedCertSha: Flow<String?>  = ctx.dataStore.data.map { it[TRUSTED_CERT_SHA] }
     val biometricLock: Flow<Boolean>   = ctx.dataStore.data.map { it[BIOMETRIC_LOCK] ?: false }
-    // "system" (follow device setting), "light", or "dark" — always the branded ITFlow palette,
-    // never Material You dynamic/wallpaper-derived color.
+    // "system" (follow device setting), "light", or "dark" — never Material You dynamic/
+    // wallpaper-derived color, always one of the fixed brand seeds below.
     val themeMode: Flow<String>        = ctx.dataStore.data.map { it[THEME_MODE] ?: "system" }
+    // One of ColorSeed's ids ("foleyit"/"teal"/"sunset"/"forest"/"violet"); "foleyit" is default.
+    val colorSeed: Flow<String>        = ctx.dataStore.data.map { it[COLOR_SEED] ?: "foleyit" }
 
     val authToken: Flow<String?> = flow {
         emit(securePrefs.getString("auth_token", null))
@@ -90,5 +93,9 @@ class AppPreferences(context: Context) {
 
     suspend fun setThemeMode(mode: String) {
         ctx.dataStore.edit { it[THEME_MODE] = mode }
+    }
+
+    suspend fun setColorSeed(seed: String) {
+        ctx.dataStore.edit { it[COLOR_SEED] = seed }
     }
 }

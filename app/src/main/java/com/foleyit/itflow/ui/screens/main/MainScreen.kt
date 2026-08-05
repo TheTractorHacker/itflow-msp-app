@@ -1,5 +1,6 @@
 package com.foleyit.itflow.ui.screens.main
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.*
@@ -8,14 +9,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.*
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.local.AppPreferences
+import com.foleyit.itflow.ui.components.AppDrawerContent
+import com.foleyit.itflow.ui.components.BrandMark
+import com.foleyit.itflow.ui.components.FloatingBottomNavBar
 import com.foleyit.itflow.ui.components.OfflineBanner
+import com.foleyit.itflow.ui.components.UnreadDot
 import com.foleyit.itflow.ui.navigation.*
+import com.foleyit.itflow.ui.theme.ThemeMode
 import com.foleyit.itflow.ui.util.rememberIsOnline
 import com.foleyit.itflow.ui.screens.appointments.AppointmentsScreen
 import com.foleyit.itflow.ui.screens.worksheets.FillWorksheetScreen
@@ -50,6 +55,10 @@ private val ROOT_ROUTES = setOf(
     Screen.Notifications.route, Screen.Alerts.route
 )
 
+// The 5 true root screens — only these show the floating bottom nav (the rest of ROOT_ROUTES
+// gets the brand top bar but is reached via the drawer, not a persistent tab).
+private val BOTTOM_NAV_ROUTES = bottomNavItems.map { it.screen.route }.toSet()
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -61,13 +70,31 @@ fun MainScreen(
 ) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
     var userName by remember { mutableStateOf("") }
     var userEmail by remember { mutableStateOf("") }
-    var showUserMenu by remember { mutableStateOf(false) }
+    var hasUnreadNotifications by remember { mutableStateOf(false) }
+
+    val themeMode by prefs.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+    val isDarkMode = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        else -> isSystemInDarkTheme()
+    }
 
     LaunchedEffect(Unit) {
         userName = prefs.userName.first() ?: ""
         userEmail = prefs.userEmail.first() ?: ""
+        try {
+            hasUnreadNotifications = ApiClient.service().getDashboard().unread > 0
+        } catch (_: Exception) {
+            // Chrome badge only — a failed fetch here shouldn't block rendering the screen.
+        }
+    }
+
+    fun closeDrawerAndNavigate(route: String) {
+        scope.launch { drawerState.close() }
+        navController.navigate(route) { launchSingleTop = true }
     }
 
     LaunchedEffect(deepLinkRoute) {
@@ -94,21 +121,44 @@ fun MainScreen(
         }
     }
 
+    fun signOut() {
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                try { ApiClient.service().registerFcmToken(com.foleyit.itflow.data.api.FcmTokenRequest("")) } catch (_: Exception) {}
+                try { ApiClient.service().logout() } catch (_: Exception) {}
+            }
+            prefs.clearAuth()
+            ApiClient.clearToken()
+            onLoggedOut()
+        }
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            AppDrawerContent(
+                userName = userName,
+                userEmail = userEmail,
+                hasUnreadNotifications = hasUnreadNotifications,
+                isDarkMode = isDarkMode,
+                onToggleDarkMode = { dark -> scope.launch { prefs.setThemeMode(if (dark) ThemeMode.DARK else ThemeMode.LIGHT) } },
+                onNavigate = ::closeDrawerAndNavigate,
+                onSignOut = { scope.launch { drawerState.close() }; signOut() },
+            )
+        }
+    ) {
     Scaffold(
         topBar = {
             if (isRootScreen) {
                 TopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Outlined.Menu, "Menu")
+                        }
+                    },
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(shape = MaterialTheme.shapes.small,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(28.dp)) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Outlined.SyncAlt, null,
-                                        tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(18.dp))
-                                }
-                            }
+                            BrandMark(size = 28.dp)
                             Spacer(Modifier.width(10.dp))
                             Text("ITFlow MSP", style = MaterialTheme.typography.titleLarge)
                         }
@@ -121,73 +171,11 @@ fun MainScreen(
                             Icon(Icons.Outlined.Warning, "Alerts")
                         }
                         IconButton(onClick = { navController.navigate(Screen.Notifications.route) }) {
-                            Icon(Icons.Outlined.Notifications, "Notifications")
-                        }
-                        Box {
-                            IconButton(onClick = { showUserMenu = true }) {
-                                Icon(Icons.Outlined.AccountCircle, "Account")
-                            }
-                            DropdownMenu(
-                                expanded = showUserMenu,
-                                onDismissRequest = { showUserMenu = false },
-                                shape = MaterialTheme.shapes.large,
-                                modifier = Modifier.width(280.dp)
-                            ) {
-                                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Surface(
-                                            shape = MaterialTheme.shapes.extraLarge,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(48.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Text(
-                                                    userName.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onPrimary
-                                                )
-                                            }
-                                        }
-                                        Spacer(Modifier.width(12.dp))
-                                        Column(Modifier.weight(1f)) {
-                                            Text(userName.ifBlank { "Account" }, style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.SemiBold, maxLines = 1)
-                                            Text(userEmail.ifBlank { "Signed in" }, style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.outline, maxLines = 1)
-                                        }
-                                    }
+                            Box {
+                                Icon(Icons.Outlined.Notifications, "Notifications")
+                                if (hasUnreadNotifications) {
+                                    UnreadDot(Modifier.align(Alignment.TopEnd))
                                 }
-                                Spacer(Modifier.height(4.dp))
-                                DropdownMenuItem(
-                                    text = { Text("View Profile") },
-                                    onClick = { showUserMenu = false; navController.navigate(Screen.Profile.route) },
-                                    leadingIcon = { Icon(Icons.Outlined.Person, null) }
-                                )
-                                HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                                DropdownMenuItem(
-                                    text = { Text("Sign out", color = MaterialTheme.colorScheme.error) },
-                                    onClick = {
-                                        showUserMenu = false
-                                        scope.launch {
-                                            withContext(Dispatchers.IO) {
-                                                try { ApiClient.service().registerFcmToken(com.foleyit.itflow.data.api.FcmTokenRequest("")) } catch (_: Exception) {}
-                                                try { ApiClient.service().logout() } catch (_: Exception) {}
-                                            }
-                                            prefs.clearAuth()
-                                            ApiClient.clearToken()
-                                            onLoggedOut()
-                                        }
-                                    },
-                                    leadingIcon = {
-                                        Icon(Icons.AutoMirrored.Outlined.Logout, null,
-                                            tint = MaterialTheme.colorScheme.error)
-                                    }
-                                )
-                                Spacer(Modifier.height(4.dp))
                             }
                         }
                     }
@@ -195,23 +183,20 @@ fun MainScreen(
             }
         },
         bottomBar = {
-            NavigationBar {
+            if (currentRoute in BOTTOM_NAV_ROUTES) {
                 val hierarchy = currentDest?.destination?.hierarchy
-                bottomNavItems.forEach { item ->
-                    val selected = hierarchy?.any { it.route == item.screen.route } == true ||
-                                   (currentRoute == item.screen.route)
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = { navigateToTab(item.screen.route) },
-                        icon = { Icon(if (selected) item.selectedIcon else item.icon, item.label) },
-                        label = { Text(item.label) }
-                    )
-                }
+                FloatingBottomNavBar(
+                    items = bottomNavItems,
+                    isSelected = { item ->
+                        hierarchy?.any { it.route == item.screen.route } == true || currentRoute == item.screen.route
+                    },
+                    onSelect = ::navigateToTab,
+                )
             }
         }
     ) { padding ->
         val isOnline by rememberIsOnline()
-        Column(if (isRootScreen) Modifier.padding(padding) else Modifier.padding(bottom = padding.calculateBottomPadding())) {
+        Column(Modifier.padding(padding)) {
         if (!isOnline) {
             OfflineBanner()
         }
@@ -286,5 +271,6 @@ fun MainScreen(
             composable(Screen.ScanBarcode.route) { ScanBarcodeScreen(navController) }
         }
         }
+    }
     }
 }
