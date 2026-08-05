@@ -22,10 +22,11 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
+import com.foleyit.itflow.data.api.BiometricKeyRequest
 import com.foleyit.itflow.data.api.CredentialDetail
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
-import com.foleyit.itflow.ui.util.BiometricCrypto
+import com.foleyit.itflow.ui.util.BiometricSigningKey
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,6 +34,7 @@ import kotlinx.coroutines.launch
 fun CredentialDetailScreen(id: Int, navController: NavController) {
     var authenticated by remember { mutableStateOf(false) }
     var state by remember { mutableStateOf<Result<CredentialDetail>?>(null) }
+    var authError by remember { mutableStateOf<String?>(null) }
     var showPassword by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
@@ -40,27 +42,85 @@ fun CredentialDetailScreen(id: Int, navController: NavController) {
     val localActivity = androidx.activity.compose.LocalActivity.current
     val snackbarHost = remember { SnackbarHostState() }
 
+    // challengeToken/challengeBytes for the in-flight biometric step-up, set
+    // just before showing the prompt and consumed once inside
+    // onAuthenticationSucceeded (the actual signing - and therefore the only
+    // moment the private key is usable - must happen inside that callback).
     fun authenticate() {
         val activity = localActivity as? FragmentActivity ?: return
-        val crypto = try { BiometricCrypto.cryptoObject() } catch (_: Exception) { return }
-        val executor = ContextCompat.getMainExecutor(context)
-        val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                if (BiometricCrypto.confirm(result)) authenticated = true
+        authError = null
+        scope.launch {
+            val challenge = try {
+                ApiClient.service().passkeyBegin()
+            } catch (e: Exception) {
+                authError = "Could not reach server: ${e.message}"
+                return@launch
             }
-        })
-        val info = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Verify identity")
-            .setSubtitle("Access credential details")
-            .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
-            .setNegativeButtonText("Cancel")
-            .build()
-        prompt.authenticate(info, crypto)
+            val challengeBytes = BiometricSigningKey.base64UrlDecode(challenge.challenge)
+
+            val crypto = BiometricSigningKey.cryptoObject()
+            if (crypto == null) {
+                authError = "Biometric key unavailable on this device"
+                return@launch
+            }
+
+            val executor = ContextCompat.getMainExecutor(context)
+            val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    val signatureB64 = BiometricSigningKey.sign(result, challengeBytes)
+                    if (signatureB64 == null) {
+                        authError = "Signing failed"
+                        return
+                    }
+                    scope.launch {
+                        try {
+                            // Idempotent - cheap to always (re-)register in case this
+                            // is the first use, or the key was regenerated after a
+                            // biometric-enrollment invalidation.
+                            val pub = BiometricSigningKey.getOrCreatePublicKey()
+                            if (pub != null) {
+                                ApiClient.service().registerBiometricKey(
+                                    BiometricKeyRequest(BiometricSigningKey.publicKeyPem(pub))
+                                )
+                            }
+                            state = runCatching {
+                                ApiClient.service().getCredential(id, challenge.challengeToken, signatureB64)
+                            }
+                            authenticated = true
+                        } catch (e: Exception) {
+                            authError = "Verification failed: ${e.message}"
+                        }
+                    }
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    authError = errString.toString()
+                }
+            })
+            val info = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Verify identity")
+                .setSubtitle("Access credential details")
+                .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                .setNegativeButtonText("Cancel")
+                .build()
+            prompt.authenticate(info, crypto)
+        }
     }
 
-    fun load() { scope.launch { state = runCatching { ApiClient.service().getCredential(id) } } }
-    LaunchedEffect(authenticated) {
-        if (authenticated) load()
+    fun load() {
+        scope.launch {
+            val challenge = try {
+                ApiClient.service().passkeyBegin()
+            } catch (e: Exception) {
+                state = Result.failure(e)
+                return@launch
+            }
+            // A retry (e.g. after a transient network error) still needs a fresh
+            // biometric-signed challenge, not just a plain re-fetch - re-run the
+            // whole step-up flow rather than reusing a stale signature.
+            authenticated = false
+            authenticate()
+        }
     }
 
     fun copy(value: String, label: String, sensitive: Boolean = false) {
