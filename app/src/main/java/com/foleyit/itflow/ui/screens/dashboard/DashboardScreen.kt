@@ -1,19 +1,25 @@
 package com.foleyit.itflow.ui.screens.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
@@ -115,74 +121,9 @@ fun DashboardScreen(navController: NavController) {
                     }
                 }
 
-                // Primary stats
+                // Quick actions
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StatCard(
-                            label = "My Open",
-                            value = dash.myOpen.toString(),
-                            icon = Icons.Outlined.Person,
-                            bg = MaterialTheme.colorScheme.primaryContainer,
-                            fg = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.weight(1f),
-                            onClick = { navController.navigate(Screen.Tickets.route) }
-                        )
-                        StatCard(
-                            label = "All Open",
-                            value = dash.allOpen.toString(),
-                            icon = Icons.Outlined.ConfirmationNumber,
-                            bg = MaterialTheme.colorScheme.secondaryContainer,
-                            fg = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.weight(1f),
-                            onClick = { navController.navigate(Screen.Tickets.route) }
-                        )
-                        StatCard(
-                            label = "Overdue",
-                            value = dash.overdue.toString(),
-                            icon = Icons.Outlined.Warning,
-                            bg = if (dash.overdue > 0) MaterialTheme.colorScheme.errorContainer
-                                 else MaterialTheme.colorScheme.surfaceVariant,
-                            fg = if (dash.overdue > 0) MaterialTheme.colorScheme.onErrorContainer
-                                 else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                // Secondary stats (optional fields)
-                if (dash.dueToday != null || dash.onsiteOpen != null) {
-                    item {
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            dash.dueToday?.let { dueToday ->
-                                StatCard(
-                                    label = "Due Today",
-                                    value = dueToday.toString(),
-                                    icon = Icons.Outlined.Schedule,
-                                    bg = if (dueToday > 0) MaterialTheme.colorScheme.tertiaryContainer
-                                         else MaterialTheme.colorScheme.surfaceVariant,
-                                    fg = if (dueToday > 0) MaterialTheme.colorScheme.onTertiaryContainer
-                                         else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { navController.navigate(Screen.Tickets.route) }
-                                )
-                            }
-                            dash.onsiteOpen?.let { onsiteOpen ->
-                                StatCard(
-                                    label = "On-Site",
-                                    value = onsiteOpen.toString(),
-                                    icon = Icons.Outlined.LocationOn,
-                                    bg = MaterialTheme.colorScheme.surfaceVariant,
-                                    fg = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { navController.navigate(Screen.Tickets.route) }
-                                )
-                            }
-                            // Balance row when only one secondary stat exists
-                            if ((dash.dueToday == null) xor (dash.onsiteOpen == null)) {
-                                Spacer(Modifier.weight(1f))
-                            }
-                        }
-                    }
+                    QuickActionsRow(navController)
                 }
 
                 // Today: appointments + active alerts — the "while on the go" summary
@@ -225,6 +166,82 @@ fun DashboardScreen(navController: NavController) {
                     items(appointmentsToday) { appt ->
                         AppointmentSummaryCard(appt) {
                             navController.navigate(Screen.TicketDetail.go(appt.ticketId))
+                        }
+                    }
+                }
+
+                // Hero: My Open
+                item {
+                    MyOpenHeroCard(
+                        value = dash.myOpen,
+                        onClick = { navController.navigate(Screen.Tickets.route) }
+                    )
+                }
+
+                // Secondary stats — 2x2 grid
+                item {
+                    val secondaryStats = buildList {
+                        add(
+                            SecondaryStat(
+                                label = "All Open",
+                                value = dash.allOpen.toString(),
+                                icon = Icons.Outlined.ConfirmationNumber,
+                                bg = MaterialTheme.colorScheme.secondaryContainer,
+                                fg = MaterialTheme.colorScheme.onSecondaryContainer,
+                                onClick = { navController.navigate(Screen.Tickets.route) }
+                            )
+                        )
+                        add(
+                            SecondaryStat(
+                                label = "Overdue",
+                                value = dash.overdue.toString(),
+                                icon = Icons.Outlined.Warning,
+                                bg = MaterialTheme.colorScheme.errorContainer,
+                                fg = MaterialTheme.colorScheme.onErrorContainer,
+                                onClick = null
+                            )
+                        )
+                        dash.dueToday?.let { dueToday ->
+                            add(
+                                SecondaryStat(
+                                    label = "Due Today",
+                                    value = dueToday.toString(),
+                                    icon = Icons.Outlined.Schedule,
+                                    bg = MaterialTheme.colorScheme.tertiaryContainer,
+                                    fg = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    onClick = { navController.navigate(Screen.Tickets.route) }
+                                )
+                            )
+                        }
+                        dash.onsiteOpen?.let { onsiteOpen ->
+                            add(
+                                SecondaryStat(
+                                    label = "On-Site",
+                                    value = onsiteOpen.toString(),
+                                    icon = Icons.Outlined.LocationOn,
+                                    bg = MaterialTheme.colorScheme.surfaceVariant,
+                                    fg = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    onClick = { navController.navigate(Screen.Tickets.route) }
+                                )
+                            )
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        secondaryStats.chunked(2).forEach { rowStats ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                rowStats.forEach { stat ->
+                                    StatCard(
+                                        label = stat.label,
+                                        value = stat.value,
+                                        icon = stat.icon,
+                                        bg = stat.bg,
+                                        fg = stat.fg,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = stat.onClick
+                                    )
+                                }
+                                if (rowStats.size == 1) Spacer(Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -279,13 +296,141 @@ fun DashboardScreen(navController: NavController) {
                         }
                     }
                 } else {
-                    items(dash.queue) { ticket ->
+                    items(dash.queue.take(4)) { ticket ->
                         QueueTicketCard(ticket) {
                             navController.navigate(Screen.TicketDetail.go(ticket.id))
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+private data class SecondaryStat(
+    val label: String,
+    val value: String,
+    val icon: ImageVector,
+    val bg: Color,
+    val fg: Color,
+    val onClick: (() -> Unit)?
+)
+
+@Composable
+private fun QuickActionsRow(navController: NavController) {
+    val glowColor = MaterialTheme.colorScheme.primary
+    val gradient = Brush.linearGradient(
+        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.inversePrimary),
+        start = Offset.Zero,
+        end = Offset.Infinite
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Surface(
+            onClick = { navController.navigate(Screen.CreateTicket.route) },
+            modifier = Modifier
+                .weight(1f)
+                .shadow(
+                    elevation = 10.dp,
+                    shape = MaterialTheme.shapes.extraLarge,
+                    ambientColor = glowColor,
+                    spotColor = glowColor
+                ),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = Color.Transparent
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(gradient)
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Outlined.Add, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    "Ticket",
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+        }
+        OutlinedButton(
+            onClick = { navController.navigate(Screen.ScanBarcode.route) },
+            modifier = Modifier.weight(1f),
+            shape = MaterialTheme.shapes.extraLarge,
+            contentPadding = PaddingValues(vertical = 12.dp, horizontal = 12.dp)
+        ) {
+            Icon(Icons.Outlined.QrCodeScanner, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Scan", style = MaterialTheme.typography.labelLarge)
+        }
+        OutlinedButton(
+            onClick = { navController.navigate(Screen.Search.route) },
+            modifier = Modifier.weight(1f),
+            shape = MaterialTheme.shapes.extraLarge,
+            contentPadding = PaddingValues(vertical = 12.dp, horizontal = 12.dp)
+        ) {
+            Icon(Icons.Outlined.Search, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Search", style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+@Composable
+private fun MyOpenHeroCard(value: Int, onClick: () -> Unit) {
+    val gradient = Brush.linearGradient(
+        listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.tertiaryContainer),
+        start = Offset.Zero,
+        end = Offset.Infinite
+    )
+    val onColor = MaterialTheme.colorScheme.onPrimaryContainer
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(gradient)
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(52.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        Icons.Outlined.Person, null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    value.toString(),
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.W800,
+                    color = onColor
+                )
+                Text(
+                    "tickets in My Open",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = onColor.copy(alpha = 0.8f)
+                )
+            }
+            Icon(Icons.Outlined.ChevronRight, null, tint = onColor)
         }
     }
 }
@@ -307,7 +452,7 @@ private fun StatCard(
             Spacer(Modifier.height(10.dp))
             Text(
                 value,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = fg
             )

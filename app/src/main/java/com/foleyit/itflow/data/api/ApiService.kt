@@ -400,7 +400,12 @@ data class Appointment(
     val onsite: Boolean, val notes: String?,
     val priority: String?, val status: String?,
     @com.google.gson.annotations.SerializedName("status_color") val statusColor: String?,
-    val client: String?, @com.google.gson.annotations.SerializedName("assigned_to") val assignedTo: String?
+    val client: String?, @com.google.gson.annotations.SerializedName("assigned_to") val assignedTo: String?,
+    // On-site contact + the client's primary location — may all be null (no contact/location
+    // on file), which is why the "Drive"/"Call" appointment actions must be conditional.
+    @com.google.gson.annotations.SerializedName("contact_name") val contactName: String? = null,
+    @com.google.gson.annotations.SerializedName("contact_phone") val contactPhone: String? = null,
+    val address: String? = null, val city: String? = null, val state: String? = null,
 )
 
 data class CreateAppointmentRequest(

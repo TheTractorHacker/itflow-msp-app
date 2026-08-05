@@ -1,10 +1,12 @@
 package com.foleyit.itflow.ui.screens.tickets
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -23,6 +25,7 @@ import com.foleyit.itflow.ui.components.EmptyScreen
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadMoreRow
 import com.foleyit.itflow.ui.components.LoadingScreen
+import com.foleyit.itflow.ui.components.SectionLabel
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.theme.forPriority
 import com.foleyit.itflow.ui.theme.statusColors
@@ -47,6 +50,8 @@ fun TicketsScreen(navController: NavController) {
     var savedViews by remember { mutableStateOf<List<SavedTicketView>>(emptyList()) }
     var activeView by remember { mutableStateOf<SavedTicketView?>(null) }
     var showViewsMenu by remember { mutableStateOf(false) }
+    var showFilterSheet by remember { mutableStateOf(false) }
+    val filtersActive = priorityFilter != null || onsiteFilter != null || categoryFilter != null
 
     val list = rememberPagedList(selectedTab, mineOnly, priorityFilter, onsiteFilter, categoryFilter, activeView) { page, q ->
         val view = activeView
@@ -120,6 +125,20 @@ fun TicketsScreen(navController: NavController) {
                 onClick = { mineOnly = !mineOnly },
                 label = { Text("Mine", style = MaterialTheme.typography.labelMedium) }
             )
+            Box {
+                IconButton(onClick = { showFilterSheet = true }) {
+                    Icon(Icons.Outlined.Tune, "Filters")
+                }
+                if (filtersActive) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 8.dp, end = 8.dp)
+                            .size(8.dp)
+                            .background(MaterialTheme.colorScheme.error, CircleShape)
+                    )
+                }
+            }
             if (savedViews.isNotEmpty()) {
                 Box {
                     IconButton(onClick = { showViewsMenu = true }) {
@@ -158,58 +177,37 @@ fun TicketsScreen(navController: NavController) {
             }
         }
 
-        TabRow(selectedTabIndex = selectedTab) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 },
-                text = { Text("Open") })
-            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 },
-                text = { Text("Closed") })
-        }
-
-        // Scrollable filter chips
-        Row(
+        // Segmented pill control for Open/Closed
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 16.dp, vertical = 6.dp)
         ) {
-            // Priority filters
-            listOf(null to "All", "critical" to "Critical", "high" to "High",
-                   "medium" to "Medium", "low" to "Low").forEach { (value, label) ->
-                FilterChip(
-                    selected = priorityFilter == value,
-                    onClick = { priorityFilter = if (priorityFilter == value && value != null) null else value },
-                    label = { Text(label) }
-                )
-            }
-            VerticalDivider(modifier = Modifier.height(32.dp).padding(horizontal = 4.dp))
-            FilterChip(
-                selected = onsiteFilter == 1,
-                onClick = { onsiteFilter = if (onsiteFilter == 1) null else 1 },
-                label = { Text("On-Site") },
-                leadingIcon = { Icon(Icons.Outlined.LocationOn, null, Modifier.size(14.dp)) }
-            )
-            FilterChip(
-                selected = onsiteFilter == 0,
-                onClick = { onsiteFilter = if (onsiteFilter == 0) null else 0 },
-                label = { Text("Remote") },
-                leadingIcon = { Icon(Icons.Outlined.Wifi, null, Modifier.size(14.dp)) }
-            )
-            if (categories.isNotEmpty()) {
-                VerticalDivider(modifier = Modifier.height(32.dp).padding(horizontal = 4.dp))
-                categories.forEach { cat ->
-                    FilterChip(
-                        selected = categoryFilter == cat.id,
-                        onClick = { categoryFilter = if (categoryFilter == cat.id) null else cat.id },
-                        label = { Text(cat.name) },
-                        leadingIcon = {
-                            Surface(
-                                color = ticketStatusColor(cat.color),
-                                shape = MaterialTheme.shapes.extraSmall,
-                                modifier = Modifier.size(10.dp)
-                            ) {}
+            Row(modifier = Modifier.padding(4.dp)) {
+                listOf("Open" to 0, "Closed" to 1).forEach { (label, index) ->
+                    val selected = selectedTab == index
+                    Surface(
+                        selected = selected,
+                        onClick = { selectedTab = index },
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    )
+                    }
                 }
             }
         }
@@ -278,13 +276,113 @@ fun TicketsScreen(navController: NavController) {
             }
         }
     }
+
+    if (showFilterSheet) {
+        ModalBottomSheet(onDismissRequest = { showFilterSheet = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 24.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Filters", style = MaterialTheme.typography.titleMedium)
+                    TextButton(onClick = {
+                        priorityFilter = null
+                        onsiteFilter = null
+                        categoryFilter = null
+                    }) {
+                        Text("Clear all")
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                SectionLabel("Priority")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(null to "All", "critical" to "Critical", "high" to "High",
+                           "medium" to "Medium", "low" to "Low").forEach { (value, label) ->
+                        FilterChip(
+                            selected = priorityFilter == value,
+                            onClick = { priorityFilter = if (priorityFilter == value && value != null) null else value },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                SectionLabel("Location")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = onsiteFilter == 1,
+                        onClick = { onsiteFilter = if (onsiteFilter == 1) null else 1 },
+                        label = { Text("On-Site") },
+                        leadingIcon = { Icon(Icons.Outlined.LocationOn, null, Modifier.size(14.dp)) }
+                    )
+                    FilterChip(
+                        selected = onsiteFilter == 0,
+                        onClick = { onsiteFilter = if (onsiteFilter == 0) null else 0 },
+                        label = { Text("Remote") },
+                        leadingIcon = { Icon(Icons.Outlined.Wifi, null, Modifier.size(14.dp)) }
+                    )
+                }
+
+                if (categories.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    SectionLabel("Category")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        categories.forEach { cat ->
+                            FilterChip(
+                                selected = categoryFilter == cat.id,
+                                onClick = { categoryFilter = if (categoryFilter == cat.id) null else cat.id },
+                                label = { Text(cat.name) },
+                                leadingIcon = {
+                                    Surface(
+                                        color = ticketStatusColor(cat.color),
+                                        shape = MaterialTheme.shapes.extraSmall,
+                                        modifier = Modifier.size(10.dp)
+                                    ) {}
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = { showFilterSheet = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Done")
+                }
+            }
+        }
+    }
     } // end Scaffold
 }
 
 @Composable
 fun TicketCard(ticket: TicketSummary, onClick: () -> Unit) {
     val priorityColor = MaterialTheme.statusColors.forPriority(ticket.priority)
-    Card(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, onClick = onClick) {
         Row(modifier = Modifier.padding(16.dp)) {
             Surface(
                 color = priorityColor,

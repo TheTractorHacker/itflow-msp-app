@@ -2,6 +2,8 @@ package com.foleyit.itflow.ui.screens.appointments
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -132,6 +134,8 @@ fun AppointmentsScreen(navController: NavController) {
 @Composable
 private fun AppointmentCard(appt: Appointment, onClick: () -> Unit) {
     val priorityColor = MaterialTheme.statusColors.forPriority(appt.priority)
+    val ctx = LocalContext.current
+    val fullAddress = listOfNotNull(appt.address, appt.city, appt.state).joinToString(", ")
     Card(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(Modifier.padding(16.dp)) {
             // Color strip
@@ -185,6 +189,50 @@ private fun AppointmentCard(appt: Appointment, onClick: () -> Unit) {
                     Text(notes, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
                 }
+                appt.address?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.LocationOn, null, Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.outline)
+                        Spacer(Modifier.width(3.dp))
+                        Text(fullAddress, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline, maxLines = 1)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    appt.address?.let {
+                        OutlinedButton(
+                            onClick = {
+                                ctx.startActivity(Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(fullAddress))
+                                ))
+                            },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Outlined.Directions, null, Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Drive", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    appt.contactPhone?.let { phone ->
+                        OutlinedButton(
+                            onClick = { ctx.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))) },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Outlined.Phone, null, Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Call", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = onClick,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text("#${appt.number}", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 appt.status?.let {
@@ -195,7 +243,6 @@ private fun AppointmentCard(appt: Appointment, onClick: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSecondaryContainer)
                     }
                 }
-                val ctx = LocalContext.current
                 if (appt.schedule != null) {
                     FilledTonalIconButton(onClick = { addAppointmentToCalendar(ctx, appt) },
                         modifier = Modifier.size(32.dp)) {

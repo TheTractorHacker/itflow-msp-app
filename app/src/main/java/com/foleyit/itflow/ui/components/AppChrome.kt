@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
@@ -102,7 +104,7 @@ fun AppDrawerContent(
     onNavigate: (String) -> Unit,
     onSignOut: () -> Unit,
 ) {
-    ModalDrawerSheet(modifier = Modifier.width(272.dp)) {
+    ModalDrawerSheet(modifier = Modifier.width(272.dp).fillMaxHeight()) {
         Surface(color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(20.dp)) {
                 Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp)) {
@@ -126,50 +128,60 @@ fun AppDrawerContent(
                 )
             }
         }
-        Spacer(Modifier.height(8.dp))
+        // Scrollable middle section — everything below (Profile/dark-mode/Sign out) must stay
+        // pinned and visible even when this list alone is taller than the screen (header + 3 +
+        // divider + 6 items comfortably exceeds a typical phone height once you add the pinned
+        // section on top; without its own scroll, a plain Column would just clip the overflow
+        // instead of scrolling it, silently hiding Sign out on shorter devices).
+        Column(
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Spacer(Modifier.height(8.dp))
 
-        NavigationDrawerItem(
-            label = { Text("Search") }, icon = { DrawerLeadingIcon(Icons.Outlined.Search) },
-            selected = false, onClick = { onNavigate(Screen.Search.route) }, modifier = DrawerItemPadding,
-        )
-        NavigationDrawerItem(
-            label = { Text("Notifications") },
-            icon = { DrawerLeadingIcon(Icons.Outlined.Notifications, hasUnreadNotifications) },
-            selected = false, onClick = { onNavigate(Screen.Notifications.route) }, modifier = DrawerItemPadding,
-        )
-        NavigationDrawerItem(
-            label = { Text("Alerts") }, icon = { DrawerLeadingIcon(Icons.Outlined.Warning) },
-            selected = false, onClick = { onNavigate(Screen.Alerts.route) }, modifier = DrawerItemPadding,
-        )
+            NavigationDrawerItem(
+                label = { Text("Search") }, icon = { DrawerLeadingIcon(Icons.Outlined.Search) },
+                selected = false, onClick = { onNavigate(Screen.Search.route) }, modifier = DrawerItemPadding,
+            )
+            NavigationDrawerItem(
+                label = { Text("Notifications") },
+                icon = { DrawerLeadingIcon(Icons.Outlined.Notifications, hasUnreadNotifications) },
+                selected = false, onClick = { onNavigate(Screen.Notifications.route) }, modifier = DrawerItemPadding,
+            )
+            NavigationDrawerItem(
+                label = { Text("Alerts") }, icon = { DrawerLeadingIcon(Icons.Outlined.Warning) },
+                selected = false, onClick = { onNavigate(Screen.Alerts.route) }, modifier = DrawerItemPadding,
+            )
 
-        HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 12.dp))
+            HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 12.dp))
 
-        NavigationDrawerItem(
-            label = { Text("Reports") }, icon = { DrawerLeadingIcon(Icons.Outlined.Assessment) },
-            selected = false, onClick = { onNavigate(Screen.ReportsHub.route) }, modifier = DrawerItemPadding,
-        )
-        NavigationDrawerItem(
-            label = { Text("Knowledge Base") }, icon = { DrawerLeadingIcon(Icons.AutoMirrored.Outlined.MenuBook) },
-            selected = false, onClick = { onNavigate(Screen.KnowledgeBase.route) }, modifier = DrawerItemPadding,
-        )
-        NavigationDrawerItem(
-            label = { Text("Credentials") }, icon = { DrawerLeadingIcon(Icons.Outlined.Lock) },
-            selected = false, onClick = { onNavigate(Screen.Credentials.route) }, modifier = DrawerItemPadding,
-        )
-        NavigationDrawerItem(
-            label = { Text("Quotes") }, icon = { DrawerLeadingIcon(Icons.Outlined.RequestQuote) },
-            selected = false, onClick = { onNavigate(Screen.Quotes.route) }, modifier = DrawerItemPadding,
-        )
-        NavigationDrawerItem(
-            label = { Text("Invoices") }, icon = { DrawerLeadingIcon(Icons.AutoMirrored.Outlined.ReceiptLong) },
-            selected = false, onClick = { onNavigate(Screen.Invoices.route) }, modifier = DrawerItemPadding,
-        )
-        NavigationDrawerItem(
-            label = { Text("Expenses") }, icon = { DrawerLeadingIcon(Icons.Outlined.Payments) },
-            selected = false, onClick = { onNavigate(Screen.Expenses.route) }, modifier = DrawerItemPadding,
-        )
+            NavigationDrawerItem(
+                label = { Text("Reports") }, icon = { DrawerLeadingIcon(Icons.Outlined.Assessment) },
+                selected = false, onClick = { onNavigate(Screen.ReportsHub.route) }, modifier = DrawerItemPadding,
+            )
+            NavigationDrawerItem(
+                label = { Text("Knowledge Base") }, icon = { DrawerLeadingIcon(Icons.AutoMirrored.Outlined.MenuBook) },
+                selected = false, onClick = { onNavigate(Screen.KnowledgeBase.route) }, modifier = DrawerItemPadding,
+            )
+            NavigationDrawerItem(
+                label = { Text("Credentials") }, icon = { DrawerLeadingIcon(Icons.Outlined.Lock) },
+                selected = false, onClick = { onNavigate(Screen.Credentials.route) }, modifier = DrawerItemPadding,
+            )
+            NavigationDrawerItem(
+                label = { Text("Quotes") }, icon = { DrawerLeadingIcon(Icons.Outlined.RequestQuote) },
+                selected = false, onClick = { onNavigate(Screen.Quotes.route) }, modifier = DrawerItemPadding,
+            )
+            NavigationDrawerItem(
+                label = { Text("Invoices") }, icon = { DrawerLeadingIcon(Icons.AutoMirrored.Outlined.ReceiptLong) },
+                selected = false, onClick = { onNavigate(Screen.Invoices.route) }, modifier = DrawerItemPadding,
+            )
+            NavigationDrawerItem(
+                label = { Text("Expenses") }, icon = { DrawerLeadingIcon(Icons.Outlined.Payments) },
+                selected = false, onClick = { onNavigate(Screen.Expenses.route) }, modifier = DrawerItemPadding,
+            )
+        }
 
-        Spacer(Modifier.weight(1f))
         HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 12.dp))
 
         NavigationDrawerItem(
