@@ -69,6 +69,7 @@ fun ScanBarcodeScreen(navController: NavController) {
     }
     var scanning by remember { mutableStateOf(true) }
     var status by remember { mutableStateOf("Point camera at barcode or serial number") }
+    var notFoundCode by remember { mutableStateOf<String?>(null) }
     var camera by remember { mutableStateOf<Camera?>(null) }
     var torchOn by remember { mutableStateOf(false) }
     var borderTarget by remember { mutableStateOf(Color.White) }
@@ -120,10 +121,28 @@ fun ScanBarcodeScreen(navController: NavController) {
             } else {
                 flashBorder(NoMatchColor)
                 runCatching { toneGenerator?.startTone(ToneGenerator.TONE_PROP_NACK, 200) }
-                status = "No asset found for \"$raw\". Tap back to try again."
-                scanning = true
+                // Leave scanning=false and surface a dialog instead of re-arming immediately -
+                // the camera keeps decoding the same code every frame while it's still in view,
+                // so resuming here would re-fire this lookup (and the NACK beep/red flash)
+                // dozens of times a second until the user physically moved the camera.
+                status = "Point camera at barcode or serial number"
+                notFoundCode = raw
             }
         }
+    }
+
+    notFoundCode?.let { code ->
+        AlertDialog(
+            onDismissRequest = { notFoundCode = null; scanning = true },
+            title = { Text("No Asset Found") },
+            text = { Text("No asset matches the scanned code \"$code\".") },
+            confirmButton = {
+                TextButton(onClick = { notFoundCode = null; scanning = true }) { Text("Scan Again") }
+            },
+            dismissButton = {
+                TextButton(onClick = { navController.popBackStack() }) { Text("Cancel") }
+            }
+        )
     }
 
     Scaffold(

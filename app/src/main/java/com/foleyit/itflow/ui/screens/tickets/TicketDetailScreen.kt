@@ -4,6 +4,7 @@ import android.text.Html
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -161,12 +162,13 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     if (showReply) {
         ReplySheet(
             defaultTimeWorked = if (elapsed > 0) timeWorkedString else "",
+            statuses = statuses,
             onDismiss = { showReply = false },
-            onSubmit = { reply, type, timeWorked, onsite ->
+            onSubmit = { reply, type, timeWorked, onsite, statusId ->
                 scope.launch {
                     runCatching {
                         ApiClient.service().addReply(id, reply, type = type,
-                            timeWorked = timeWorked.ifBlank { null }, onsite = onsite)
+                            timeWorked = timeWorked.ifBlank { null }, onsite = onsite, statusId = statusId)
                     }.onSuccess {
                         load()
                         if (elapsed > 0) elapsed = 0L
@@ -473,14 +475,23 @@ fun parseStatusColor(hex: String): Color = try {
 @Composable
 private fun ReplySheet(
     defaultTimeWorked: String,
+    statuses: List<TicketStatus>,
     onDismiss: () -> Unit,
-    onSubmit: (reply: String, type: String, timeWorked: String, onsite: Boolean) -> Unit
+    onSubmit: (reply: String, type: String, timeWorked: String, onsite: Boolean, statusId: Int?) -> Unit
 ) {
     var reply by remember { mutableStateOf("") }
     val (initialH, initialM) = remember(defaultTimeWorked) { parseHoursMinutes(defaultTimeWorked) }
     var hours by remember { mutableIntStateOf(initialH) }
     var minutes by remember { mutableIntStateOf(initialM) }
     var onsite by remember { mutableStateOf(false) }
+    var selectedStatusId by remember { mutableStateOf<Int?>(null) }
+
+    // Mirrors the web app's reply-form "Submit & set status to…" dropdown, which excludes
+    // "New" (not a status a reply returns a ticket to) and "Closed" (only ever reached via
+    // "Resolved", which the backend remaps automatically).
+    val statusOptions = remember(statuses) {
+        statuses.filter { it.name != "New" && it.name != "Closed" }
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier
@@ -518,6 +529,29 @@ private fun ReplySheet(
                 TimeStepper(label = "hr", value = hours, step = 1, range = 0..23, onChange = { hours = it })
                 TimeStepper(label = "min", value = minutes, step = 5, range = 0..59, onChange = { minutes = it })
             }
+            if (statusOptions.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                Text("Set status (optional)", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                ) {
+                    FilterChip(
+                        selected = selectedStatusId == null,
+                        onClick = { selectedStatusId = null },
+                        label = { Text("No change") }
+                    )
+                    statusOptions.forEach { s ->
+                        FilterChip(
+                            selected = selectedStatusId == s.id,
+                            onClick = { selectedStatusId = s.id },
+                            label = { Text(s.name) }
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = onDismiss) { Text("Cancel") }
@@ -528,7 +562,7 @@ private fun ReplySheet(
                             val timeWorked = if (hours > 0 || minutes > 0)
                                 "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00"
                             else ""
-                            onSubmit(reply, "note", timeWorked, onsite)
+                            onSubmit(reply, "note", timeWorked, onsite, selectedStatusId)
                         }
                     },
                     enabled = reply.isNotBlank()

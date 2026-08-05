@@ -223,7 +223,8 @@ interface ApiService {
     @GET("credentials/{id}")
     suspend fun getCredential(
         @Path("id") id: Int,
-        @Header("X-Biometric") biometric: String = "1"
+        @Header("X-Biometric-Challenge-Token") challengeToken: String,
+        @Header("X-Biometric-Signature") signature: String
     ): CredentialDetail
 
     // Quotes — no-store: responses contain guest_url, a bearer-token-like public link
@@ -319,6 +320,9 @@ interface ApiService {
     @PUT("me")
     suspend fun registerFcmToken(@Body body: FcmTokenRequest)
 
+    @PUT("me")
+    suspend fun registerBiometricKey(@Body body: BiometricKeyRequest)
+
     @POST("tickets/{id}/charges")
     suspend fun addCharge(@Path("id") id: Int, @Body body: AddChargeRequest)
 
@@ -383,8 +387,8 @@ interface ApiService {
 }
 
 // Extension helpers
-suspend fun ApiService.addReply(id: Int, reply: String, type: String = "reply", timeWorked: String? = null, onsite: Boolean = false) =
-    addReply(id, AddReplyRequest(reply, type, timeWorked, if (onsite) 1 else 0))
+suspend fun ApiService.addReply(id: Int, reply: String, type: String = "reply", timeWorked: String? = null, onsite: Boolean = false, statusId: Int? = null) =
+    addReply(id, AddReplyRequest(reply, type, timeWorked, if (onsite) 1 else 0, statusId))
 
 
 // ── Appointments ─────────────────────────────────────────────────────────────

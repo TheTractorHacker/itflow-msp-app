@@ -78,7 +78,7 @@ data class TicketReply(
     @SerializedName("created_at") val createdAt: String?
 )
 
-data class AddReplyRequest(val reply: String, val type: String, val time_worked: String?, val onsite: Int = 0)
+data class AddReplyRequest(val reply: String, val type: String, val time_worked: String?, val onsite: Int = 0, val status_id: Int? = null)
 data class TicketStatus(val id: Int, val name: String, val color: String)
 
 data class LogTimeRequest(val time_worked: String, val note: String)
@@ -109,13 +109,13 @@ data class Contact(
 data class AssetsResponse(override val data: List<AssetSummary>, override val total: Int) : PagedResponse<AssetSummary>
 
 data class AssetSummary(
-    val id: Int, val name: String, val type: String?,
+    val id: Int, val name: String, val tag: String?, val type: String?,
     val make: String?, val model: String?, val serial: String?,
     val os: String?, val status: String?, val client: String?
 )
 
 data class AssetDetail(
-    val id: Int, val name: String, val type: String?,
+    val id: Int, val name: String, val tag: String?, val type: String?,
     val make: String?, val model: String?, val serial: String?,
     val os: String?, val status: String?, val description: String?,
     @SerializedName("physical_location") val physicalLocation: String?,
@@ -307,6 +307,10 @@ data class UpdateProfileRequest(
 
 data class FcmTokenRequest(
     @com.google.gson.annotations.SerializedName("fcm_token") val fcmToken: String
+)
+
+data class BiometricKeyRequest(
+    @com.google.gson.annotations.SerializedName("device_public_key_pem") val devicePublicKeyPem: String
 )
 
 // ── Create Ticket ────────────────────────────────────────────────────────────
