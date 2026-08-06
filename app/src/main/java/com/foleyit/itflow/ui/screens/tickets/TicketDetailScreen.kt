@@ -1,6 +1,7 @@
 package com.foleyit.itflow.ui.screens.tickets
 
 import android.text.Html
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -58,7 +59,6 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     // Sheets
     var showReply by remember { mutableStateOf(false) }
     var showStatusPicker by remember { mutableStateOf(false) }
-    var showAddCharge by remember { mutableStateOf(false) }
     var showAddWorksheet by remember { mutableStateOf(false) }
     var showAddOuttake by remember { mutableStateOf(false) }
     var showResolveConfirm by remember { mutableStateOf(false) }
@@ -107,17 +107,6 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    if (showAddCharge) {
-        AddChargeSheet(onDismiss = { showAddCharge = false }, onSave = { name, desc, qty, price ->
-            scope.launch {
-                runCatching { ApiClient.service().addCharge(id, AddChargeRequest(name, desc, qty, price)) }
-                    .onSuccess { load() }
-                    .onFailure { snackbar.showSnackbar("Failed to add charge: ${userMessage(it)}") }
-            }
-            showAddCharge = false
-        })
     }
 
     if (showAddWorksheet) {
@@ -217,6 +206,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                 Spacer(Modifier.height(12.dp))
                 statuses.forEach { s ->
                     val isCurrentStatus = state?.getOrNull()?.status == s.name
+                    val statusColor = parseStatusColor(s.color)
                     Surface(
                         onClick = {
                             showStatusPicker = false
@@ -233,11 +223,17 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                                 else MaterialTheme.colorScheme.surface,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            Surface(color = parseStatusColor(s.color),
-                                shape = MaterialTheme.shapes.extraSmall,
-                                modifier = Modifier.size(12.dp)) {}
+                            Surface(
+                                color = statusColor.copy(alpha = 0.15f),
+                                shape = MaterialTheme.shapes.extraLarge,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(statusIcon(s.name), null, Modifier.size(20.dp), tint = statusColor)
+                                }
+                            }
                             Spacer(Modifier.width(12.dp))
                             Text(s.name, style = MaterialTheme.typography.bodyMedium)
                             if (isCurrentStatus) {
@@ -346,7 +342,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
 
                     // Header card
                     item {
-                        Card(modifier = Modifier.fillMaxWidth()) {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                             Column(Modifier.padding(16.dp)) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically) {
@@ -395,7 +391,7 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                     // Description
                     if (!ticket.details.isNullOrBlank()) {
                         item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
+                            Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                                 Column(Modifier.padding(16.dp)) {
                                     Text("Description", style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -407,7 +403,15 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                     }
 
                     // Charges
-                    item { ChargesCard(charges, onAddCharge = { showAddCharge = true }) }
+                    item {
+                        ChargesCard(charges, onSaveCharge = { name, desc, qty, price ->
+                            scope.launch {
+                                runCatching { ApiClient.service().addCharge(id, AddChargeRequest(name, desc, qty, price)) }
+                                    .onSuccess { load() }
+                                    .onFailure { snackbar.showSnackbar("Failed to add charge: ${userMessage(it)}") }
+                            }
+                        })
+                    }
 
                     // Worksheets + Outtake Forms (separate sections)
                     item {
@@ -470,6 +474,17 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
 fun parseStatusColor(hex: String): Color = try {
     Color(android.graphics.Color.parseColor(if (hex.startsWith("#")) hex else "#$hex"))
 } catch (_: Exception) { Color.Gray }
+
+// Statuses are admin-configurable on the server, so names beyond this common set can't be
+// predicted — anything unrecognized falls back to a plain dot-in-circle treatment.
+private fun statusIcon(name: String): androidx.compose.ui.graphics.vector.ImageVector =
+    when (name.lowercase()) {
+        "open", "new" -> Icons.Outlined.RadioButtonUnchecked
+        "in progress" -> Icons.Outlined.Sync
+        "waiting", "pending" -> Icons.Outlined.Schedule
+        "closed", "resolved" -> Icons.Outlined.CheckCircle
+        else -> Icons.Outlined.Circle
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -740,9 +755,10 @@ private fun ReplyCard(reply: TicketReply, ticketId: Int, onDeleted: () -> Unit, 
 }
 
 @Composable
-private fun ChargesCard(cr: ChargesResponse?, onAddCharge: (() -> Unit)? = null) {
+private fun ChargesCard(cr: ChargesResponse?, onSaveCharge: ((name: String, desc: String, qty: Double, price: Double) -> Unit)? = null) {
     val currency = NumberFormat.getCurrencyInstance(Locale.US)
-    Card(modifier = Modifier.fillMaxWidth()) {
+    var expanded by remember { mutableStateOf(false) }
+    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
@@ -753,9 +769,13 @@ private fun ChargesCard(cr: ChargesResponse?, onAddCharge: (() -> Unit)? = null)
                             color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(8.dp))
                     }
-                    onAddCharge?.let { action ->
-                        FilledTonalIconButton(onClick = action, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Outlined.Add, "Add Charge", Modifier.size(16.dp))
+                    onSaveCharge?.let {
+                        FilledTonalIconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                if (expanded) Icons.Outlined.Close else Icons.Outlined.Add,
+                                if (expanded) "Close" else "Add Charge",
+                                Modifier.size(16.dp)
+                            )
                         }
                     }
                 }
@@ -764,34 +784,51 @@ private fun ChargesCard(cr: ChargesResponse?, onAddCharge: (() -> Unit)? = null)
                 Spacer(Modifier.height(8.dp))
                 Text("No charges on this ticket.", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline)
-                return@Column
-            }
-            Spacer(Modifier.height(12.dp))
-            cr.charges.forEachIndexed { i, charge ->
-                Row(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                    Column(Modifier.weight(1f)) {
-                        Text(charge.name, fontWeight = FontWeight.Medium)
-                        if (!charge.description.isNullOrBlank()) {
-                            Text(charge.description, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Spacer(Modifier.height(12.dp))
+                cr.charges.forEachIndexed { i, charge ->
+                    Row(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text(charge.name, fontWeight = FontWeight.Medium)
+                            if (!charge.description.isNullOrBlank()) {
+                                Text(charge.description, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text("${charge.quantity} × ${currency.format(charge.unitPrice)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline)
                         }
-                        Text("${charge.quantity} × ${currency.format(charge.unitPrice)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline)
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(currency.format(charge.total), fontWeight = FontWeight.Medium)
-                        if (charge.invoiced) {
-                            Surface(color = MaterialTheme.colorScheme.secondaryContainer,
-                                shape = MaterialTheme.shapes.extraSmall) {
-                                Text("Invoiced", modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(currency.format(charge.total), fontWeight = FontWeight.Medium)
+                            if (charge.invoiced) {
+                                Surface(color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = MaterialTheme.shapes.extraSmall) {
+                                    Text("Invoiced", modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                }
                             }
                         }
                     }
+                    if (i < cr.charges.size - 1) HorizontalDivider()
                 }
-                if (i < cr.charges.size - 1) HorizontalDivider()
+            }
+            if (onSaveCharge != null) {
+                AnimatedVisibility(visible = expanded) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                    ) {
+                        AddChargeForm(
+                            onCancel = { expanded = false },
+                            onSave = { name, desc, qty, price ->
+                                onSaveCharge(name, desc, qty, price)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
             }
         }
     }
@@ -808,7 +845,7 @@ private fun WorksheetsCard(
     onDeleteOuttake: ((Int) -> Unit)? = null,
     onToggleWorksheetComplete: ((Int, Boolean) -> Unit)? = null
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
         Column(Modifier.padding(16.dp)) {
             // ── Worksheets ───────────────────────────────────────────────
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
@@ -986,10 +1023,11 @@ private fun OuttakeItems(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+// Inline "Add Charge" panel rendered directly inside ChargesCard (an expanding panel, not a
+// separate sheet route) — same product-catalog quick-pick, fields, and live total as before.
 @Composable
-private fun AddChargeSheet(
-    onDismiss: () -> Unit,
+private fun AddChargeForm(
+    onCancel: () -> Unit,
     onSave: (name: String, desc: String, qty: Double, price: Double) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -1014,120 +1052,113 @@ private fun AddChargeSheet(
         }.take(8)
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
-        ) {
-            Text("Add Charge", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(12.dp))
+    Column(Modifier.fillMaxWidth().padding(16.dp)) {
+        Text("Add Charge", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(12.dp))
 
-            // Product catalog search
-            if (products.isNotEmpty()) {
-                Text("From Catalog", style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(6.dp))
-                OutlinedTextField(
-                    value = productSearch,
-                    onValueChange = { productSearch = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search products & services…") },
-                    leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                    trailingIcon = {
-                        if (productSearch.isNotEmpty()) {
-                            IconButton(onClick = { productSearch = "" }) {
-                                Icon(Icons.Outlined.Clear, "Clear search")
-                            }
+        // Product catalog search
+        if (products.isNotEmpty()) {
+            Text("From Catalog", style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(6.dp))
+            OutlinedTextField(
+                value = productSearch,
+                onValueChange = { productSearch = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search products & services…") },
+                leadingIcon = { Icon(Icons.Outlined.Search, null) },
+                trailingIcon = {
+                    if (productSearch.isNotEmpty()) {
+                        IconButton(onClick = { productSearch = "" }) {
+                            Icon(Icons.Outlined.Clear, "Clear search")
                         }
-                    },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.extraLarge
-                )
-                if (filteredProducts.isNotEmpty()) {
-                    Spacer(Modifier.height(6.dp))
-                    filteredProducts.forEach { product ->
-                        Surface(
-                            onClick = {
-                                name = product.name
-                                desc = product.description ?: ""
-                                price = product.price.toString()
-                                qty = 1
-                                productSearch = ""
-                            },
-                            shape = MaterialTheme.shapes.medium,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
-                        ) {
-                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(product.name, fontWeight = FontWeight.Medium,
-                                        style = MaterialTheme.typography.bodyMedium)
-                                    product.type?.let {
-                                        Text(it, style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.outline)
-                                    }
+                    }
+                },
+                singleLine = true,
+                shape = MaterialTheme.shapes.extraLarge
+            )
+            if (filteredProducts.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                filteredProducts.forEach { product ->
+                    Surface(
+                        onClick = {
+                            name = product.name
+                            desc = product.description ?: ""
+                            price = product.price.toString()
+                            qty = 1
+                            productSearch = ""
+                        },
+                        shape = MaterialTheme.shapes.medium,
+                        // Contrasts against this form's own surfaceVariant panel background.
+                        color = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+                    ) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(product.name, fontWeight = FontWeight.Medium,
+                                    style = MaterialTheme.typography.bodyMedium)
+                                product.type?.let {
+                                    Text(it, style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline)
                                 }
-                                Text(currency.format(product.price), fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary)
                             }
+                            Text(currency.format(product.price), fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
-                HorizontalDivider(Modifier.padding(vertical = 12.dp))
             }
+            HorizontalDivider(Modifier.padding(vertical = 12.dp))
+        }
 
-            OutlinedTextField(value = name, onValueChange = { name = it },
-                label = { Text("Item Name *") },
-                modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(value = desc, onValueChange = { desc = it },
-                label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 3)
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column {
-                    Text("Quantity", style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(4.dp))
-                    QtyStepper(value = qty, onChange = { qty = it })
-                }
-                OutlinedTextField(
-                    value = price, onValueChange = { price = it }, label = { Text("Unit Price") },
-                    leadingIcon = { Text("$") }, modifier = Modifier.weight(1f), singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
+        OutlinedTextField(value = name, onValueChange = { name = it },
+            label = { Text("Item Name *") },
+            modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(value = desc, onValueChange = { desc = it },
+            label = { Text("Description") },
+            modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 3)
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column {
+                Text("Quantity", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(4.dp))
+                QtyStepper(value = qty, onChange = { qty = it })
             }
-            Spacer(Modifier.height(12.dp))
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.fillMaxWidth()
+            OutlinedTextField(
+                value = price, onValueChange = { price = it }, label = { Text("Unit Price") },
+                leadingIcon = { Text("$") }, modifier = Modifier.weight(1f), singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Total", style = MaterialTheme.typography.labelLarge)
-                    Text(currency.format(total), fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary)
-                }
+                Text("New line total", style = MaterialTheme.typography.labelLarge)
+                Text(currency.format(total), fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary)
             }
-            Spacer(Modifier.height(16.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-                Spacer(Modifier.width(8.dp))
-                Button(
-                    onClick = {
-                        if (name.isNotBlank()) onSave(name, desc, qty.toDouble(), price.toDoubleOrNull() ?: 0.0)
-                    },
-                    enabled = name.isNotBlank()
-                ) { Text("Add Charge") }
-            }
-            Spacer(Modifier.height(8.dp))
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onCancel) { Text("Cancel") }
+            Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    if (name.isNotBlank()) onSave(name, desc, qty.toDouble(), price.toDoubleOrNull() ?: 0.0)
+                },
+                enabled = name.isNotBlank()
+            ) { Text("Add Charge") }
         }
     }
 }
