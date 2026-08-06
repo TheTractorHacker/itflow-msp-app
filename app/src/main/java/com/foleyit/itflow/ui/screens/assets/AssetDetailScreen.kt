@@ -58,11 +58,11 @@ fun AssetDetailScreen(id: Int, navController: NavController) {
                 ) {
                     // Header
                     item {
-                        Card(modifier = Modifier.fillMaxWidth()) {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(
-                                        shape = MaterialTheme.shapes.medium,
+                                        shape = MaterialTheme.shapes.extraLarge,
                                         color = MaterialTheme.colorScheme.secondaryContainer,
                                         modifier = Modifier.size(52.dp)
                                     ) {
@@ -94,7 +94,7 @@ fun AssetDetailScreen(id: Int, navController: NavController) {
 
                     // Details
                     item {
-                        Card(modifier = Modifier.fillMaxWidth()) {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                             Column(Modifier.padding(16.dp)) {
                                 Text("Details", style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -117,7 +117,7 @@ fun AssetDetailScreen(id: Int, navController: NavController) {
                     // Serial number with copy
                     if (!a.serial.isNullOrBlank()) {
                         item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
+                            Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Outlined.QrCode, null,
                                         tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(20.dp))
@@ -146,7 +146,7 @@ fun AssetDetailScreen(id: Int, navController: NavController) {
                     // Notes
                     if (!a.notes.isNullOrBlank()) {
                         item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
+                            Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                                 Column(Modifier.padding(16.dp)) {
                                     Text("Notes", style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
