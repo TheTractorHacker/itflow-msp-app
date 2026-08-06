@@ -8,7 +8,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,29 +59,19 @@ fun TechnicianUtilizationReportScreen(navController: NavController) {
                         val totals = report.totals
                         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             item {
-                                Card(Modifier.fillMaxWidth()) {
+                                ReportHeroStat(
+                                    label = "Team Utilization",
+                                    value = totals.teamUtilizationPct?.let { "%.0f%%".format(it) } ?: "N/A",
+                                    icon = Icons.Outlined.Speed
+                                )
+                            }
+                            item {
+                                Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                                     Text(
                                         "${capacity.businessDays} business days · ${capacity.capacityHoursPerTech}h capacity per tech",
                                         style = MaterialTheme.typography.bodyMedium,
                                         modifier = Modifier.padding(16.dp)
                                     )
-                                }
-                            }
-                            item {
-                                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                                    Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Outlined.Speed, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(32.dp))
-                                        Spacer(Modifier.width(16.dp))
-                                        Column {
-                                            Text("Team Utilization", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                                            Text(
-                                                totals.teamUtilizationPct?.let { "%.0f%%".format(it) } ?: "N/A",
-                                                style = MaterialTheme.typography.headlineMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-                                    }
                                 }
                             }
                             item {

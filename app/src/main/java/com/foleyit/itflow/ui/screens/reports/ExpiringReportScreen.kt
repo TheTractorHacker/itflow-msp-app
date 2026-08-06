@@ -69,7 +69,7 @@ fun ExpiringReportScreen(navController: NavController) {
                     } else {
                         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(report.items, key = { it.id }) { item ->
-                                Card(Modifier.fillMaxWidth()) {
+                                Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Column(Modifier.weight(1f)) {
                                             Text(item.name, fontWeight = FontWeight.Medium)

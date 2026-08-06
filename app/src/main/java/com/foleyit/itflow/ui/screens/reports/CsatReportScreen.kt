@@ -62,21 +62,11 @@ fun CsatReportScreen(navController: NavController) {
                         val maxDistribution = (report.distribution.values.maxOrNull() ?: 1).coerceAtLeast(1)
                         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             item {
-                                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                                    Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Outlined.Star, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(32.dp))
-                                        Spacer(Modifier.width(16.dp))
-                                        Column {
-                                            Text("Avg. Rating", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                                            Text(
-                                                summary.avgRating?.let { "%.1f / 5".format(it) } ?: "N/A",
-                                                style = MaterialTheme.typography.headlineMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-                                    }
-                                }
+                                ReportHeroStat(
+                                    label = "Avg. Rating",
+                                    value = summary.avgRating?.let { "%.1f / 5".format(it) } ?: "N/A",
+                                    icon = Icons.Outlined.Star
+                                )
                             }
                             item {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -141,7 +131,7 @@ fun CsatReportScreen(navController: NavController) {
                             if (report.feedback.isNotEmpty()) {
                                 item { Spacer(Modifier.height(8.dp)); Text("Recent Feedback", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 items(report.feedback.take(10)) { f ->
-                                    Card(Modifier.fillMaxWidth()) {
+                                    Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                                         Column(Modifier.padding(16.dp)) {
                                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                                 Text("Ticket #${f.ticketNumber}", fontWeight = FontWeight.Medium)
@@ -172,7 +162,7 @@ fun CsatReportScreen(navController: NavController) {
 
 @Composable
 private fun CsatStatCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier) {
+    Card(modifier, shape = MaterialTheme.shapes.large) {
         Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)

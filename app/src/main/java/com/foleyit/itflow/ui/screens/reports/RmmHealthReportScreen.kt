@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -65,6 +66,14 @@ fun RmmHealthReportScreen(navController: NavController) {
 
                         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             item {
+                                ReportHeroStat(
+                                    label = "Mean Time to Resolve",
+                                    value = formatSeconds(totals.mttrSeconds),
+                                    icon = Icons.Outlined.Timer
+                                )
+                            }
+                            item { Spacer(Modifier.height(4.dp)) }
+                            item {
                                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     RmmStatCard("Total Alerts", totals.total.toString(), Modifier.weight(1f))
                                     RmmStatCard("Resolved", totals.resolved.toString(), Modifier.weight(1f))
@@ -75,12 +84,7 @@ fun RmmHealthReportScreen(navController: NavController) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     RmmStatCard("Acknowledged", totals.acknowledged.toString(), Modifier.weight(1f))
                                     RmmStatCard("Conversion", totals.conversionPct?.let { "%.1f%%".format(it) } ?: "-", Modifier.weight(1f))
-                                }
-                            }
-                            item {
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     RmmStatCard("MTTA", formatSeconds(totals.mttaSeconds), Modifier.weight(1f))
-                                    RmmStatCard("MTTR", formatSeconds(totals.mttrSeconds), Modifier.weight(1f))
                                 }
                             }
 

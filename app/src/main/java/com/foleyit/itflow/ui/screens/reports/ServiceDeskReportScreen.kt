@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.PendingActions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -59,10 +60,17 @@ fun ServiceDeskReportScreen(navController: NavController) {
 
                     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         item {
+                            ReportHeroStat(
+                                label = "Open Now",
+                                value = totals.openNow.toString(),
+                                icon = Icons.Outlined.PendingActions,
+                            )
+                        }
+                        item {
+                            Spacer(Modifier.height(8.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 ServiceDeskStatCard("Opened", totals.opened.toString(), Modifier.weight(1f))
                                 ServiceDeskStatCard("Resolved", totals.resolved.toString(), Modifier.weight(1f))
-                                ServiceDeskStatCard("Open Now", totals.openNow.toString(), Modifier.weight(1f))
                             }
                         }
 
@@ -110,7 +118,7 @@ fun ServiceDeskReportScreen(navController: NavController) {
 
                         item {
                             Spacer(Modifier.height(8.dp))
-                            Card(Modifier.fillMaxWidth()) {
+                            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                                 Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Column {
                                         Text("CSAT", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)

@@ -100,7 +100,7 @@ private fun ReportSectionHeader(title: String) {
 
 @Composable
 private fun ReportCard(entry: ReportEntry, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), onClick = onClick) {
+    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), shape = MaterialTheme.shapes.large, onClick = onClick) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(
                 shape = MaterialTheme.shapes.medium,

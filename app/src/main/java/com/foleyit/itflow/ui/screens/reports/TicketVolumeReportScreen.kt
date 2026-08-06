@@ -3,11 +3,11 @@ package com.foleyit.itflow.ui.screens.reports
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ConfirmationNumber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
@@ -49,7 +49,11 @@ fun TicketVolumeReportScreen(navController: NavController) {
                     val report = state!!.getOrThrow()
                     val total = report.months.sumOf { it.count }
                     Column(Modifier.padding(16.dp)) {
-                        Text("$total tickets in $year", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        ReportHeroStat(
+                            label = "Tickets in $year",
+                            value = "$total",
+                            icon = Icons.Outlined.ConfirmationNumber,
+                        )
                         Spacer(Modifier.height(16.dp))
                         MonthlyTrendChart(report.months.map { it.count.toDouble() })
                     }

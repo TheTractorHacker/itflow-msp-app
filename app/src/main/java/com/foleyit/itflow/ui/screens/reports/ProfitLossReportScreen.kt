@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,18 +58,17 @@ fun ProfitLossReportScreen(navController: NavController) {
                     val netProfit = report.months.sumOf { it.profit }
                     LazyColumn(contentPadding = PaddingValues(16.dp)) {
                         item {
-                            Card(
-                                Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (netProfit >= 0) MaterialTheme.colorScheme.primaryContainer
-                                                      else MaterialTheme.colorScheme.errorContainer
-                                )
-                            ) {
-                                Column(Modifier.padding(20.dp)) {
-                                    Text("Net Profit ($year)", style = MaterialTheme.typography.labelMedium)
-                                    Text(currency.format(netProfit), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                                }
-                            }
+                            val isLoss = netProfit < 0
+                            ReportHeroStat(
+                                label = "Net Profit ($year)",
+                                value = currency.format(netProfit),
+                                icon = Icons.Outlined.Payments,
+                                modifier = Modifier.padding(bottom = 16.dp),
+                                containerColor = if (isLoss) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = if (isLoss) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                                accentColor = if (isLoss) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                onAccentColor = if (isLoss) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary,
+                            )
                             Text("Monthly Profit Trend", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(8.dp))
                             MonthlyTrendChart(report.months.map { it.profit })

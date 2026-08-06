@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,12 +17,68 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+
+/**
+ * Shared "headline stat" card for report detail screens — e.g. "Avg. Resolution Time" on the
+ * CSAT/RMM/Service Desk reports. Every report screen currently renders its top-line number as
+ * plain Text with no card treatment at all; this is the one shared piece the design spec calls
+ * for ("hero stat card, primary-container") that didn't already exist anywhere in this file, so
+ * screens can adopt it directly instead of each hand-rolling their own version.
+ */
+@Composable
+fun ReportHeroStat(
+    label: String,
+    value: String,
+    icon: ImageVector = Icons.Outlined.Insights,
+    modifier: Modifier = Modifier,
+    // Overridable for reports whose headline number carries its own semantic (e.g. a Profit &
+    // Loss card that should read as an error/loss state, not brand-primary, when negative) —
+    // all four default to the original fixed primary/primaryContainer look, so every call site
+    // that doesn't pass these renders identically to before this parameter existed.
+    containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    accentColor: Color = MaterialTheme.colorScheme.primary,
+    onAccentColor: Color = MaterialTheme.colorScheme.onPrimary,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+    ) {
+        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = accentColor,
+                modifier = Modifier.size(44.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = onAccentColor, modifier = Modifier.size(22.dp))
+                }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column {
+                Text(
+                    value,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor,
+                )
+                Text(
+                    label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor.copy(alpha = 0.8f),
+                )
+            }
+        }
+    }
+}
 
 /** A labeled value with a bar proportional to [fraction] (0f..1f) of the series' max — used
  * for client/tech/category/priority/status breakdowns across the reports section. */

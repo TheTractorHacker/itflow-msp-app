@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
@@ -56,21 +55,11 @@ fun OverviewReportScreen(navController: NavController) {
                     val maxPriority = (report.byPriority.maxOfOrNull { it.count } ?: 1).coerceAtLeast(1)
                     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         item {
-                            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Outlined.Schedule, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(32.dp))
-                                    Spacer(Modifier.width(16.dp))
-                                    Column {
-                                        Text("Avg. Resolution Time", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                                        Text(
-                                            report.avgResolutionHours?.let { "%.1f hrs".format(it) } ?: "N/A",
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    }
-                                }
-                            }
+                            ReportHeroStat(
+                                label = "Avg. Resolution Time",
+                                value = report.avgResolutionHours?.let { "%.1f hrs".format(it) } ?: "N/A",
+                                icon = Icons.Outlined.Schedule
+                            )
                         }
                         if (report.byPriority.isNotEmpty()) {
                             item { Spacer(Modifier.height(8.dp)); Text("Open Tickets by Priority", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }

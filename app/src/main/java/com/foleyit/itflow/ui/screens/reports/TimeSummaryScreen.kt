@@ -73,25 +73,11 @@ fun TimeSummaryScreen(navController: NavController) {
                     ) {
                         // Total summary card
                         item {
-                            Card(Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Outlined.Timer, null,
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.size(32.dp))
-                                    Spacer(Modifier.width(16.dp))
-                                    Column {
-                                        Text("Total Hours",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                                        Text("%.1f hrs".format(report.totalHours),
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                    }
-                                }
-                            }
+                            ReportHeroStat(
+                                label = "Total Hours",
+                                value = "%.1f hrs".format(report.totalHours),
+                                icon = Icons.Outlined.Timer
+                            )
                         }
 
                         if (report.entries.isEmpty()) {
@@ -110,7 +96,7 @@ fun TimeSummaryScreen(navController: NavController) {
                                     modifier = Modifier.padding(vertical = 4.dp))
                             }
                             items(report.entries) { entry ->
-                                Card(Modifier.fillMaxWidth()) {
+                                Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                                     Row(Modifier.padding(16.dp),
                                         verticalAlignment = Alignment.CenterVertically) {
                                         Column(Modifier.weight(1f)) {

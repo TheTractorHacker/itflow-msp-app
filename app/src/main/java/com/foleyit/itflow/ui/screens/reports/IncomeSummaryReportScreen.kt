@@ -5,11 +5,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.FinancialSummaryResponse
@@ -58,11 +58,11 @@ fun FinancialSummaryScreen(
                         val maxTotal = (report.categories.maxOfOrNull { it.total } ?: 1.0).coerceAtLeast(1.0)
                         LazyColumn(contentPadding = PaddingValues(16.dp)) {
                             item {
-                                Text(
-                                    "Total: ${currency.format(report.grandTotal)}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 12.dp)
+                                ReportHeroStat(
+                                    label = "Total",
+                                    value = currency.format(report.grandTotal),
+                                    icon = Icons.Outlined.Payments,
+                                    modifier = Modifier.padding(bottom = 16.dp)
                                 )
                             }
                             items(report.categories.filter { it.total > 0.0 }, key = { it.categoryId }) { c ->
