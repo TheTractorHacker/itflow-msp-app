@@ -2,9 +2,13 @@ package com.foleyit.itflow.ui.screens.profile
 
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -14,6 +18,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
@@ -23,8 +29,9 @@ import androidx.navigation.NavController
 import com.foleyit.itflow.BuildConfig
 import com.foleyit.itflow.data.api.*
 import com.foleyit.itflow.data.local.AppPreferences
-import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.theme.ColorSeed
 import com.foleyit.itflow.ui.theme.ThemeMode
+import com.foleyit.itflow.ui.theme.colorSchemeFor
 import com.foleyit.itflow.ui.util.userMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -69,6 +76,59 @@ private fun SettingsRow(
     }
 }
 
+/** Small display name for a color seed — the enum id ("foleyit") isn't presentation-ready. */
+private fun ColorSeed.displayName(): String = when (this) {
+    ColorSeed.FOLEYIT -> "FoleyIT"
+    ColorSeed.TEAL -> "Teal"
+    ColorSeed.SUNSET -> "Sunset"
+    ColorSeed.FOREST -> "Forest"
+    ColorSeed.VIOLET -> "Violet"
+}
+
+/**
+ * One tappable accent-color preview. Deliberately resolves [seed]'s own color scheme rather than
+ * reading MaterialTheme.colorScheme (which only ever reflects the currently-active seed) so the
+ * user can see every option's true color while picking, not just the one already selected.
+ */
+@Composable
+private fun ColorSeedSwatch(
+    seed: ColorSeed,
+    selected: Boolean,
+    darkTheme: Boolean,
+    onClick: () -> Unit
+) {
+    val seedScheme = colorSchemeFor(seed, darkTheme)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(onClick = onClick).padding(4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(seedScheme.primary, CircleShape)
+                .border(
+                    width = if (selected) 2.5.dp else 1.dp,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (selected) {
+                // This seed's own onPrimary, not a hardcoded white — dark-mode primaries in this
+                // app are deliberately light/bright (standard M3 convention), so a fixed white
+                // checkmark would wash out against e.g. dark-mode Sunset's pale peach primary.
+                Icon(Icons.Outlined.Check, null, tint = seedScheme.onPrimary, modifier = Modifier.size(18.dp))
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            seed.displayName(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -92,6 +152,7 @@ fun ProfileScreen(
     var showChangeServerConfirm by remember { mutableStateOf(false) }
     var showSignOutConfirm by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showChangePasswordSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -168,6 +229,12 @@ fun ProfileScreen(
     }
 
     val themeMode by prefs.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+    val isDarkMode = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        else -> isSystemInDarkTheme()
+    }
+
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
@@ -205,6 +272,75 @@ fun ProfileScreen(
         )
     }
 
+    if (showChangePasswordSheet) {
+        ModalBottomSheet(onDismissRequest = { showChangePasswordSheet = false }) {
+            Column(
+                Modifier
+                    .padding(16.dp)
+                    .navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("Change Password",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold)
+                Text("Leave blank to keep your current password",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline)
+                HorizontalDivider()
+                OutlinedTextField(
+                    value = currentPass, onValueChange = { currentPass = it },
+                    label = { Text("Current Password") },
+                    leadingIcon = { Icon(Icons.Outlined.LockOpen, null) },
+                    trailingIcon = {
+                        IconButton(onClick = { obscureCur = !obscureCur }) {
+                            Icon(if (obscureCur) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, if (obscureCur) "Show password" else "Hide password")
+                        }
+                    },
+                    visualTransformation = if (obscureCur) PasswordVisualTransformation() else VisualTransformation.None,
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                )
+                OutlinedTextField(
+                    value = newPass, onValueChange = { newPass = it },
+                    label = { Text("New Password") },
+                    leadingIcon = { Icon(Icons.Outlined.Lock, null) },
+                    trailingIcon = {
+                        IconButton(onClick = { obscureNew = !obscureNew }) {
+                            Icon(if (obscureNew) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, if (obscureNew) "Show password" else "Hide password")
+                        }
+                    },
+                    visualTransformation = if (obscureNew) PasswordVisualTransformation() else VisualTransformation.None,
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                )
+                OutlinedTextField(
+                    value = confirmPass, onValueChange = { confirmPass = it },
+                    label = { Text("Confirm New Password") },
+                    leadingIcon = { Icon(Icons.Outlined.Lock, null) },
+                    trailingIcon = {
+                        IconButton(onClick = { obscureConfirm = !obscureConfirm }) {
+                            Icon(if (obscureConfirm) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, if (obscureConfirm) "Show password" else "Hide password")
+                        }
+                    },
+                    visualTransformation = if (obscureConfirm) PasswordVisualTransformation() else VisualTransformation.None,
+                    isError = newPass.isNotBlank() && confirmPass.isNotBlank() && newPass != confirmPass,
+                    supportingText = if (newPass.isNotBlank() && confirmPass.isNotBlank() && newPass != confirmPass) {
+                        { Text("Passwords don't match") }
+                    } else null,
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                )
+                Button(
+                    onClick = ::save,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !saving && currentPass.isNotBlank() && newPass.isNotBlank()
+                ) {
+                    Text("Change Password")
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -240,19 +376,23 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Surface(
-                        shape = MaterialTheme.shapes.extraLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(88.dp)
+                    val avatarGradient = Brush.linearGradient(
+                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.inversePrimary),
+                        start = Offset.Zero,
+                        end = Offset.Infinite
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(88.dp)
+                            .background(avatarGradient, CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                                fontSize = 38.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
+                        Text(
+                            name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                            fontSize = 38.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
                     }
                     Spacer(Modifier.height(14.dp))
                     Text(
@@ -269,11 +409,12 @@ fun ProfileScreen(
                 }
             }
 
-            // ── Account Info card ─────────────────────────────────────────
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Card(Modifier.fillMaxWidth()) {
+
+                // ── Account card ─────────────────────────────────────────────
+                Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Account Info",
+                        Text("Account",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold)
                         OutlinedTextField(
@@ -304,77 +445,6 @@ fun ProfileScreen(
                     }
                 }
 
-                // ── Change Password card ──────────────────────────────────────
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Lock, null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Text("Change Password",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold)
-                                Text("Leave blank to keep your current password",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline)
-                            }
-                        }
-                        HorizontalDivider()
-                        OutlinedTextField(
-                            value = currentPass, onValueChange = { currentPass = it },
-                            label = { Text("Current Password") },
-                            leadingIcon = { Icon(Icons.Outlined.LockOpen, null) },
-                            trailingIcon = {
-                                IconButton(onClick = { obscureCur = !obscureCur }) {
-                                    Icon(if (obscureCur) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, if (obscureCur) "Show password" else "Hide password")
-                                }
-                            },
-                            visualTransformation = if (obscureCur) PasswordVisualTransformation() else VisualTransformation.None,
-                            modifier = Modifier.fillMaxWidth(), singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-                        )
-                        OutlinedTextField(
-                            value = newPass, onValueChange = { newPass = it },
-                            label = { Text("New Password") },
-                            leadingIcon = { Icon(Icons.Outlined.Lock, null) },
-                            trailingIcon = {
-                                IconButton(onClick = { obscureNew = !obscureNew }) {
-                                    Icon(if (obscureNew) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, if (obscureNew) "Show password" else "Hide password")
-                                }
-                            },
-                            visualTransformation = if (obscureNew) PasswordVisualTransformation() else VisualTransformation.None,
-                            modifier = Modifier.fillMaxWidth(), singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-                        )
-                        OutlinedTextField(
-                            value = confirmPass, onValueChange = { confirmPass = it },
-                            label = { Text("Confirm New Password") },
-                            leadingIcon = { Icon(Icons.Outlined.Lock, null) },
-                            trailingIcon = {
-                                IconButton(onClick = { obscureConfirm = !obscureConfirm }) {
-                                    Icon(if (obscureConfirm) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, if (obscureConfirm) "Show password" else "Hide password")
-                                }
-                            },
-                            visualTransformation = if (obscureConfirm) PasswordVisualTransformation() else VisualTransformation.None,
-                            isError = newPass.isNotBlank() && confirmPass.isNotBlank() && newPass != confirmPass,
-                            supportingText = if (newPass.isNotBlank() && confirmPass.isNotBlank() && newPass != confirmPass) {
-                                { Text("Passwords don't match") }
-                            } else null,
-                            modifier = Modifier.fillMaxWidth(), singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-                        )
-                        Button(
-                            onClick = ::save,
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !saving && currentPass.isNotBlank() && newPass.isNotBlank()
-                        ) {
-                            Text("Change Password")
-                        }
-                    }
-                }
-
                 error?.let {
                     Surface(
                         color = MaterialTheme.colorScheme.errorContainer,
@@ -392,16 +462,15 @@ fun ProfileScreen(
                     }
                 }
 
-                // ── App Settings card ───────────────────────────────────────
+                // ── Security & Server card ──────────────────────────────────
                 val biometricEnabled by prefs.biometricLock.collectAsState(initial = false)
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)) {
-                        Text("App Settings",
+                Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+                    Column(Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                        Text("Security & Server",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(bottom = 12.dp))
 
-                        // Biometric Lock row
                         SettingsRow(
                             icon = Icons.Outlined.Fingerprint,
                             title = "Biometric Lock",
@@ -418,30 +487,22 @@ fun ProfileScreen(
                         Spacer(Modifier.height(8.dp))
 
                         SettingsRow(
-                            icon = Icons.Outlined.Palette,
-                            title = "Theme",
-                            subtitle = when (themeMode) {
-                                ThemeMode.LIGHT -> "Light"
-                                ThemeMode.DARK -> "Dark"
-                                else -> "System default"
-                            },
-                            onClick = { showThemeDialog = true }
+                            icon = Icons.Outlined.Lock,
+                            title = "Change Password",
+                            subtitle = "Update your account password",
+                            onClick = { showChangePasswordSheet = true }
                         )
                         Spacer(Modifier.height(8.dp))
 
                         SettingsRow(
-                            icon = Icons.Outlined.BarChart,
-                            title = "Reports",
-                            subtitle = "Tickets, financials, and more",
-                            onClick = { navController.navigate(Screen.ReportsHub.route) }
-                        )
-                        Spacer(Modifier.height(8.dp))
-
-                        SettingsRow(
-                            icon = Icons.AutoMirrored.Outlined.Article,
-                            title = "Knowledge Base",
-                            subtitle = "Browse help articles",
-                            onClick = { navController.navigate(Screen.KnowledgeBase.route) }
+                            icon = Icons.Outlined.Dns,
+                            title = "Server",
+                            subtitle = ApiClient.serverUrl,
+                            onClick = { showChangeServerConfirm = true },
+                            trailing = {
+                                Text("Change", style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
                         )
                         Spacer(Modifier.height(8.dp))
 
@@ -459,24 +520,60 @@ fun ProfileScreen(
                                     tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
                             }
                         )
-                        Spacer(Modifier.height(8.dp))
-
-                        SettingsRow(
-                            icon = Icons.Outlined.Dns,
-                            title = "Server",
-                            subtitle = ApiClient.serverUrl,
-                            onClick = { showChangeServerConfirm = true },
-                            trailing = {
-                                Text("Change", style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary)
-                            }
-                        )
-                        Spacer(Modifier.height(8.dp))
                     }
                 }
 
+                // ── Appearance card ──────────────────────────────────────────
+                val colorSeedId by prefs.colorSeed.collectAsState(initial = ColorSeed.DEFAULT.id)
+                Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+                    Column(Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                        Text("Appearance",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(bottom = 12.dp))
+
+                        SettingsRow(
+                            icon = Icons.Outlined.Palette,
+                            title = "Theme",
+                            subtitle = when (themeMode) {
+                                ThemeMode.LIGHT -> "Light"
+                                ThemeMode.DARK -> "Dark"
+                                else -> "System default"
+                            },
+                            onClick = { showThemeDialog = true }
+                        )
+                        Spacer(Modifier.height(16.dp))
+
+                        Text("Accent Color",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            ColorSeed.entries.forEach { seed ->
+                                ColorSeedSwatch(
+                                    seed = seed,
+                                    selected = seed.id == colorSeedId,
+                                    darkTheme = isDarkMode,
+                                    onClick = { scope.launch { prefs.setColorSeed(seed.id) } }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Text(
+                    "Reports, Knowledge Base, Credentials, Quotes, Invoices, and Expenses are in the menu",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
                 // ── Sign out ─────────────────────────────────────────────────
-                Card(Modifier.fillMaxWidth()) {
+                Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                     Column(Modifier.padding(16.dp)) {
                         SettingsRow(
                             icon = Icons.AutoMirrored.Outlined.Logout,
@@ -504,4 +601,3 @@ fun ProfileScreen(
         }
     }
 }
-
