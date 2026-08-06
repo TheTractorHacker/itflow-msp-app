@@ -86,7 +86,7 @@ fun TicketChatScreen(ticketId: Int, navController: NavController) {
             if (!chatDisabled) {
                 Surface(tonalElevation = 2.dp) {
                     Row(
-                        Modifier.fillMaxWidth().padding(8.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedTextField(
@@ -94,10 +94,11 @@ fun TicketChatScreen(ticketId: Int, navController: NavController) {
                             onValueChange = { draft = it },
                             modifier = Modifier.weight(1f),
                             placeholder = { Text("Message") },
+                            shape = MaterialTheme.shapes.extraLarge,
                             maxLines = 4
                         )
                         Spacer(Modifier.width(8.dp))
-                        IconButton(
+                        FilledIconButton(
                             enabled = draft.isNotBlank() && !sending,
                             onClick = {
                                 val text = draft.trim()
@@ -180,25 +181,30 @@ private fun ChatBubble(msg: ChatMessage) {
             shape = MaterialTheme.shapes.medium,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
-            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Column(
+                Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 if (!msg.senderName.isNullOrBlank()) {
                     Text(
                         msg.senderName,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (isAgent) MaterialTheme.colorScheme.onPrimaryContainer
-                                else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isAgent) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
                 Text(
                     msg.message,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = if (isAgent) MaterialTheme.colorScheme.onPrimaryContainer
                             else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     fmtDate(msg.createdAt),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = if (isAgent) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                            else MaterialTheme.colorScheme.outline
                 )
             }
         }

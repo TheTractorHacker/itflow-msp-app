@@ -10,6 +10,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.AlertActionRequest
@@ -47,12 +49,40 @@ fun AlertsScreen(navController: NavController) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        ScrollableTabRow(
-            selectedTabIndex = STATUS_TABS.indexOfFirst { it.first == status }.coerceAtLeast(0),
-            edgePadding = 12.dp
+        // Segmented pill control for New/Acked/Resolved/All — matches the Tickets screen's
+        // segmented status control rather than a stock ScrollableTabRow.
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = MaterialTheme.shapes.extraLarge,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
         ) {
-            STATUS_TABS.forEach { (key, label) ->
-                Tab(selected = status == key, onClick = { status = key }, text = { Text(label) })
+            Row(modifier = Modifier.padding(4.dp)) {
+                STATUS_TABS.forEach { (key, label) ->
+                    val selected = status == key
+                    Surface(
+                        selected = selected,
+                        onClick = { status = key },
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -64,9 +94,13 @@ fun AlertsScreen(navController: NavController) {
                 if (alerts.isEmpty()) {
                     EmptyScreen("No alerts here", Icons.Outlined.CheckCircle)
                 } else {
-                    LazyColumn(Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         items(alerts, key = { it.source + it.id }) { alert ->
-                            AlertRow(
+                            AlertCard(
                                 alert = alert,
                                 onAcknowledge = { act(alert, "acknowledge") },
                                 onResolve = { act(alert, "resolve") },
@@ -74,7 +108,6 @@ fun AlertsScreen(navController: NavController) {
                                     alert.ticketId?.let { navController.navigate(Screen.TicketDetail.go(it)) }
                                 }
                             )
-                            HorizontalDivider()
                         }
                     }
                 }
@@ -84,7 +117,7 @@ fun AlertsScreen(navController: NavController) {
 }
 
 @Composable
-private fun AlertRow(
+private fun AlertCard(
     alert: AlertItem,
     onAcknowledge: () -> Unit,
     onResolve: () -> Unit,
@@ -92,20 +125,20 @@ private fun AlertRow(
 ) {
     val severityColor = MaterialTheme.statusColors.forAlertSeverity(alert.severity)
     val statusColor = MaterialTheme.statusColors.forAlertStatus(alert.status)
-    ListItem(
-        leadingContent = {
+    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+        Row(modifier = Modifier.padding(16.dp)) {
             Surface(shape = MaterialTheme.shapes.extraLarge, color = severityColor.copy(alpha = 0.15f), modifier = Modifier.size(40.dp)) {
                 Box(contentAlignment = Alignment.Center) {
                     val icon = if (alert.source == "backup") Icons.Outlined.CloudUpload else Icons.Outlined.Dns
                     Icon(icon, null, tint = severityColor, modifier = Modifier.size(20.dp))
                 }
             }
-        },
-        headlineContent = { Text(alert.message ?: "", style = MaterialTheme.typography.bodyMedium, maxLines = 2) },
-        supportingContent = {
-            Column {
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(alert.message ?: "", style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+                Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Both chips now share the same tinted-container + colored-text idiom used
+                    // Both chips share the same tinted-container + colored-text idiom used
                     // everywhere else in the app (Invoices/Quotes/Tickets) — previously this
                     // severity chip alone used a solid fill with hardcoded white text, which
                     // silently broke (near-invisible white-on-pastel) once dark mode used a
@@ -120,9 +153,9 @@ private fun AlertRow(
                             style = MaterialTheme.typography.labelSmall, color = statusColor)
                     }
                 }
-                Spacer(Modifier.height(2.dp))
                 val subtitle = listOfNotNull(alert.subject, alert.clientName).joinToString(" · ")
                 if (subtitle.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
                     Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Row(Modifier.padding(top = 6.dp)) {
@@ -140,5 +173,5 @@ private fun AlertRow(
                 }
             }
         }
-    )
+    }
 }

@@ -42,7 +42,11 @@ fun NotificationsScreen() {
             else -> {
                 val notifs = state!!.getOrThrow().data
                 if (notifs.isEmpty()) EmptyScreen("No new notifications", Icons.Outlined.NotificationsNone)
-                else LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+                else LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     items(notifs, key = { it.id }) { n ->
                         val dismissState = rememberSwipeToDismissBoxState(confirmValueChange = {
                             if (it == SwipeToDismissBoxValue.EndToStart) {
@@ -53,19 +57,26 @@ fun NotificationsScreen() {
                         SwipeToDismissBox(
                             state = dismissState,
                             backgroundContent = {
-                                Box(Modifier.fillMaxSize().padding(end = 16.dp), contentAlignment = Alignment.CenterEnd) {
-                                    Icon(Icons.Outlined.Check, null, tint = MaterialTheme.colorScheme.onError)
+                                Surface(
+                                    modifier = Modifier.fillMaxSize(),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = MaterialTheme.shapes.large
+                                ) {
+                                    Box(Modifier.fillMaxSize().padding(end = 24.dp), contentAlignment = Alignment.CenterEnd) {
+                                        Icon(
+                                            Icons.Outlined.Check,
+                                            contentDescription = "Mark read",
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
                                 }
                             },
                             content = {
-                                Surface(color = MaterialTheme.colorScheme.surface) {
-                                    NotifItem(n) {
-                                        scope.launch { runCatching { ApiClient.service().markRead(n.id) }; load() }
-                                    }
+                                NotifItem(n) {
+                                    scope.launch { runCatching { ApiClient.service().markRead(n.id) }; load() }
                                 }
                             }
                         )
-                        HorizontalDivider()
                     }
                 }
             }
@@ -75,10 +86,11 @@ fun NotificationsScreen() {
 
 @Composable
 private fun NotifItem(n: Notification, onMarkRead: () -> Unit) {
-    ListItem(
-        headlineContent = { Text(n.message, style = MaterialTheme.typography.bodyMedium) },
-        supportingContent = n.timestamp?.let { { Text(it, style = MaterialTheme.typography.bodySmall) } },
-        leadingContent = {
+    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) {
                 Box(contentAlignment = Alignment.Center) {
                     val icon = when {
@@ -89,9 +101,18 @@ private fun NotifItem(n: Notification, onMarkRead: () -> Unit) {
                     Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
                 }
             }
-        },
-        trailingContent = {
-            IconButton(onClick = onMarkRead) { Icon(Icons.Outlined.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(n.message, style = MaterialTheme.typography.bodyMedium)
+                n.timestamp?.let {
+                    Spacer(Modifier.height(2.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            IconButton(onClick = onMarkRead) {
+                Icon(Icons.Outlined.CheckCircle, contentDescription = "Mark read", tint = MaterialTheme.colorScheme.primary)
+            }
         }
-    )
+    }
 }
