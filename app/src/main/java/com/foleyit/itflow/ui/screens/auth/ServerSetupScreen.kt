@@ -1,5 +1,6 @@
 package com.foleyit.itflow.ui.screens.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -14,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -175,16 +178,20 @@ fun ServerSetupScreen(prefs: AppPreferences, onDone: () -> Unit) {
     ) {
         Spacer(Modifier.height(64.dp))
 
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(72.dp)
+        val logoTileGradient = Brush.linearGradient(
+            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.inversePrimary),
+            start = Offset.Zero,
+            end = Offset.Infinite
+        )
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .background(logoTileGradient, MaterialTheme.shapes.extraLarge),
+            contentAlignment = Alignment.Center
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.SyncAlt, null,
-                    modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
+            Icon(Icons.Outlined.SyncAlt, null,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onPrimary)
         }
         Spacer(Modifier.height(24.dp))
         Text("Connect to ITFlow", style = MaterialTheme.typography.headlineMedium)

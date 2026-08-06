@@ -1,5 +1,6 @@
 package com.foleyit.itflow.ui.screens.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -11,10 +12,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import android.app.Activity
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
@@ -48,6 +53,7 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
     var totpCode by remember { mutableStateOf("") }
     var obscure by remember { mutableStateOf(true) }
     var loading by remember { mutableStateOf(false) }
+    var passkeyPending by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var requires2fa by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -92,7 +98,7 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
     }
 
     fun loginWithPasskey() {
-        loading = true; error = null
+        loading = true; passkeyPending = true; error = null
         scope.launch {
             try {
                 val beginResp = withContext(Dispatchers.IO) { ApiClient.service().passkeyBegin() }
@@ -142,7 +148,7 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
                 if (e.message?.contains("cancel", ignoreCase = true) != true) {
                     error = "Passkey sign-in failed: ${userMessage(e)}"
                 }
-            } finally { loading = false }
+            } finally { loading = false; passkeyPending = false }
         }
     }
 
@@ -155,13 +161,19 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
     ) {
         Spacer(Modifier.height(64.dp))
 
-        Surface(shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(72.dp)) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.SyncAlt, null, modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
+        val logoGradient = Brush.linearGradient(
+            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.inversePrimary),
+            start = Offset.Zero,
+            end = Offset.Infinite
+        )
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .background(logoGradient, MaterialTheme.shapes.extraLarge),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Outlined.SyncAlt, null, modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onPrimary)
         }
         Spacer(Modifier.height(24.dp))
         Text("Sign in", style = MaterialTheme.typography.headlineMedium)
@@ -199,6 +211,8 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
                 onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) totpCode = it },
                 label = { Text("6-digit code") }, leadingIcon = { Icon(Icons.Outlined.Key, null) },
                 modifier = Modifier.fillMaxWidth(), singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    fontFamily = FontFamily.Monospace, letterSpacing = 4.sp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { login() }))
             Spacer(Modifier.height(8.dp))
@@ -222,9 +236,15 @@ fun LoginScreen(prefs: AppPreferences, onLoggedIn: () -> Unit, onChangeServer: (
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 enabled = !loading
             ) {
-                Icon(Icons.Outlined.Fingerprint, null, Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Sign in with passkey", fontWeight = FontWeight.Medium)
+                if (passkeyPending) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Waiting for passkey…", fontWeight = FontWeight.Medium)
+                } else {
+                    Icon(Icons.Outlined.Fingerprint, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Sign in with passkey", fontWeight = FontWeight.Medium)
+                }
             }
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onChangeServer, modifier = Modifier.fillMaxWidth()) { Text("Change server") }
