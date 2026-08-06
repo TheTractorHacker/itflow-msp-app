@@ -136,7 +136,7 @@ fun KnowledgeBaseScreen(navController: NavController) {
 private fun KbArticleCard(article: KbArticleSummary, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         modifier = Modifier.fillMaxWidth()
     ) {

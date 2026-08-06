@@ -71,6 +71,22 @@ private fun ArticleContent(article: KbArticleDetail, modifier: Modifier = Modifi
     val baseUrl = ApiClient.serverUrl
 
     Column(modifier) {
+        article.categoryName?.let { category ->
+            Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.extraSmall
+                ) {
+                    Text(
+                        category,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+        }
+
         AndroidView(
             modifier = Modifier.fillMaxWidth().weight(1f),
             factory = {
