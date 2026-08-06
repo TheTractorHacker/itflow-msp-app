@@ -2,6 +2,8 @@ package com.foleyit.itflow.ui.screens.clients
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -100,7 +104,11 @@ fun ClientDetailScreen(id: Int, navController: NavController) {
                         }
                     }
                     // Tab row
-                    ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 16.dp) {
+                    ScrollableTabRow(
+                        selectedTabIndex = selectedTab,
+                        edgePadding = 16.dp,
+                        indicator = { tabPositions -> GradientTabIndicator(tabPositions, selectedTab) }
+                    ) {
                         tabs.forEachIndexed { i, title ->
                             Tab(selected = selectedTab == i, onClick = { selectedTab = i }, text = { Text(title) })
                         }
@@ -122,12 +130,35 @@ fun ClientDetailScreen(id: Int, navController: NavController) {
     }
 }
 
+/** Short rounded gradient bar under the selected tab, replacing the default full-width indicator. */
+@Composable
+private fun GradientTabIndicator(tabPositions: List<TabPosition>, selectedTabIndex: Int) {
+    if (selectedTabIndex !in tabPositions.indices) return
+    val indicatorWidth = 24.dp
+    val targetOffset = tabPositions[selectedTabIndex].left + (tabPositions[selectedTabIndex].width - indicatorWidth) / 2
+    val indicatorOffset by animateDpAsState(targetValue = targetOffset, label = "tabIndicatorOffset")
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .wrapContentSize(Alignment.BottomStart)
+            .offset(x = indicatorOffset)
+            .width(indicatorWidth)
+            .height(3.dp)
+            .clip(MaterialTheme.shapes.small)
+            .background(
+                Brush.horizontalGradient(
+                    listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.inversePrimary)
+                )
+            )
+    )
+}
+
 @Composable
 private fun ClientInfoTab(client: ClientDetail) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (client.address != null || client.phone != null) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Contact Info", style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -143,7 +174,7 @@ private fun ClientInfoTab(client: ClientDetail) {
         }
         if (!client.notes.isNullOrBlank()) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Notes", style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -179,7 +210,7 @@ private fun ClientTicketsTab(clientId: Int, navController: NavController) {
 
 @Composable
 private fun TicketRow(t: TicketSummary, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
+    Card(modifier = Modifier.fillMaxWidth(), onClick = onClick, shape = MaterialTheme.shapes.large) {
         ListItem(
             headlineContent = { Text(t.subject, maxLines = 1) },
             supportingContent = { Text("#${t.number} · ${t.status ?: ""}") },
@@ -200,7 +231,7 @@ private fun ClientContactsTab(contacts: List<Contact>, context: android.content.
     if (contacts.isEmpty()) { EmptyScreen("No contacts", Icons.Outlined.People); return }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items(contacts) { c ->
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                 ListItem(
                     headlineContent = { Text(c.name, fontWeight = FontWeight.Medium) },
                     supportingContent = {
@@ -240,7 +271,7 @@ private fun ClientAssetsTab(clientId: Int, navController: NavController) {
             if (assets.isEmpty()) { EmptyScreen("No assets", Icons.Outlined.Devices); return }
             LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(assets) { a ->
-                    Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.AssetDetail.go(a.id)) }) {
+                    Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.AssetDetail.go(a.id)) }, shape = MaterialTheme.shapes.large) {
                         ListItem(
                             headlineContent = { Text(a.name, fontWeight = FontWeight.Medium) },
                             supportingContent = { Text(listOfNotNull(a.make, a.model).joinToString(" ")) },
@@ -273,7 +304,7 @@ private fun ClientLocationsTab(clientId: Int, context: android.content.Context) 
             if (locs.isEmpty()) { EmptyScreen("No locations", Icons.Outlined.LocationOn); return }
             LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(locs) { loc ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                         Column(Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(loc.name ?: "Location", fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
@@ -360,7 +391,7 @@ private fun ClientCredentialsTab(clientId: Int, navController: NavController) {
             if (creds.isEmpty()) { EmptyScreen("No credentials", Icons.Outlined.Lock); return }
             LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(creds) { c ->
-                    Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.CredDetail.go(c.id)) }) {
+                    Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.CredDetail.go(c.id)) }, shape = MaterialTheme.shapes.large) {
                         ListItem(
                             headlineContent = { Text(c.name, fontWeight = FontWeight.Medium) },
                             supportingContent = c.uri?.takeIf { it.isNotBlank() }?.let { uri -> { Text(uri, maxLines = 1) } },
@@ -389,7 +420,7 @@ private fun ClientContractsTab(clientId: Int) {
             if (contracts.isEmpty()) { EmptyScreen("No contracts", Icons.Outlined.Description); return }
             LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(contracts) { c ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                         ListItem(
                             headlineContent = { Text(c.name ?: "", fontWeight = FontWeight.Medium) },
                             supportingContent = { Text("${c.type ?: ""} · ${c.status ?: ""}") },
@@ -419,7 +450,8 @@ private fun ClientFilesTab(clientId: Int, navController: NavController) {
                 items(files) { f ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        onClick = { navController.navigate(Screen.OuttakeSign.go(f.id)) }
+                        onClick = { navController.navigate(Screen.OuttakeSign.go(f.id)) },
+                        shape = MaterialTheme.shapes.large
                     ) {
                         ListItem(
                             headlineContent = { Text("Outtake Form · #${f.ticketNumber}", fontWeight = FontWeight.Medium) },

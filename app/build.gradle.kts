@@ -13,8 +13,8 @@ android {
         applicationId = "com.foleyit.itflow"
         minSdk = 34
         targetSdk = 36
-        versionCode = 27
-        versionName = "1.19.0"
+        versionCode = 28
+        versionName = "1.20.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

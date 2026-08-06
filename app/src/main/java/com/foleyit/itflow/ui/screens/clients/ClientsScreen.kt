@@ -46,7 +46,7 @@ fun ClientsScreen(navController: NavController) {
             else -> {
                 LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(ls.items, key = { it.id }) { c ->
-                        Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.ClientDetail.go(c.id)) }) {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, onClick = { navController.navigate(Screen.ClientDetail.go(c.id)) }) {
                             ListItem(
                                 headlineContent = { Text(c.name, fontWeight = FontWeight.Medium) },
                                 supportingContent = if (c.city != null) {{ Text("${c.city}, ${c.state ?: ""}") }} else null,
