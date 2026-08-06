@@ -29,6 +29,7 @@ import com.foleyit.itflow.data.api.TicketSummary
 import com.foleyit.itflow.ui.components.EmptyScreen
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
+import com.foleyit.itflow.ui.components.pressScale
 import com.foleyit.itflow.ui.theme.forPriority
 import com.foleyit.itflow.ui.theme.statusColors
 import com.foleyit.itflow.ui.navigation.Screen
@@ -79,7 +80,10 @@ fun AppointmentsScreen(navController: NavController) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAdd = true }) {
+            FloatingActionButton(
+                onClick = { showAdd = true },
+                modifier = Modifier.pressScale(0.90f),
+            ) {
                 Icon(Icons.Outlined.Add, "Add Appointment")
             }
         }

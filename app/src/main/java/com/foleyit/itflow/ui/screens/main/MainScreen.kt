@@ -1,5 +1,8 @@
 package com.foleyit.itflow.ui.screens.main
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -20,6 +23,7 @@ import com.foleyit.itflow.ui.components.FloatingBottomNavBar
 import com.foleyit.itflow.ui.components.OfflineBanner
 import com.foleyit.itflow.ui.components.UnreadDot
 import com.foleyit.itflow.ui.navigation.*
+import com.foleyit.itflow.ui.theme.Motion
 import com.foleyit.itflow.ui.theme.ThemeMode
 import com.foleyit.itflow.ui.util.rememberIsOnline
 import com.foleyit.itflow.ui.screens.appointments.AppointmentsScreen
@@ -203,7 +207,20 @@ fun MainScreen(
         NavHost(
             navController,
             startDestination = Screen.Dashboard.route,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            // Fade + subtle rise (design reference's springy screen-transition motion) applied
+            // once here, at the NavHost level, so every one of the ~35 destinations below gets
+            // it uniformly without each composable() call needing its own animation params.
+            enterTransition = {
+                fadeIn(animationSpec = Motion.medium()) +
+                    slideInVertically(animationSpec = Motion.medium()) { it / 20 }
+            },
+            exitTransition = { fadeOut(animationSpec = Motion.fast()) },
+            popEnterTransition = {
+                fadeIn(animationSpec = Motion.medium()) +
+                    slideInVertically(animationSpec = Motion.medium()) { -it / 20 }
+            },
+            popExitTransition = { fadeOut(animationSpec = Motion.fast()) },
         ) {
             composable(Screen.Dashboard.route) { DashboardScreen(navController) }
             composable(Screen.Tickets.route) { TicketsScreen(navController) }

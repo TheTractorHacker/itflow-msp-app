@@ -35,7 +35,8 @@ fun ExpensesScreen(navController: NavController) {
             ExtendedFloatingActionButton(
                 onClick = { navController.navigate(Screen.AddExpense.route) },
                 icon = { Icon(Icons.Outlined.Add, null) },
-                text = { Text("Add Expense") }
+                text = { Text("Add Expense") },
+                modifier = Modifier.pressScale(0.90f),
             )
         }
     ) { padding ->

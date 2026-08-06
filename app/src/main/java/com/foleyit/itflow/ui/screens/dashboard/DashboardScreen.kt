@@ -28,6 +28,7 @@ import com.foleyit.itflow.data.api.DashboardResponse
 import com.foleyit.itflow.data.api.TicketSummary
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
+import com.foleyit.itflow.ui.components.pressScale
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.theme.forPriority
 import com.foleyit.itflow.ui.theme.statusColors
@@ -332,6 +333,7 @@ private fun QuickActionsRow(navController: NavController) {
             onClick = { navController.navigate(Screen.CreateTicket.route) },
             modifier = Modifier
                 .weight(1f)
+                .pressScale()
                 .shadow(
                     elevation = 10.dp,
                     shape = MaterialTheme.shapes.extraLarge,
@@ -361,7 +363,7 @@ private fun QuickActionsRow(navController: NavController) {
         }
         OutlinedButton(
             onClick = { navController.navigate(Screen.ScanBarcode.route) },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).pressScale(),
             shape = MaterialTheme.shapes.extraLarge,
             contentPadding = PaddingValues(vertical = 12.dp, horizontal = 12.dp)
         ) {
@@ -371,7 +373,7 @@ private fun QuickActionsRow(navController: NavController) {
         }
         OutlinedButton(
             onClick = { navController.navigate(Screen.Search.route) },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).pressScale(),
             shape = MaterialTheme.shapes.extraLarge,
             contentPadding = PaddingValues(vertical = 12.dp, horizontal = 12.dp)
         ) {

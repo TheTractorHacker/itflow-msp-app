@@ -26,6 +26,7 @@ import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadMoreRow
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.components.SectionLabel
+import com.foleyit.itflow.ui.components.pressScale
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.theme.forPriority
 import com.foleyit.itflow.ui.theme.statusColors
@@ -90,7 +91,10 @@ fun TicketsScreen(navController: NavController) {
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate(Screen.CreateTicket.route) }) {
+            FloatingActionButton(
+                onClick = { navController.navigate(Screen.CreateTicket.route) },
+                modifier = Modifier.pressScale(0.90f),
+            ) {
                 Icon(Icons.Outlined.Add, "New Ticket")
             }
         }

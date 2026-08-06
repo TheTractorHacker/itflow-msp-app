@@ -20,6 +20,7 @@ import com.foleyit.itflow.ui.components.EmptyScreen
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadMoreRow
 import com.foleyit.itflow.ui.components.LoadingScreen
+import com.foleyit.itflow.ui.components.pressScale
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.util.rememberPagedList
 import com.foleyit.itflow.ui.util.userMessage
@@ -75,7 +76,10 @@ fun AssetsScreen(navController: NavController) {
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate(Screen.ScanBarcode.route) }) {
+            FloatingActionButton(
+                onClick = { navController.navigate(Screen.ScanBarcode.route) },
+                modifier = Modifier.pressScale(0.90f),
+            ) {
                 Icon(Icons.Outlined.DocumentScanner, "Scan Barcode")
             }
         }
