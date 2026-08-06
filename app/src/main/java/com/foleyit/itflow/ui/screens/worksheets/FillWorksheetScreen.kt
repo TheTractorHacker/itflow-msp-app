@@ -2,7 +2,6 @@ package com.foleyit.itflow.ui.screens.worksheets
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
@@ -75,11 +74,28 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
             )
         },
         bottomBar = {
-            Surface(shadowElevation = 4.dp) {
-                Row(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding()) {
-                    Button(onClick = { saveResponses() }, modifier = Modifier.fillMaxWidth(), enabled = !saving) {
-                        if (saving) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                        else { Icon(Icons.Outlined.Check, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Save") }
+            Surface(
+                tonalElevation = 3.dp,
+                shadowElevation = 8.dp
+            ) {
+                Box(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding()) {
+                    Button(
+                        onClick = { saveResponses() },
+                        enabled = !saving,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = MaterialTheme.shapes.extraLarge
+                    ) {
+                        if (saving) {
+                            CircularProgressIndicator(
+                                Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Icon(Icons.Outlined.Check, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Save", fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
@@ -91,68 +107,81 @@ fun FillWorksheetScreen(worksheetId: Int, navController: NavController) {
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             worksheet?.fields?.let { fields ->
-                items(fields) { field ->
-                    when (field.type) {
-                        "heading" -> Text(field.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 4.dp))
-                        "checkbox" -> Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = fieldValues[field.id] == "true",
-                                onCheckedChange = { fieldValues = fieldValues + (field.id to it.toString()) }
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(field.name)
-                        }
-                        "select" -> {
-                            val options = field.options?.split(",")?.map { it.trim() } ?: emptyList()
-                            var expanded by remember { mutableStateOf(false) }
-                            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                                OutlinedTextField(
-                                    value = fieldValues[field.id] ?: "",
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    label = { Text(field.name) },
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
-                                )
-                                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                    options.forEach { opt ->
-                                        DropdownMenuItem(text = { Text(opt) }, onClick = {
-                                            fieldValues = fieldValues + (field.id to opt)
-                                            expanded = false
-                                        })
+                item {
+                    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+                        Column(
+                            Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            fields.forEach { field ->
+                                when (field.type) {
+                                    "heading" -> Text(field.name,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(top = 4.dp))
+                                    "checkbox" -> Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = fieldValues[field.id] == "true",
+                                            onCheckedChange = { fieldValues = fieldValues + (field.id to it.toString()) }
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(field.name)
                                     }
+                                    "select" -> {
+                                        val options = field.options?.split(",")?.map { it.trim() } ?: emptyList()
+                                        var expanded by remember { mutableStateOf(false) }
+                                        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+                                            OutlinedTextField(
+                                                value = fieldValues[field.id] ?: "",
+                                                onValueChange = {},
+                                                readOnly = true,
+                                                label = { Text(field.name) },
+                                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
+                                            )
+                                            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                                options.forEach { opt ->
+                                                    DropdownMenuItem(text = { Text(opt) }, onClick = {
+                                                        fieldValues = fieldValues + (field.id to opt)
+                                                        expanded = false
+                                                    })
+                                                }
+                                            }
+                                        }
+                                    }
+                                    "textarea" -> OutlinedTextField(
+                                        value = fieldValues[field.id] ?: "",
+                                        onValueChange = { fieldValues = fieldValues + (field.id to it) },
+                                        label = { Text(field.name) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        minLines = 3, maxLines = 6
+                                    )
+                                    "signature" -> Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = MaterialTheme.shapes.large,
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                                    ) {
+                                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Outlined.Draw, null, tint = MaterialTheme.colorScheme.outline)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("${field.name} — not collected on mobile",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.outline)
+                                        }
+                                    }
+                                    else -> OutlinedTextField(
+                                        value = fieldValues[field.id] ?: "",
+                                        onValueChange = { fieldValues = fieldValues + (field.id to it) },
+                                        label = { Text(field.name) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
+                                    )
                                 }
                             }
                         }
-                        "textarea" -> OutlinedTextField(
-                            value = fieldValues[field.id] ?: "",
-                            onValueChange = { fieldValues = fieldValues + (field.id to it) },
-                            label = { Text(field.name) },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3, maxLines = 6
-                        )
-                        "signature" -> Card(modifier = Modifier.fillMaxWidth()) {
-                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Outlined.Draw, null, tint = MaterialTheme.colorScheme.outline)
-                                Spacer(Modifier.width(8.dp))
-                                Text("${field.name} — not collected on mobile",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline)
-                            }
-                        }
-                        else -> OutlinedTextField(
-                            value = fieldValues[field.id] ?: "",
-                            onValueChange = { fieldValues = fieldValues + (field.id to it) },
-                            label = { Text(field.name) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
                     }
                 }
             }

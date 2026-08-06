@@ -55,7 +55,7 @@ fun InvoiceDetailScreen(id: Int, navController: NavController) {
             val statusColor: Color = MaterialTheme.statusColors.forFinancialStatus(inv.status)
             LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                         Column(Modifier.padding(16.dp)) {
                             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                                 Text("Invoice #${inv.number}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -75,7 +75,7 @@ fun InvoiceDetailScreen(id: Int, navController: NavController) {
                     }
                 }
                 item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                         Column(Modifier.padding(16.dp)) {
                             Text("Line Items", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(12.dp))

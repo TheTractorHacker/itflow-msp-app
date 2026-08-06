@@ -41,7 +41,7 @@ fun QuotesScreen(navController: NavController) {
                 LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(ls.items, key = { it.id }) { q ->
                         val statusColor = MaterialTheme.statusColors.forFinancialStatus(q.status)
-                        Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.QuoteDetail.go(q.id)) }) {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, onClick = { navController.navigate(Screen.QuoteDetail.go(q.id)) }) {
                             ListItem(
                                 headlineContent = { Text(q.subject ?: "", fontWeight = FontWeight.Medium) },
                                 supportingContent = { Text("${q.client ?: ""} · ${q.date ?: ""}") },

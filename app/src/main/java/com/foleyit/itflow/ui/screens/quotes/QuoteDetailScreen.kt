@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -18,6 +19,8 @@ import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.QuoteDetail
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
+import com.foleyit.itflow.ui.theme.forFinancialStatus
+import com.foleyit.itflow.ui.theme.statusColors
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
@@ -49,9 +52,10 @@ fun QuoteDetailScreen(id: Int, navController: NavController) {
         state!!.isFailure -> Box(Modifier.fillMaxSize().padding(padding)) { ErrorScreen(state!!.exceptionOrNull()?.message ?: "", onRetry = ::load) }
         else -> {
             val q = state!!.getOrThrow()
+            val statusColor: Color = MaterialTheme.statusColors.forFinancialStatus(q.status)
             LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                         Column(Modifier.padding(16.dp)) {
                             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                                 Text(q.subject ?: "", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
@@ -64,13 +68,13 @@ fun QuoteDetailScreen(id: Int, navController: NavController) {
                             Spacer(Modifier.height(12.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small) { Text("${q.date ?: ""}", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall) }
-                                Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small) { Text(q.status ?: "", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall) }
+                                Surface(color = statusColor.copy(alpha = 0.12f), shape = MaterialTheme.shapes.small) { Text(q.status ?: "", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = statusColor, fontWeight = FontWeight.SemiBold) }
                             }
                         }
                     }
                 }
                 item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                         Column(Modifier.padding(16.dp)) {
                             Text("Line Items", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(12.dp))

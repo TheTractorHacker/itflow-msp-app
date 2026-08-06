@@ -47,7 +47,7 @@ fun ExpensesScreen(navController: NavController) {
             else -> {
                 LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(ls.items, key = { it.id }) { e ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                             ListItem(
                                 headlineContent = { Text(e.description ?: "", fontWeight = FontWeight.Medium) },
                                 supportingContent = { Text("${e.date ?: ""} · ${e.paymentMethod ?: ""}") },

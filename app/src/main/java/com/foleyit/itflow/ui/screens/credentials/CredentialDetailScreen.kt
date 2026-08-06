@@ -197,7 +197,7 @@ fun CredentialDetailScreen(id: Int, navController: NavController) {
                 val c = state!!.getOrThrow()
                 LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     item {
-                        Card(modifier = Modifier.fillMaxWidth()) {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(48.dp)) {
@@ -223,13 +223,18 @@ fun CredentialDetailScreen(id: Int, navController: NavController) {
                                 c.uri?.takeIf { it.isNotBlank() }?.let { url ->
                                     CredField("URL", url, Icons.Outlined.Link, onCopy = { copy(url, "URL") }, onTap = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) })
                                 }
-                                // Password generator
-                                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                                var genLen by remember { mutableStateOf(16f) }
-                                var genResult by remember { mutableStateOf("") }
-                                Text("Generate Password", style = MaterialTheme.typography.labelSmall,
+                            }
+                        }
+                    }
+                    item {
+                        // Password generator
+                        var genLen by remember { mutableStateOf(16f) }
+                        var genResult by remember { mutableStateOf("") }
+                        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text("Generate Password", style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(4.dp))
+                                Spacer(Modifier.height(8.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Slider(value = genLen, onValueChange = { genLen = it },
                                         valueRange = 8f..32f, steps = 23,
@@ -253,7 +258,7 @@ fun CredentialDetailScreen(id: Int, navController: NavController) {
                                             }
                                         }
                                     }
-                                    Spacer(Modifier.height(4.dp))
+                                    Spacer(Modifier.height(8.dp))
                                 }
                                 Button(onClick = { genResult = generatePassword(genLen.toInt()) },
                                     modifier = Modifier.fillMaxWidth()) {
@@ -261,12 +266,16 @@ fun CredentialDetailScreen(id: Int, navController: NavController) {
                                     Spacer(Modifier.width(6.dp))
                                     Text("Generate")
                                 }
-
-                                c.note?.takeIf { it.isNotBlank() }?.let {
-                                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                                    Text("Notes", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(it)
+                            }
+                        }
+                    }
+                    if (!c.note.isNullOrBlank()) {
+                        item {
+                            Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+                                Column(Modifier.padding(16.dp)) {
+                                    Text("Notes", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(c.note)
                                 }
                             }
                         }

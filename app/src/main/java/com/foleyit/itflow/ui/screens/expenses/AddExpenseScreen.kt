@@ -14,12 +14,14 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.foleyit.itflow.data.api.ApiClient
+import com.foleyit.itflow.ui.components.SectionLabel
 import com.foleyit.itflow.ui.util.userMessage
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
@@ -79,42 +81,49 @@ fun AddExpenseScreen(onDone: () -> Unit) {
     }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Add Expense") }, navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.Outlined.Close, "Close") } }) }) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") }, leadingIcon = { Icon(Icons.Outlined.Description, null) }, modifier = Modifier.fillMaxWidth()) }
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(value = amount, onValueChange = { amount = it }, label = { Text("Amount") }, leadingIcon = { Icon(Icons.Outlined.AttachMoney, null) }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                    OutlinedTextField(value = date, onValueChange = { date = it }, label = { Text("Date") }, modifier = Modifier.weight(1f))
+                Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SectionLabel("Details")
+                        OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") }, leadingIcon = { Icon(Icons.Outlined.Description, null) }, modifier = Modifier.fillMaxWidth())
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedTextField(value = amount, onValueChange = { amount = it }, label = { Text("Amount") }, leadingIcon = { Icon(Icons.Outlined.AttachMoney, null) }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                            OutlinedTextField(value = date, onValueChange = { date = it }, label = { Text("Date") }, modifier = Modifier.weight(1f))
+                        }
+                        OutlinedTextField(value = paymentMethod, onValueChange = { paymentMethod = it }, label = { Text("Payment Method") }, leadingIcon = { Icon(Icons.Outlined.CreditCard, null) }, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = reference, onValueChange = { reference = it }, label = { Text("Reference") }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Notes, null) }, modifier = Modifier.fillMaxWidth())
+                    }
                 }
             }
-            item { OutlinedTextField(value = paymentMethod, onValueChange = { paymentMethod = it }, label = { Text("Payment Method") }, leadingIcon = { Icon(Icons.Outlined.CreditCard, null) }, modifier = Modifier.fillMaxWidth()) }
-            item { OutlinedTextField(value = reference, onValueChange = { reference = it }, label = { Text("Reference") }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Notes, null) }, modifier = Modifier.fillMaxWidth()) }
             item {
-                Text("Receipt", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(8.dp))
-                if (receiptUri != null) {
-                    val bmp = remember(receiptUri) {
-                        receiptUri?.let { uri ->
-                            context.contentResolver.openInputStream(uri)
-                                ?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
+                Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SectionLabel("Receipt")
+                        if (receiptUri != null) {
+                            val bmp = remember(receiptUri) {
+                                receiptUri?.let { uri ->
+                                    context.contentResolver.openInputStream(uri)
+                                        ?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
+                                }
+                            }
+                            bmp?.let {
+                                Image(bitmap = it, contentDescription = null,
+                                    modifier = Modifier.fillMaxWidth().height(160.dp).clip(MaterialTheme.shapes.medium),
+                                    contentScale = ContentScale.Crop)
+                            }
+                            OutlinedButton(onClick = { receiptUri = null }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Delete, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Remove") }
+                        } else {
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                OutlinedButton(onClick = { cameraLauncher.launch(null) }, modifier = Modifier.weight(1f)) { Icon(Icons.Outlined.CameraAlt, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Camera") }
+                                OutlinedButton(onClick = { galleryLauncher.launch("image/*") }, modifier = Modifier.weight(1f)) { Icon(Icons.Outlined.Photo, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Gallery") }
+                            }
                         }
-                    }
-                    bmp?.let {
-                        Image(bitmap = it, contentDescription = null,
-                            modifier = Modifier.fillMaxWidth().height(160.dp),
-                            contentScale = ContentScale.Crop)
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = { receiptUri = null }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Delete, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Remove") }
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedButton(onClick = { cameraLauncher.launch(null) }, modifier = Modifier.weight(1f)) { Icon(Icons.Outlined.CameraAlt, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Camera") }
-                        OutlinedButton(onClick = { galleryLauncher.launch("image/*") }, modifier = Modifier.weight(1f)) { Icon(Icons.Outlined.Photo, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Gallery") }
                     }
                 }
             }
             error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) } }
-            item { Button(onClick = ::submit, modifier = Modifier.fillMaxWidth().height(52.dp), enabled = !loading) { if (loading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) else Text("Save Expense") } }
+            item { Button(onClick = ::submit, modifier = Modifier.fillMaxWidth().height(52.dp), enabled = !loading, shape = MaterialTheme.shapes.extraLarge) { if (loading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) else Text("Save Expense") } }
         }
     }
 }

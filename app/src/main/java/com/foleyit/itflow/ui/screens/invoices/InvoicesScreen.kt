@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -41,13 +40,17 @@ fun InvoicesScreen(navController: NavController) {
             else -> {
                 LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(ls.items, key = { it.id }) { inv ->
-                        val statusColor: Color = MaterialTheme.statusColors.forFinancialStatus(inv.status)
-                        Card(modifier = Modifier.fillMaxWidth(), onClick = { navController.navigate(Screen.InvoiceDetail.go(inv.id)) }) {
+                        val statusColor = MaterialTheme.statusColors.forFinancialStatus(inv.status)
+                        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, onClick = { navController.navigate(Screen.InvoiceDetail.go(inv.id)) }) {
                             ListItem(
                                 headlineContent = { Text("Invoice #${inv.number}", fontWeight = FontWeight.Medium) },
                                 supportingContent = { Text("${inv.client ?: ""} · Due ${inv.dueDate ?: ""}") },
-                                leadingContent = { Surface(shape = MaterialTheme.shapes.medium, color = statusColor.copy(alpha = 0.12f), modifier = Modifier.size(40.dp)) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Outlined.ReceiptLong, null, tint = statusColor, modifier = Modifier.size(22.dp)) } } },
-                                trailingContent = { Column(horizontalAlignment = Alignment.End) { Text(currency.format(inv.total ?: 0.0), fontWeight = FontWeight.Bold); Text(inv.status ?: "", style = MaterialTheme.typography.labelSmall, color = statusColor) } }
+                                trailingContent = {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(currency.format(inv.total ?: 0.0), fontWeight = FontWeight.Bold)
+                                        Surface(color = statusColor.copy(alpha = 0.12f), shape = MaterialTheme.shapes.extraSmall) { Text(inv.status ?: "", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = statusColor) }
+                                    }
+                                }
                             )
                         }
                     }
