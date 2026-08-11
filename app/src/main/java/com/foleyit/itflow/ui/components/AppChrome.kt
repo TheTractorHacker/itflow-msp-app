@@ -186,6 +186,10 @@ fun AppDrawerContent(
             Spacer(Modifier.height(8.dp))
 
             NavigationDrawerItem(
+                label = { Text("Home") }, icon = { DrawerLeadingIcon(Icons.Outlined.Dashboard) },
+                selected = false, onClick = { onNavigate(Screen.Dashboard.route) }, modifier = DrawerItemPadding,
+            )
+            NavigationDrawerItem(
                 label = { Text("Search") }, icon = { DrawerLeadingIcon(Icons.Outlined.Search) },
                 selected = false, onClick = { onNavigate(Screen.Search.route) }, modifier = DrawerItemPadding,
             )
