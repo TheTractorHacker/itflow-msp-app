@@ -222,6 +222,10 @@ fun AppDrawerContent(
                 selected = false, onClick = { onNavigate(Screen.Credentials.route) }, modifier = DrawerItemPadding,
             )
             NavigationDrawerItem(
+                label = { Text("Contracts") }, icon = { DrawerLeadingIcon(Icons.Outlined.Description) },
+                selected = false, onClick = { onNavigate(Screen.Contracts.route) }, modifier = DrawerItemPadding,
+            )
+            NavigationDrawerItem(
                 label = { Text("Quotes") }, icon = { DrawerLeadingIcon(Icons.Outlined.RequestQuote) },
                 selected = false, onClick = { onNavigate(Screen.Quotes.route) }, modifier = DrawerItemPadding,
             )
