@@ -39,9 +39,9 @@ import RivetCore
 
                 SectionLabel(text: "Client · Contact · Category")
                 VStack(spacing: 0) {
-                    pickRow("building.2", client?.name ?? "Select department (optional)", set: department != nil) { showDepartments = true }
+                    pickRow("building.2", department?.name ?? "Select client (optional)", set: department != nil) { showDepartments = true }
                     Divider().padding(.leading, 46)
-                    pickRow("person", contact?.name ?? (client != nil ? "Primary contact (tap to search)" : "Search contacts (optional)"), set: contact != nil) { showContacts = true }
+                    pickRow("person", contact?.name ?? (department != nil ? "Primary contact (tap to search)" : "Search contacts (optional)"), set: contact != nil) { showContacts = true }
                     Divider().padding(.leading, 46)
                     pickRow("tag", category?.name ?? "Select category (optional)", set: category != nil) { showCategories = true }
                 }.background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous)).padding(.horizontal, 16)
