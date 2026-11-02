@@ -25,7 +25,10 @@ import RivetCore
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                BrandMark(size: 76).padding(.top, 70)
+                // Before a server is chosen there is no company to show, so this is the one place the product mark appears.
+                Image("RivetMSPLogo").resizable().scaledToFit().frame(height: 56).padding(.horizontal, 20).padding(.vertical, 14)
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .padding(.top, 70).accessibilityLabel("RivetMSP")
                 Text("Connect to RivetMSP").font(.largeTitle.weight(.bold)).padding(.top, 24)
                 Text("Enter your RivetMSP server address.").foregroundColor(Palette.label2).padding(.top, 4)
 
