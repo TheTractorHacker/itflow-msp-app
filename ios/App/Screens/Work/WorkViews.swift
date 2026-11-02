@@ -112,6 +112,16 @@ import RivetCore
                         ProgressView(value: Double(done), total: Double(max(p.tasks.count, 1))).tint(Palette.brand)
                     }.card().padding(.horizontal, 16)
 
+                    if !p.milestones.isEmpty {
+                        SectionLabel(text: "Milestones")
+                        VStack(spacing: 0) {
+                            ForEach(p.milestones) { m in
+                                milestoneRow(m)
+                                if m.id != p.milestones.last?.id { Divider().padding(.leading, 52) }
+                            }
+                        }.card(padding: 6).padding(.horizontal, 16)
+                    }
+
                     if !p.tasks.isEmpty {
                         SectionLabel(text: "Tasks")
                         VStack(spacing: 0) {
@@ -157,6 +167,33 @@ import RivetCore
             }
             Spacer()
         }.padding(10)
+    }
+
+    private func milestoneRow(_ m: ProjectMilestone) -> some View {
+        let canToggle = session.capabilities.canWrite(Capabilities.support)
+        let done = m.completedAt != nil
+        return HStack(alignment: .top, spacing: 12) {
+            Button { toggleMilestone(m) } label: {
+                Image(systemName: done ? "flag.fill" : "flag").font(.title3).foregroundColor(done ? Palette.brand : Palette.label3)
+            }.disabled(!canToggle || toggling.contains(-m.id))
+            .accessibilityLabel(done ? "Completed: \(m.name)" : "Not completed: \(m.name)")
+            VStack(alignment: .leading, spacing: 2) {
+                Text(m.name).strikethrough(done).foregroundColor(done ? Palette.label2 : Palette.label)
+                if let due = m.dueAt, !due.isEmpty { Text("Due \(RivetDate.dateOnly(due))").font(.caption).foregroundColor(Palette.label2) }
+            }
+            Spacer()
+        }.padding(10)
+    }
+
+    /// Milestones use negative ids in `toggling` so they cannot collide with task ids.
+    private func toggleMilestone(_ m: ProjectMilestone) {
+        guard let api = session.api, !toggling.contains(-m.id) else { return }
+        toggling.insert(-m.id); toggleError = nil
+        Task {
+            defer { toggling.remove(-m.id) }
+            do { _ = try await api.toggleMilestone(m.id); await load() }
+            catch { toggleError = userMessage(for: error) }
+        }
     }
 
     /// Waits for the server's answer before changing the checkbox.

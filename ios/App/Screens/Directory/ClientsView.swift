@@ -66,6 +66,7 @@ import RivetCore
         var t = ["Info", "Tickets", "Contacts", "Assets", "Locations"]
         if session.capabilities.canView(Capabilities.credential) { t.append("Credentials") }
         t.append("Contracts")
+        if session.capabilities.canView(Capabilities.support) { t.append("Files") }     // signed outtake forms
         return t
     }
 
@@ -125,6 +126,7 @@ import RivetCore
         case "Assets": ClientAssets(clientId: id)
         case "Locations": ClientLocations(clientId: id)
         case "Credentials": ClientCredentials(clientId: id)
+        case "Files": ClientFiles(clientId: id)
         default: ClientContracts(clientId: id)
         }
     }
@@ -257,6 +259,29 @@ import RivetCore
                     VStack(alignment: .leading, spacing: 2) {
                         Text(c.name ?? "Contract").font(.subheadline.weight(.semibold))
                         Text([c.type, c.status].compactMap { $0 }.joined(separator: " • ")).font(.caption).foregroundColor(Palette.label2)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundColor(Palette.label3)
+                }
+            }.buttonStyle(.plain)
+        }
+    }
+}
+
+/// Signed outtake forms for the client (the Android "Files" tab); each row opens the signed form.
+@MainActor private struct ClientFiles: View {
+    let clientId: Int
+    @EnvironmentObject var session: Session
+    var body: some View {
+        ClientTab(load: { try await session.requireAPI().clientFiles(clientId) }, empty: "No signed forms yet") { (f: ClientFile) in
+            NavigationLink(value: AppRoute.outtake(f.id)) {
+                ListRowCard {
+                    IconTile(systemName: "signature")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Outtake Form · #\(f.ticketNumber)").font(.subheadline.weight(.semibold))
+                        if let s = f.ticketSubject, !s.isEmpty { Text(s).font(.caption).foregroundColor(Palette.label2).lineLimit(1) }
+                        Text("Signed by \(f.signedName ?? "?")" + (f.signedAt.map { " · \(RivetDate.display($0))" } ?? ""))
+                            .font(.caption).foregroundColor(Palette.label2)
                     }
                     Spacer()
                     Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundColor(Palette.label3)
