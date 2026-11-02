@@ -106,9 +106,10 @@ import RivetCore
         }.frame(maxWidth: .infinity, alignment: .leading).card().padding(.horizontal, 16)
     }
 
-    /// Worksheets and outtake forms: the lists the Android card shows. Creating and filling them is not in the iOS app yet.
-    private var formsCard: some View {
-        FormsCard(ticketId: id).padding(.horizontal, 16)
+    /// Charges (when the server has them on and the role may see support), then worksheets and outtake forms.
+    @ViewBuilder private var formsCard: some View {
+        if session.capabilities.showsTicketCharges { ChargesCard(ticketId: id).padding(.horizontal, 16) }
+        if session.capabilities.canView(Capabilities.support) { WorksheetsCard(ticketId: id).padding(.horizontal, 16) }
     }
 
     private func attachmentsCard(_ items: [TicketAttachment]) -> some View {
@@ -222,47 +223,6 @@ import RivetCore
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(isNote ? Palette.brand.opacity(0.25) : Color.clear, lineWidth: 1))
         .padding(.horizontal, 16)
         .accessibilityElement(children: .combine)
-    }
-}
-
-/// Worksheets / outtake forms attached to a ticket (read-only lists, like the Android card without the add buttons).
-@MainActor struct FormsCard: View {
-    let ticketId: Int
-    @EnvironmentObject var session: Session
-    @State private var worksheets: [WorksheetSummary] = []
-    @State private var outtakes: [OuttakeSummary] = []
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Worksheets").font(.subheadline.weight(.semibold))
-                if worksheets.isEmpty { Text("No worksheets.").font(.caption).foregroundColor(Palette.label2) }
-                ForEach(worksheets) { w in
-                    HStack {
-                        Text(w.templateName ?? "Worksheet #\(w.id)").font(.subheadline); Spacer()
-                        Pill(text: w.completedAt != nil ? "Completed" : "In progress", tone: w.completedAt != nil ? .cyan : .gray, small: true)
-                    }
-                }
-            }
-            Divider()
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Outtake Forms").font(.subheadline.weight(.semibold))
-                Text("Contact signs on pickup").font(.caption).foregroundColor(Palette.label2)
-                if outtakes.isEmpty { Text("No outtake forms.").font(.caption).foregroundColor(Palette.label2) }
-                ForEach(outtakes) { o in
-                    HStack {
-                        Text("Outtake #\(o.id)").font(.subheadline); Spacer()
-                        Pill(text: o.signed ? "Signed" : "Awaiting signature", tone: o.signed ? .cyan : .gray, small: true)
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading).card()
-        .task {
-            guard let api = session.api else { return }
-            worksheets = (try? await api.worksheets(ticketId: ticketId)) ?? []
-            outtakes = (try? await api.outtakes(ticketId: ticketId)) ?? []
-        }
     }
 }
 

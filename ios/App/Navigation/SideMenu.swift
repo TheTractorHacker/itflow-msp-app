@@ -32,6 +32,9 @@ import RivetCore
                     if caps.canView(Capabilities.kb) { item("Knowledge Base", "book") { router.open(.kb) } }
                     if caps.canView(Capabilities.credential) { item("Credentials", "lock") { router.open(.credentials) } }
                     if caps.canView(Capabilities.client) { item("Contracts", "doc.text") { router.open(.contracts) } }
+                    if caps.showsQuotes { item("Quotes", "doc.plaintext") { router.open(.quotes) } }
+                    if caps.showsInvoices { item("Invoices", "doc.richtext") { router.open(.invoices) } }
+                    if caps.showsExpenses { item("Expenses", "creditcard") { router.open(.expenses) } }
                 }.padding(.horizontal, 12).padding(.top, 10)
             }
             VStack(spacing: 2) {

@@ -101,6 +101,15 @@ import RivetCore
         case .alerts: AccessGuard(module: Capabilities.rmmAlerts) { AlertsView() }
         case .kb: AccessGuard(module: Capabilities.kb) { KnowledgeBaseView() }
         case .kbArticle(let id): AccessGuard(module: Capabilities.kb) { KbArticleView(id: id) }
+        case .quotes: AccessGuard(module: Capabilities.sales) { QuotesView() }
+        case .quote(let id): AccessGuard(module: Capabilities.sales) { QuoteDetailView(id: id) }
+        case .invoices: AccessGuard(module: Capabilities.sales) { InvoicesView() }
+        case .invoice(let id): AccessGuard(module: Capabilities.sales) { InvoiceDetailView(id: id) }
+        case .expenses: AccessGuard(module: Capabilities.financial) { ExpensesView() }
+        case .addExpense: AccessGuard(module: Capabilities.financial) { AddExpenseView() }
+        case .worksheet(let id): AccessGuard(module: Capabilities.support) { FillWorksheetView(id: id) }
+        case .outtake(let id): AccessGuard(module: Capabilities.support) { OuttakeSignView(id: id) }
+        case .report(let key): AccessGuard(module: Capabilities.reporting) { ReportUnavailableView(title: key) }
         }
     }
 }
