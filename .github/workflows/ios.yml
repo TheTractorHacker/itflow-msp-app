@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # attach the packages to a GitHub Release on tags
+  contents: read
 
 jobs:
   core-linux:
@@ -68,6 +68,8 @@ jobs:
     name: Package (unsigned .ipa + simulator .app)
     runs-on: macos-15
     needs: app-macos
+    permissions:
+      contents: write   # attach the packages to a GitHub Release on tags
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
@@ -110,7 +112,7 @@ jobs:
           retention-days: 30
       - name: Attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: ios/dist/*
           generate_release_notes: true
