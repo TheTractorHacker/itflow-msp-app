@@ -37,11 +37,11 @@ import RivetCore
                     TextField("Description", text: $details, axis: .vertical).lineLimit(4...8).padding(16)
                 }.background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous)).padding(.horizontal, 16)
 
-                SectionLabel(text: "Department · Contact · Category")
+                SectionLabel(text: "Client · Contact · Category")
                 VStack(spacing: 0) {
-                    pickRow("building.2", department?.name ?? "Select department (optional)", set: department != nil) { showDepartments = true }
+                    pickRow("building.2", client?.name ?? "Select department (optional)", set: department != nil) { showDepartments = true }
                     Divider().padding(.leading, 46)
-                    pickRow("person", contact?.name ?? (department != nil ? "Primary contact (tap to search)" : "Search contacts (optional)"), set: contact != nil) { showContacts = true }
+                    pickRow("person", contact?.name ?? (client != nil ? "Primary contact (tap to search)" : "Search contacts (optional)"), set: contact != nil) { showContacts = true }
                     Divider().padding(.leading, 46)
                     pickRow("tag", category?.name ?? "Select category (optional)", set: category != nil) { showCategories = true }
                 }.background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous)).padding(.horizontal, 16)
@@ -107,7 +107,7 @@ import RivetCore
     }
 }
 
-/// Searches the server by name so departments beyond the first page are reachable.
+/// Searches the server by name so clients beyond the first page are reachable.
 @MainActor struct DepartmentPicker: View {
     var onPick: (ClientSummary) -> Void
     @EnvironmentObject var session: Session
@@ -120,10 +120,10 @@ import RivetCore
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                SearchField(placeholder: "Search departments…", text: $search).padding(16)
+                SearchField(placeholder: "Search clients…", text: $search).padding(16)
                 if let error { ErrorStateView(message: error, retry: { await load() }) }
                 else if loading && results.isEmpty { LoadingStateView() }
-                else if results.isEmpty { EmptyStateView(title: "No departments found", systemImage: "building.2") }
+                else if results.isEmpty { EmptyStateView(title: "No clients found", systemImage: "building.2") }
                 else {
                     List(results) { c in
                         Button { onPick(c) } label: {
@@ -132,7 +132,7 @@ import RivetCore
                     }.listStyle(.plain)
                 }
             }
-            .navigationTitle("Department").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Client").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .task(id: search) {
                 if !search.isEmpty { try? await Task.sleep(nanoseconds: 300_000_000) }
@@ -151,7 +151,7 @@ import RivetCore
     }
 }
 
-/// Searches contacts by name or email, within the chosen department when there is one.
+/// Searches contacts by name or email, within the chosen client when there is one.
 @MainActor struct ContactPicker: View {
     var clientId: Int?
     var onPick: (Contact?) -> Void

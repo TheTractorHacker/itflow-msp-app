@@ -16,8 +16,8 @@ import RivetCore
                         .tabItem { Label("Tickets", systemImage: "ticket") }.tag(AppTab.tickets)
                 }
                 if session.capabilities.canView(Capabilities.client) {
-                    root(.depts) { ClientsView() }
-                        .tabItem { Label("Depts", systemImage: "building.2") }.tag(AppTab.depts)
+                    root(.clients) { ClientsView() }
+                        .tabItem { Label("Clients", systemImage: "building.2") }.tag(AppTab.clients)
                 }
                 if session.capabilities.canView(Capabilities.assets) {
                     root(.assets) { AssetsView() }

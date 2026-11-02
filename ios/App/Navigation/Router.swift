@@ -1,7 +1,7 @@
 import SwiftUI
 import RivetCore
 
-enum AppTab: Hashable { case home, tickets, depts, assets, appts }
+enum AppTab: Hashable { case home, tickets, clients, assets, appts }
 
 /// Optional pre-set filters when opening the ticket list from a dashboard tile.
 struct TicketFilter: Equatable {
@@ -30,7 +30,7 @@ final class Router: ObservableObject {
         menuOpen = false
         switch route {
         case .tickets: select(.tickets)
-        case .clients: select(.depts)
+        case .clients: select(.clients)
         case .assets: select(.assets)
         case .appointments: select(.appts)
         default: push(route)

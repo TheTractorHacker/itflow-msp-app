@@ -67,6 +67,8 @@ public struct MultipartForm {
     public let boundary: String
     public var fields: [(String, String)] = []
     public var files: [ReplyFile] = []
+    /// Form field the files go under: `files[]` for ticket replies, `receipt` for an expense.
+    public var fileField = "files[]"
     public init(boundary: String = "RivetMSP-" + UUID().uuidString) { self.boundary = boundary }
 
     public var contentType: String { "multipart/form-data; boundary=\(boundary)" }
@@ -80,7 +82,7 @@ public struct MultipartForm {
         for file in files {
             let safe = file.name.replacingOccurrences(of: "\"", with: "_").replacingOccurrences(of: "\r", with: "_")
                 .replacingOccurrences(of: "\n", with: "_")
-            add("--\(boundary)\r\nContent-Disposition: form-data; name=\"files[]\"; filename=\"\(safe)\"\r\nContent-Type: \(file.mimeType)\r\n\r\n")
+            add("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(fileField)\"; filename=\"\(safe)\"\r\nContent-Type: \(file.mimeType)\r\n\r\n")
             out.append(file.data)
             add("\r\n")
         }

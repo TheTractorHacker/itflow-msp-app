@@ -41,7 +41,7 @@ import RivetCore
                         Label("Internal note", systemImage: "lock").tag(false)
                         Label("Public reply", systemImage: "globe").tag(true)
                     }.pickerStyle(.segmented)
-                    Text(isPublic ? "Department contacts can see this reply." : "Only technicians can see this note.")
+                    Text(isPublic ? "Client contacts can see this reply." : "Only technicians can see this note.")
                         .font(.footnote).foregroundColor(Palette.label2)
 
                     Picker("Visit type", selection: $onsite) {

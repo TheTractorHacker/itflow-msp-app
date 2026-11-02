@@ -114,7 +114,7 @@ private func assetSymbol(_ type: String?) -> String {
 
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Details").font(.caption.weight(.semibold)).foregroundColor(Palette.label2).padding(.bottom, 4)
-                        row("Department", a.client); row("Make", a.make); row("Model", a.model); row("OS", a.os)
+                        row("Client", a.client); row("Make", a.make); row("Model", a.model); row("OS", a.os)
                         row("Location", [a.locationName, a.physicalLocation].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " – "))
                         row("Contact", a.contactName); row("Purchase Date", a.purchaseDate.map { RivetDate.dateOnly($0) })
                         row("Warranty Expires", a.warrantyExpire.map { RivetDate.dateOnly($0) })

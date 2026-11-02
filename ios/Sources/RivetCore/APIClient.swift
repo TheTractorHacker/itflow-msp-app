@@ -263,3 +263,47 @@ public extension APIClient {
     }
     func kbArticle(_ id: Int) async throws -> KbArticleDetail { try await get("kb/articles/\(id)") }
 }
+
+// MARK: - RivetMSP endpoints (sales documents, expenses, charges, worksheets, outtake forms)
+
+public extension APIClient {
+    func quotes(page: Int = 1) async throws -> Paged<QuoteSummary> { try await get("quotes", query: ["page": String(page)]) }
+    func quote(_ id: Int) async throws -> QuoteDetail { try await get("quotes/\(id)") }
+    func invoices(page: Int = 1) async throws -> Paged<InvoiceSummary> { try await get("invoices", query: ["page": String(page)]) }
+    func invoice(_ id: Int) async throws -> InvoiceDetail { try await get("invoices/\(id)") }
+    func expenses(page: Int = 1) async throws -> Paged<ExpenseSummary> { try await get("expenses", query: ["page": String(page)]) }
+    func products(search: String = "") async throws -> [Product] { try await get("products", query: ["search": search]) }
+
+    /// Creates an expense, optionally with a receipt photo, in one multipart request (as `expenses.php` reads `$_POST` + `$_FILES`).
+    func createExpense(_ draft: ExpenseDraft, receipt: ReplyFile? = nil) async throws {
+        var form = MultipartForm()
+        form.fields = draft.formFields()
+        form.fileField = "receipt"
+        if let receipt { form.files = [receipt] }
+        var request = try makeRequest("POST", "expenses")
+        request.httpBody = form.body()
+        request.setValue(form.contentType, forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 120
+        try await perform(request: request)
+    }
+
+    func charges(ticketId: Int) async throws -> ChargesResponse { try await get("tickets/\(ticketId)/charges") }
+    func addCharge(ticketId: Int, _ body: AddChargeRequest) async throws { try await sendVoid("POST", "tickets/\(ticketId)/charges", body: body) }
+    func logTime(ticketId: Int, _ body: LogTimeRequest) async throws { try await sendVoid("POST", "tickets/\(ticketId)/time", body: body) }
+
+    func worksheetTemplates() async throws -> [WorksheetTemplate] { try await get("worksheet-templates") }
+    func worksheet(_ id: Int) async throws -> WorksheetDetail { try await get("worksheets/\(id)") }
+    func createWorksheet(ticketId: Int, _ body: CreateWorksheetRequest) async throws -> IdResponse { try await send("POST", "tickets/\(ticketId)/worksheets", body: body) }
+    func saveWorksheetResponses(id: Int, _ body: SaveResponsesRequest) async throws { try await sendVoid("POST", "worksheets/\(id)/responses", body: body) }
+    func completeWorksheet(id: Int, completed: Bool) async throws { try await sendVoid("POST", "worksheets/\(id)/complete", body: CompleteWorksheetRequest(completed: completed)) }
+    func deleteWorksheet(id: Int) async throws { try await sendVoid("DELETE", "worksheets/\(id)") }
+
+    func createOuttake(ticketId: Int) async throws -> IdResponse { try await send("POST", "tickets/\(ticketId)/outtake", body: CreateWorksheetRequest()) }
+    func outtake(_ id: Int) async throws -> OuttakeDetail { try await get("outtakes/\(id)") }
+    func signOuttake(id: Int, _ body: SignRequest) async throws { try await sendVoid("POST", "outtakes/\(id)/sign", body: body) }
+    func deleteOuttake(id: Int) async throws { try await sendVoid("DELETE", "outtakes/\(id)") }
+
+    func toggleMilestone(_ id: Int) async throws -> ProjectMilestone { try await send("POST", "milestones/\(id)/toggle", body: Empty()) }
+    func clientFiles(_ id: Int) async throws -> [ClientFile] { try await get("clients/\(id)/files") }
+}
+

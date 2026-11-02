@@ -8,14 +8,14 @@ import RivetCore
 
     var body: some View {
         VStack(spacing: 0) {
-            SearchField(placeholder: "Search departments…", text: $search).padding(.horizontal, 16).padding(.vertical, 8)
+            SearchField(placeholder: "Search clients…", text: $search).padding(.horizontal, 16).padding(.vertical, 8)
             let state = loader.state
             if let error = state.error, state.items.isEmpty {
                 ErrorStateView(message: error, retry: reload)
             } else if state.items.isEmpty && state.isRefreshing {
                 LoadingStateView()
             } else if state.items.isEmpty {
-                EmptyStateView(title: "No departments found", systemImage: "building.2")
+                EmptyStateView(title: "No clients found", systemImage: "building.2")
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -83,7 +83,7 @@ import RivetCore
             }
         }
         .background(Palette.background.ignoresSafeArea())
-        .navigationTitle(loader.value?.name ?? "Department").navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(loader.value?.name ?? "Client").navigationBarTitleDisplayMode(.inline)
         .task { await load() }
     }
 

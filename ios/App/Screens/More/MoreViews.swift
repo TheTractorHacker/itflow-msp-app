@@ -7,9 +7,9 @@ import RivetCore
 @MainActor struct ReportsView: View {
     private struct Item: Identifiable { let id: String; let symbol: String; let title: String; let subtitle: String }
     private let tickets = [
-        Item(id: "time", symbol: "timer", title: "Time Summary", subtitle: "Hours logged by department"),
+        Item(id: "time", symbol: "timer", title: "Time Summary", subtitle: "Hours logged by client"),
         Item(id: "volume", symbol: "chart.line.uptrend.xyaxis", title: "Ticket Volume", subtitle: "Tickets raised per month"),
-        Item(id: "byclient", symbol: "building.2", title: "Tickets by Department", subtitle: "Raised, resolved, priority breakdown"),
+        Item(id: "byclient", symbol: "building.2", title: "Tickets by Client", subtitle: "Raised, resolved, priority breakdown"),
         Item(id: "bytech", symbol: "person", title: "Time by Technician", subtitle: "Tickets assigned/touched, time worked"),
         Item(id: "perf", symbol: "trophy", title: "Technician Performance", subtitle: "Open workload vs. resolved this year"),
         Item(id: "overview", symbol: "chart.bar", title: "Overview", subtitle: "Open tickets by priority, status, category"),
@@ -488,7 +488,7 @@ import RivetCore
             ForEach(r.tickets) { t in NavigationLink(value: AppRoute.ticket(t.id)) { TicketRow(ticket: t) }.buttonStyle(.plain) }
         }
         if !r.clients.isEmpty {
-            SectionLabel(text: "Departments")
+            SectionLabel(text: "Clients")
             ForEach(r.clients) { c in
                 NavigationLink(value: AppRoute.client(c.id)) { ListRowCard { AvatarCircle(letter: Initials.letter(c.name), size: 38); Text(c.name).font(.subheadline.weight(.semibold)); Spacer() } }.buttonStyle(.plain)
             }

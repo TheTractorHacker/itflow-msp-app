@@ -48,18 +48,33 @@ public struct Capabilities: Equatable {
     public static let reporting = "module_reporting"
     public static let assets = "module_assets"
     public static let rmmAlerts = "module_rmm_alerts"
+    /// Quotes and invoices (server `module_sales`), expenses (`module_financial`).
+    public static let sales = "module_sales"
+    public static let financial = "module_financial"
     public static let unrestricted = Capabilities()
 
     public var isAdmin: Bool
     public var permissions: [String: Int]?
+    /// Company-wide switches from `/me` (`accounting_enabled`, `ticket_charges_enabled`). Nil when the server does not
+    /// report them (a RivetMSP server today does not), which keeps the feature visible, as the Android app does.
+    public var modules: ModuleFlags?
 
-    public init(isAdmin: Bool = false, permissions: [String: Int]? = nil) {
+    public init(isAdmin: Bool = false, permissions: [String: Int]? = nil, modules: ModuleFlags? = nil) {
+        self.modules = modules
         self.isAdmin = isAdmin
         // Keys are normalised so `module_support` and `moduleSupport` (a snake-case decoder can rewrite map keys) match.
         self.permissions = permissions.map { Dictionary(uniqueKeysWithValues: $0.map { (Capabilities.norm($0.key), $0.value) }) }
     }
 
-    public init(profile: UserProfile) { self.init(isAdmin: profile.isAdmin, permissions: profile.permissions) }
+    public init(profile: UserProfile) { self.init(isAdmin: profile.isAdmin, permissions: profile.permissions, modules: profile.modules) }
+
+    /// Quotes, invoices and expenses: hidden when the server reports accounting switched off or the role has no access.
+    public var showsQuotes: Bool { (modules?.accountingEnabled ?? true) && canView(Capabilities.sales) }
+    public var showsInvoices: Bool { (modules?.accountingEnabled ?? true) && canView(Capabilities.sales) }
+    public var showsExpenses: Bool { (modules?.accountingEnabled ?? true) && canView(Capabilities.financial) }
+    /// The ticket "Charges" card: needs the charges switch on and write-or-read access to support.
+    public var showsTicketCharges: Bool { (modules?.ticketChargesEnabled ?? true) && canView(Capabilities.support) }
+    public var canAddCharge: Bool { (modules?.ticketChargesEnabled ?? true) && canWrite(Capabilities.support) }
 
     public func canView(_ module: String) -> Bool { level(module) >= 1 }
     public func canWrite(_ module: String) -> Bool { level(module) >= 2 }
@@ -83,20 +98,23 @@ public enum AppRoute: Equatable, Hashable {
     case contracts, contract(Int)
     case credentials, credential(Int), notifications, appointments, search, reports, scan, profile, alerts
     case kb, kbArticle(Int)
+    case quotes, quote(Int), invoices, invoice(Int), expenses, addExpense
+    case worksheet(Int), outtake(Int)
+    case report(String)
     /// In-app only (the new-ticket form); never produced by `DeepLinks.resolve`.
     case createTicket
 }
 
 public enum DeepLinks {
     private static let allowed = try! NSRegularExpression(
-        pattern: #"^(tickets|clients|assets|projects|contracts|credentials|notifications|appointments|worksheets|outtakes|search|reports|scan|profile|kb|alerts)(/\d+(/\w+)?)?$"#)
+        pattern: #"^(tickets|clients|assets|projects|contracts|credentials|quotes|invoices|expenses|notifications|appointments|worksheets|outtakes|search|reports|scan|profile|kb|alerts)(/\d+(/\w+)?)?$"#)
 
     public static func isAllowed(_ raw: String) -> Bool {
         allowed.firstMatch(in: raw, range: NSRange(raw.startIndex..., in: raw)) != nil
     }
 
     /// Maps an externally supplied route (push payload, URL) to a real destination, or nil when it is not allowed or
-    /// has no screen. Bare `worksheets`/`outtakes` have no list screen, only per-id ones.
+    /// has no screen. Bare `worksheets`/`outtakes` have no list screen, only per-id ones (`worksheets/7/fill`, `outtakes/7/sign`).
     public static func resolve(_ raw: String) -> AppRoute? {
         guard isAllowed(raw) else { return nil }
         let parts = raw.split(separator: "/").map(String.init)
@@ -110,6 +128,11 @@ public enum DeepLinks {
         case "clients": return id.map(AppRoute.client) ?? .clients
         case "assets": return id.map(AppRoute.asset) ?? .assets
         case "projects": return id.map(AppRoute.project) ?? .projects
+        case "quotes": return id.map(AppRoute.quote) ?? .quotes
+        case "invoices": return id.map(AppRoute.invoice) ?? .invoices
+        case "expenses": return .expenses
+        case "worksheets": return (sub == nil || sub == "fill") ? id.map(AppRoute.worksheet) : nil
+        case "outtakes": return (sub == nil || sub == "sign") ? id.map(AppRoute.outtake) : nil
         case "contracts": return id.map(AppRoute.contract) ?? .contracts
         case "kb": return id.map(AppRoute.kbArticle) ?? .kb
         case "credentials": return id.map(AppRoute.credential) ?? .credentials
@@ -120,7 +143,7 @@ public enum DeepLinks {
         case "scan": return .scan
         case "profile": return .profile
         case "alerts": return .alerts
-        default: return nil   // worksheets / outtakes
+        default: return nil
         }
     }
 }

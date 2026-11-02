@@ -52,7 +52,7 @@ import RivetCore
         ScrollView {
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 0) {
-                    if let client = c.client, !client.isEmpty { row("Department", client); Divider() }
+                    if let client = c.client, !client.isEmpty { row("Client", client); Divider() }
                     if let user = c.username, !user.isEmpty { row("Username", user, copy: ("Username", false)); Divider() }
                     passwordRow(c.password)
                 }
