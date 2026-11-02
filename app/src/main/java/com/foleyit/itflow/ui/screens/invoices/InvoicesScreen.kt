@@ -18,6 +18,7 @@ import com.foleyit.itflow.ui.components.*
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.theme.forFinancialStatus
 import com.foleyit.itflow.ui.theme.statusColors
+import com.foleyit.itflow.ui.util.PullToRefreshList
 import com.foleyit.itflow.ui.util.rememberPagedList
 import com.foleyit.itflow.ui.util.userMessage
 import java.text.NumberFormat
@@ -38,7 +39,8 @@ fun InvoicesScreen(navController: NavController) {
             ls.error != null -> ErrorScreen(userMessage(ls.error), onRetry = list::retry)
             ls.items.isEmpty() -> EmptyScreen("No invoices", Icons.AutoMirrored.Outlined.ReceiptLong)
             else -> {
-                LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PullToRefreshList(list) {
+LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(ls.items, key = { it.id }) { inv ->
                         val statusColor = MaterialTheme.statusColors.forFinancialStatus(inv.status)
                         Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, onClick = { navController.navigate(Screen.InvoiceDetail.go(inv.id)) }) {
@@ -58,6 +60,7 @@ fun InvoicesScreen(navController: NavController) {
                         item(key = "load_more") { LoadMoreRow(ls.isLoadingMore, list::loadMore) }
                     }
                 }
+}
             }
         }
     }

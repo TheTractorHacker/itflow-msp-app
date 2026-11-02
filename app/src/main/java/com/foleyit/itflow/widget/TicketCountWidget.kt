@@ -27,7 +27,7 @@ class TicketCountWidget : GlanceAppWidget() {
             Box(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .background(ColorProvider(Color.White))
+                    .background(androidx.glance.color.ColorProvider(day = Color(0xFFF9FAFE), night = Color(0xFF1B1E23)))
                     .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
                     .padding(12.dp),
                 contentAlignment = Alignment.TopStart
@@ -36,7 +36,7 @@ class TicketCountWidget : GlanceAppWidget() {
                     Text(
                         companyName,
                         style = TextStyle(
-                            color = ColorProvider(Color(0xFF6650A4)),
+                            color = androidx.glance.color.ColorProvider(day = Color(0xFF0066CC), night = Color(0xFF9ECAFF)),
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
                         )
@@ -47,14 +47,14 @@ class TicketCountWidget : GlanceAppWidget() {
                             Text(
                                 "Open",
                                 style = TextStyle(
-                                    color = ColorProvider(Color(0xFF49454F)),
+                                    color = androidx.glance.color.ColorProvider(day = Color(0xFF49454F), night = Color(0xFFC4C7CF)),
                                     fontSize = 11.sp
                                 )
                             )
                             Text(
                                 open.toString(),
                                 style = TextStyle(
-                                    color = ColorProvider(Color(0xFF1C1B1F)),
+                                    color = androidx.glance.color.ColorProvider(day = Color(0xFF1C1B1F), night = Color(0xFFE3E3E6)),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 28.sp
                                 )
@@ -65,14 +65,14 @@ class TicketCountWidget : GlanceAppWidget() {
                                 Text(
                                     "Overdue",
                                     style = TextStyle(
-                                        color = ColorProvider(Color(0xFF49454F)),
+                                        color = androidx.glance.color.ColorProvider(day = Color(0xFF49454F), night = Color(0xFFC4C7CF)),
                                         fontSize = 11.sp
                                     )
                                 )
                                 Text(
                                     overdue.toString(),
                                     style = TextStyle(
-                                        color = ColorProvider(Color(0xFFB3261E)),
+                                        color = androidx.glance.color.ColorProvider(day = Color(0xFFB3261E), night = Color(0xFFF2B8B5)),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 28.sp
                                     )

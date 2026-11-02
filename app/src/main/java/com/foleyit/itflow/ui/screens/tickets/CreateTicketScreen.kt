@@ -54,10 +54,16 @@ fun CreateTicketScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) {
-        // Load all pages until we have enough clients for the picker
-        clients = runCatching { ApiClient.service().getClients(search = "", page = 1) }.getOrNull()
-        categories = runCatching { ApiClient.service().getTicketCategories() }.getOrDefault(emptyList())
+    // A failed load must not look like "no clients / no categories": say so and offer Retry.
+    var loadFailed by remember { mutableStateOf(false) }
+    var contactsFailed by remember { mutableStateOf(false) }
+    var loadAttempt by remember { mutableIntStateOf(0) }
+    LaunchedEffect(loadAttempt) {
+        val clientsResult = runCatching { ApiClient.service().getClients(search = "", page = 1) }
+        val categoriesResult = runCatching { ApiClient.service().getTicketCategories() }
+        clients = clientsResult.getOrNull()
+        categories = categoriesResult.getOrDefault(emptyList())
+        loadFailed = clientsResult.isFailure || categoriesResult.isFailure
     }
 
     // A contact belongs to one client: reload the list (and forget the old pick) whenever the client changes.
@@ -65,7 +71,9 @@ fun CreateTicketScreen(navController: NavController) {
     LaunchedEffect(selectedClientId) {
         val clientId = selectedClientId
         if (clientId == null) { contacts = emptyList(); selectedContactId = null; return@LaunchedEffect }
-        contacts = runCatching { ApiClient.service().getContacts(clientId).data }.getOrDefault(emptyList())
+        val contactsResult = runCatching { ApiClient.service().getContacts(clientId).data }
+        contactsFailed = contactsResult.isFailure
+        contacts = contactsResult.getOrDefault(emptyList())
         if (contacts.none { it.id == selectedContactId }) selectedContactId = null
     }
 
@@ -317,6 +325,18 @@ fun CreateTicketScreen(navController: NavController) {
                 }
             }
 
+            if (loadFailed) {
+                Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text("Couldn't load clients or categories.", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { loadAttempt++ }) { Text("Retry") }
+                    }
+                }
+            }
+
             // Client & category card
             Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                 Column {
@@ -343,6 +363,11 @@ fun CreateTicketScreen(navController: NavController) {
                                 Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.outline)
                             }
                         }
+                    }
+                    if (selectedClientId != null && contactsFailed) {
+                        Text("Couldn't load contacts; the client's primary contact will be used.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp))
                     }
                     if (selectedClientId != null && contacts.isNotEmpty()) {
                         val selectedContactName = contacts.firstOrNull { it.id == selectedContactId }?.name

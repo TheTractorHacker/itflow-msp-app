@@ -71,6 +71,7 @@ fun ScanBarcodeScreen(navController: NavController) {
     var scanning by remember { mutableStateOf(true) }
     var status by remember { mutableStateOf("Point camera at barcode or serial number") }
     var notFoundCode by remember { mutableStateOf<String?>(null) }
+    var lookupFailed by remember { mutableStateOf(false) }
     var camera by remember { mutableStateOf<Camera?>(null) }
     var torchOn by remember { mutableStateOf(false) }
     var borderTarget by remember { mutableStateOf(Color.White) }
@@ -131,8 +132,9 @@ fun ScanBarcodeScreen(navController: NavController) {
 
         status = "Found: $raw — searching…"
         scope.launch {
-            val result = runCatching { ApiClient.service().getAssets(search = raw) }.getOrNull()
-            val first = result?.data?.firstOrNull()
+            val lookup = runCatching { ApiClient.service().getAssets(search = raw) }
+            lookupFailed = lookup.isFailure
+            val first = lookup.getOrNull()?.data?.firstOrNull()
             if (first != null) {
                 flashBorder(MatchColor)
                 delay(250) // let the success flash register before navigating away
@@ -155,8 +157,13 @@ fun ScanBarcodeScreen(navController: NavController) {
     notFoundCode?.let { code ->
         AlertDialog(
             onDismissRequest = { notFoundCode = null; scanning = true },
-            title = { Text("No Asset Found") },
-            text = { Text("No asset matches the scanned code \"$code\".") },
+            title = { Text(if (lookupFailed) "Couldn't Look Up Asset" else "No Asset Found") },
+            text = {
+                Text(
+                    if (lookupFailed) "The server couldn't be reached to look up \"$code\". Check your connection and scan again."
+                    else "No asset matches the scanned code \"$code\"."
+                )
+            },
             confirmButton = {
                 TextButton(onClick = { notFoundCode = null; scanning = true }) { Text("Scan Again") }
             },

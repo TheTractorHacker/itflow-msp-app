@@ -16,6 +16,7 @@ import com.foleyit.itflow.ui.components.*
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.util.initialOf
 import com.foleyit.itflow.ui.util.nameOrFallback
+import com.foleyit.itflow.ui.util.PullToRefreshList
 import com.foleyit.itflow.ui.util.rememberPagedList
 import com.foleyit.itflow.ui.util.userMessage
 
@@ -46,7 +47,8 @@ fun ClientsScreen(navController: NavController) {
             ls.error != null -> ErrorScreen(userMessage(ls.error), onRetry = list::retry)
             ls.items.isEmpty() -> EmptyScreen("No clients found", Icons.Outlined.Business)
             else -> {
-                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PullToRefreshList(list) {
+LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(ls.items, key = { it.id }) { c ->
                         Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, onClick = { navController.navigate(Screen.ClientDetail.go(c.id)) }) {
                             ListItem(
@@ -71,6 +73,7 @@ fun ClientsScreen(navController: NavController) {
                         item(key = "load_more") { LoadMoreRow(ls.isLoadingMore, list::loadMore) }
                     }
                 }
+}
             }
         }
     }

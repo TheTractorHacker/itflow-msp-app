@@ -24,7 +24,11 @@ data class PagedListUiState<T>(
     val total: Int = 0,
     val isRefreshing: Boolean = true,
     val isLoadingMore: Boolean = false,
-    val error: Throwable? = null
+    val error: Throwable? = null,
+    /** A user pull-to-refresh is in flight; the current items stay on screen meanwhile. */
+    val isPullRefreshing: Boolean = false,
+    /** The last pull-to-refresh failed (items kept); the UI tells the user once, then clears it. */
+    val pullRefreshFailed: Boolean = false
 ) {
     val hasMore: Boolean get() = items.size < total
 }
@@ -68,6 +72,25 @@ class PagedListController<T>(
                     state = state.copy(isRefreshing = false, error = e)
                 }
         }
+    }
+
+    /** Pull-to-refresh: reload page 1 but keep showing the current items, unlike [refresh]. */
+    fun pullRefresh(prepare: suspend () -> Unit = {}) {
+        if (state.isPullRefreshing || state.isRefreshing) return
+        searchJob?.cancel()
+        state = state.copy(isPullRefreshing = true, pullRefreshFailed = false)
+        scope.launch {
+            // `prepare` runs first, with the spinner already showing (e.g. dropping the HTTP cache).
+            runCatching { prepare(); fetch(1, query) }
+                .onSuccess { resp ->
+                    state = PagedListUiState(items = resp.data, page = 1, total = resp.total, isRefreshing = false)
+                }
+                .onFailure { state = state.copy(isPullRefreshing = false, pullRefreshFailed = true) }
+        }
+    }
+
+    fun clearPullRefreshFailed() {
+        state = state.copy(pullRefreshFailed = false)
     }
 
     fun loadMore() {

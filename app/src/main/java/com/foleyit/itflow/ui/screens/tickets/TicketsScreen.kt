@@ -31,6 +31,7 @@ import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.theme.forPriority
 import com.foleyit.itflow.ui.theme.statusColors
 import com.foleyit.itflow.ui.util.fmtDate
+import com.foleyit.itflow.ui.util.PullToRefreshList
 import com.foleyit.itflow.ui.util.rememberPagedList
 import com.foleyit.itflow.ui.util.userMessage
 
@@ -226,7 +227,8 @@ fun TicketsScreen(navController: NavController) {
                 val tickets = ls.items
                 val statusOrder = tickets.map { it.status ?: "Unknown" }.distinct()
                 val grouped = tickets.groupBy { it.status ?: "Unknown" }
-                LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
+                PullToRefreshList(list) {
+LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
                     statusOrder.forEach { status ->
                         val group = grouped[status] ?: return@forEach
                         val color = group.firstOrNull()?.statusColor
@@ -261,10 +263,12 @@ fun TicketsScreen(navController: NavController) {
                         }
                     }
                 }
+}
             }
             else -> {
                 // Closed tickets — simple flat list
-                LazyColumn(
+                PullToRefreshList(list) {
+LazyColumn(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -277,6 +281,7 @@ fun TicketsScreen(navController: NavController) {
                         }
                     }
                 }
+}
             }
         }
     }

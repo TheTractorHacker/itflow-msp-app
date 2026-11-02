@@ -107,7 +107,9 @@ dependencies {
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
     implementation(libs.zxing.core)
-    // Glance widget
+    // Glance widget. Glance 1.1 pulls in WorkManager 2.7.1 (Room 2.2.5, 2022), whose reflective database
+    // creation broke under R8; pin a current WorkManager that ships correct consumer rules.
+    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
     // Firebase Cloud Messaging + Crashlytics

@@ -25,6 +25,7 @@ import com.foleyit.itflow.ui.components.LoadMoreRow
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.util.fmtDate
+import com.foleyit.itflow.ui.util.PullToRefreshList
 import com.foleyit.itflow.ui.util.rememberPagedList
 import com.foleyit.itflow.ui.util.userMessage
 
@@ -112,7 +113,8 @@ fun KnowledgeBaseScreen(navController: NavController) {
                 ls.error != null -> ErrorScreen(userMessage(ls.error), onRetry = list::retry)
                 ls.items.isEmpty() -> EmptyScreen("No articles found", Icons.AutoMirrored.Outlined.Article)
                 else -> {
-                    LazyColumn(
+                    PullToRefreshList(list) {
+LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -126,6 +128,7 @@ fun KnowledgeBaseScreen(navController: NavController) {
                             item(key = "load_more") { LoadMoreRow(ls.isLoadingMore, list::loadMore) }
                         }
                     }
+}
                 }
             }
         }

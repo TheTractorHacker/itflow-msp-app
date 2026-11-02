@@ -22,6 +22,7 @@ import com.foleyit.itflow.ui.components.LoadMoreRow
 import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.components.pressScale
 import com.foleyit.itflow.ui.navigation.Screen
+import com.foleyit.itflow.ui.util.PullToRefreshList
 import com.foleyit.itflow.ui.util.rememberPagedList
 import com.foleyit.itflow.ui.util.userMessage
 
@@ -139,7 +140,8 @@ fun AssetsScreen(navController: NavController) {
                 // instead of getting stuck on a false "No assets found".
                 displayedItems.isEmpty() && !ls.hasMore -> EmptyScreen("No assets found", Icons.Outlined.Devices)
                 else -> {
-                    LazyColumn(
+                    PullToRefreshList(list) {
+LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -185,6 +187,7 @@ fun AssetsScreen(navController: NavController) {
                             item(key = "load_more") { LoadMoreRow(ls.isLoadingMore, list::loadMore) }
                         }
                     }
+}
                 }
             }
         }

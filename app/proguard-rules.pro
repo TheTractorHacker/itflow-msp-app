@@ -26,14 +26,6 @@
     volatile <fields>;
 }
 
-# ── Room / WorkManager ───────────────────────────────────────────────────────
-# WorkManager 2.7 (Room 2.2) creates its generated database by reflection. R8 full mode keeps a
-# class named by `-keep class` but NOT its default constructor, which crashed every release
-# build at startup ("Failed to create an instance of androidx.work.impl.WorkDatabase").
--keep class * extends androidx.room.RoomDatabase { <init>(); }
--keep class androidx.work.impl.WorkDatabase_Impl { <init>(); }
--keep class * extends androidx.work.ListenableWorker { <init>(android.content.Context, androidx.work.WorkerParameters); }
-
 # ── Compose ──────────────────────────────────────────────────────────────────
 -keep class androidx.compose.** { *; }
 -dontwarn androidx.compose.**

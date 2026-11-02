@@ -126,4 +126,46 @@ class PagedListStateTest {
         assertNull(controller.state.error)
         assertEquals(1, controller.state.items.size)
     }
+
+    @Test
+    fun `pullRefresh keeps the current items on screen and replaces them on success`() = runTest {
+        var round = 0
+        val controller = PagedListController<FakeItem>(scope = this) { _, _ ->
+            round++
+            FakePage(data = if (round == 1) listOf(FakeItem(1)) else listOf(FakeItem(7), FakeItem(8)), total = 2)
+        }
+        controller.refresh()
+        advanceUntilIdle()
+
+        controller.pullRefresh()
+        assertTrue(controller.state.isPullRefreshing)
+        assertFalse(controller.state.isRefreshing)          // the list is not swapped for a spinner
+        assertEquals(listOf(FakeItem(1)), controller.state.items)
+        advanceUntilIdle()
+
+        assertFalse(controller.state.isPullRefreshing)
+        assertEquals(listOf(FakeItem(7), FakeItem(8)), controller.state.items)
+    }
+
+    @Test
+    fun `a failed pullRefresh keeps the old items and flags the failure once`() = runTest {
+        var fail = false
+        val controller = PagedListController<FakeItem>(scope = this) { _, _ ->
+            if (fail) error("offline") else FakePage(data = listOf(FakeItem(1)), total = 1)
+        }
+        controller.refresh()
+        advanceUntilIdle()
+
+        fail = true
+        controller.pullRefresh()
+        advanceUntilIdle()
+
+        assertFalse(controller.state.isPullRefreshing)
+        assertTrue(controller.state.pullRefreshFailed)
+        assertNull(controller.state.error)                  // no full-screen error: the list stays usable
+        assertEquals(listOf(FakeItem(1)), controller.state.items)
+
+        controller.clearPullRefreshFailed()
+        assertFalse(controller.state.pullRefreshFailed)
+    }
 }

@@ -21,6 +21,7 @@ import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.ui.components.*
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.util.BiometricCrypto
+import com.foleyit.itflow.ui.util.PullToRefreshList
 import com.foleyit.itflow.ui.util.rememberPagedList
 import com.foleyit.itflow.ui.util.userMessage
 
@@ -91,7 +92,8 @@ fun CredentialsScreen(navController: NavController) {
                 ls.error != null -> ErrorScreen(userMessage(ls.error), onRetry = list::retry)
                 ls.items.isEmpty() -> EmptyScreen("No credentials found", Icons.Outlined.Lock)
                 else -> {
-                    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PullToRefreshList(list) {
+LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(ls.items, key = { it.id }) { c ->
                             Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, onClick = { navController.navigate(Screen.CredDetail.go(c.id)) }) {
                                 ListItem(
@@ -110,6 +112,7 @@ fun CredentialsScreen(navController: NavController) {
                             item(key = "load_more") { LoadMoreRow(ls.isLoadingMore, list::loadMore) }
                         }
                     }
+}
                 }
             }
         }

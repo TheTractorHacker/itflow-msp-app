@@ -66,6 +66,8 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     var charges by remember { mutableStateOf<ChargesResponse?>(null) }
     var worksheets by remember { mutableStateOf<List<WorksheetSummary>>(emptyList()) }
     var outtakes by remember { mutableStateOf<List<OuttakeSummary>>(emptyList()) }
+    // A failed charges/worksheets/forms request must not read as "No charges on this ticket."
+    var sectionsFailed by remember { mutableStateOf(false) }
     var refresh by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(timerRunning) {
@@ -89,9 +91,13 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
     fun load() {
         scope.launch {
             state = runCatching { ApiClient.service().getTicket(id) }
-            charges = runCatching { ApiClient.service().getTicketCharges(id) }.getOrNull()
-            worksheets = runCatching { ApiClient.service().getTicketWorksheets(id) }.getOrDefault(emptyList())
-            outtakes = runCatching { ApiClient.service().getTicketOuttakes(id) }.getOrDefault(emptyList())
+            val chargesResult = runCatching { ApiClient.service().getTicketCharges(id) }
+            val worksheetsResult = runCatching { ApiClient.service().getTicketWorksheets(id) }
+            val outtakesResult = runCatching { ApiClient.service().getTicketOuttakes(id) }
+            charges = chargesResult.getOrNull()
+            worksheets = worksheetsResult.getOrDefault(emptyList())
+            outtakes = outtakesResult.getOrDefault(emptyList())
+            sectionsFailed = chargesResult.isFailure || worksheetsResult.isFailure || outtakesResult.isFailure
             if (statuses.isEmpty()) {
                 statuses = runCatching { ApiClient.service().getTicketStatuses() }.getOrDefault(emptyList())
             }
@@ -398,6 +404,29 @@ fun TicketDetailScreen(id: Int, navController: NavController) {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(Modifier.height(8.dp))
                                     Text(stripHtml(ticket.details))
+                                }
+                            }
+                        }
+                    }
+
+                    if (sectionsFailed) {
+                        item {
+                            Surface(
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        "Charges, worksheets or forms couldn't be loaded.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    TextButton(onClick = { load() }) { Text("Retry") }
                                 }
                             }
                         }

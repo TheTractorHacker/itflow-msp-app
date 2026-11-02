@@ -24,6 +24,7 @@ import com.foleyit.itflow.ui.components.LoadingScreen
 import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.util.fmtDate
 import com.foleyit.itflow.ui.util.isFeatureUnavailable
+import com.foleyit.itflow.ui.util.PullToRefreshList
 import com.foleyit.itflow.ui.util.rememberPagedList
 import com.foleyit.itflow.ui.util.userMessage
 
@@ -80,7 +81,8 @@ fun ProjectsScreen(navController: NavController) {
                 ls.error != null -> ErrorScreen(userMessage(ls.error), onRetry = list::retry)
                 ls.items.isEmpty() -> EmptyScreen("No projects found", Icons.Outlined.AccountTree)
                 else -> {
-                    LazyColumn(
+                    PullToRefreshList(list) {
+LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -91,6 +93,7 @@ fun ProjectsScreen(navController: NavController) {
                             item(key = "load_more") { LoadMoreRow(ls.isLoadingMore, list::loadMore) }
                         }
                     }
+}
                 }
             }
         }

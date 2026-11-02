@@ -41,7 +41,8 @@ import com.foleyit.itflow.ui.util.userMessage
 fun DashboardScreen(navController: NavController) {
     var state by remember { mutableStateOf<Result<DashboardResponse>?>(null) }
     var appointmentsToday by remember { mutableStateOf<List<Appointment>>(emptyList()) }
-    var activeAlerts by remember { mutableIntStateOf(0) }
+    // null = the request failed; show "—" instead of a false "0 alerts / all caught up".
+    var activeAlerts by remember { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -65,7 +66,7 @@ fun DashboardScreen(navController: NavController) {
             }.getOrDefault(emptyList())
         }
         scope.launch {
-            activeAlerts = runCatching { ApiClient.service().getAlerts(status = "new").total }.getOrDefault(0)
+            activeAlerts = runCatching { ApiClient.service().getAlerts(status = "new").total }.getOrNull()
         }
     }
 
@@ -144,11 +145,11 @@ fun DashboardScreen(navController: NavController) {
                         )
                         StatCard(
                             label = "Active Alerts",
-                            value = activeAlerts.toString(),
+                            value = activeAlerts?.toString() ?: "—",
                             icon = Icons.Outlined.NotificationImportant,
-                            bg = if (activeAlerts > 0) MaterialTheme.colorScheme.errorContainer
+                            bg = if ((activeAlerts ?: 0) > 0) MaterialTheme.colorScheme.errorContainer
                                  else MaterialTheme.colorScheme.surfaceVariant,
-                            fg = if (activeAlerts > 0) MaterialTheme.colorScheme.onErrorContainer
+                            fg = if ((activeAlerts ?: 0) > 0) MaterialTheme.colorScheme.onErrorContainer
                                  else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f),
                             onClick = { navController.navigate(Screen.Alerts.route) }
