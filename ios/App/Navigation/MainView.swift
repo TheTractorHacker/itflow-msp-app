@@ -109,7 +109,7 @@ import RivetCore
         case .addExpense: AccessGuard(module: Capabilities.financial) { AddExpenseView() }
         case .worksheet(let id): AccessGuard(module: Capabilities.support) { FillWorksheetView(id: id) }
         case .outtake(let id): AccessGuard(module: Capabilities.support) { OuttakeSignView(id: id) }
-        case .report(let key): AccessGuard(module: Capabilities.reporting) { ReportUnavailableView(title: key) }
+        case .report(let key): AccessGuard(module: Capabilities.reporting) { if let kind = ReportKind(rawValue: key) { ReportScreen(kind: kind) } else { ReportUnavailableView(title: key) } }
         }
     }
 }

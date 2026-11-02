@@ -5,27 +5,39 @@ import RivetCore
 // MARK: Reports
 
 @MainActor struct ReportsView: View {
-    private struct Item: Identifiable { let id: String; let symbol: String; let title: String; let subtitle: String }
+    @EnvironmentObject var session: Session
+    private struct Item: Identifiable { let kind: ReportKind; let symbol: String; let subtitle: String; var id: String { kind.rawValue } }
     private let tickets = [
-        Item(id: "time", symbol: "timer", title: "Time Summary", subtitle: "Hours logged by client"),
-        Item(id: "volume", symbol: "chart.line.uptrend.xyaxis", title: "Ticket Volume", subtitle: "Tickets raised per month"),
-        Item(id: "byclient", symbol: "building.2", title: "Tickets by Client", subtitle: "Raised, resolved, priority breakdown"),
-        Item(id: "bytech", symbol: "person", title: "Time by Technician", subtitle: "Tickets assigned/touched, time worked"),
-        Item(id: "perf", symbol: "trophy", title: "Technician Performance", subtitle: "Open workload vs. resolved this year"),
-        Item(id: "overview", symbol: "chart.bar", title: "Overview", subtitle: "Open tickets by priority, status, category"),
+        Item(kind: .time, symbol: "timer", subtitle: "Hours logged by client"),
+        Item(kind: .volume, symbol: "chart.line.uptrend.xyaxis", subtitle: "Tickets raised per month"),
+        Item(kind: .byClient, symbol: "building.2", subtitle: "Raised, resolved, priority breakdown"),
+        Item(kind: .byTech, symbol: "person", subtitle: "Tickets assigned/touched, time worked"),
+        Item(kind: .performance, symbol: "trophy", subtitle: "Open workload vs. resolved this year"),
+        Item(kind: .overview, symbol: "chart.pie", subtitle: "Open tickets by priority, status, category"),
     ]
+    private let financial = [
+        Item(kind: .income, symbol: "dollarsign.circle", subtitle: "Monthly income by category"),
+        Item(kind: .expense, symbol: "receipt", subtitle: "Monthly expenses by category"),
+        Item(kind: .profitLoss, symbol: "scalemass", subtitle: "Income minus expenses by month"),
+        Item(kind: .unbilled, symbol: "doc.badge.clock", subtitle: "Billable tickets not yet invoiced"),
+        Item(kind: .balances, symbol: "wallet.pass", subtitle: "Outstanding invoice balances"),
+    ]
+    private let operations = [Item(kind: .expiring, symbol: "calendar.badge.exclamationmark", subtitle: "Renewals due in the next 30 days")]
     private let support = [
-        Item(id: "csat", symbol: "face.smiling", title: "Customer Satisfaction", subtitle: "CSAT ratings, trend, feedback"),
-        Item(id: "rmm", symbol: "exclamationmark.triangle", title: "RMM Health", subtitle: "Alert volume, MTTA/MTTR, noisiest assets"),
-        Item(id: "desk", symbol: "headphones", title: "Service Desk", subtitle: "Volume, aging, SLA, CSAT"),
-        Item(id: "util", symbol: "gauge", title: "Technician Utilization", subtitle: "Capacity versus time logged"),
+        Item(kind: .csat, symbol: "face.smiling", subtitle: "CSAT ratings, trend, feedback"),
+        Item(kind: .rmm, symbol: "exclamationmark.triangle", subtitle: "Alert volume, MTTA/MTTR, noisiest assets"),
+        Item(kind: .desk, symbol: "headphones", subtitle: "Volume, backlog aging, SLA compliance"),
+        Item(kind: .utilization, symbol: "gauge", subtitle: "Billable vs. non-billable, capacity"),
     ]
-    private let operations = [Item(id: "expiring", symbol: "calendar.badge.exclamationmark", title: "Expiring Domains & Certs", subtitle: "Renewals in the next 30 days")]
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                section("Tickets", tickets); section("Support & Operations", support); section("Operations", operations)
+                section("Tickets", tickets)
+                // Money reports are hidden for roles without sales/finance access (the server refuses them anyway).
+                if session.capabilities.showsInvoices || session.capabilities.showsExpenses { section("Financial", financial) }
+                section("Operations", operations)
+                section("Support & Operations", support)
             }.padding(.bottom, 20)
         }
         .background(Palette.background.ignoresSafeArea())
@@ -37,12 +49,12 @@ import RivetCore
             SectionLabel(text: title, tint: true)
             ForEach(items) { i in
                 NavigationLink {
-                    if i.id == "overview" { OverviewReportView() } else { ReportUnavailableView(title: i.title) }
+                    if i.kind == .overview { OverviewReportView() } else { ReportScreen(kind: i.kind) }
                 } label: {
                     ListRowCard {
                         IconTile(systemName: i.symbol, size: 38)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(i.title).font(.subheadline.weight(.semibold))
+                            Text(i.kind.title).font(.subheadline.weight(.semibold))
                             Text(i.subtitle).font(.caption).foregroundColor(Palette.label2)
                         }
                         Spacer()
@@ -54,7 +66,100 @@ import RivetCore
     }
 }
 
-/// Reports that have not been ported yet say so plainly.
+/// One report drawn from its neutral document, with the year stepper / date presets / period chips it needs.
+@MainActor struct ReportScreen: View {
+    let kind: ReportKind
+    @EnvironmentObject var session: Session
+    @StateObject private var loader = Loader<ReportDocument>()
+    @State private var year = Calendar.current.component(.year, from: Date())
+    @State private var preset = DateRangePreset.thisMonth
+    @State private var periodIndex = 0
+    private let periods = [("week", "This week"), ("month", "This month"), ("year", "This year")]
+
+    private struct Key: Equatable { var year: Int; var preset: DateRangePreset; var period: Int }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if kind.usesYear {
+                HStack {
+                    Button { year -= 1 } label: { Image(systemName: "chevron.left") }.accessibilityLabel("Previous year")
+                    Text(String(year)).font(.headline).frame(minWidth: 70)
+                    Button { year += 1 } label: { Image(systemName: "chevron.right") }.accessibilityLabel("Next year")
+                }.padding(.vertical, 8)
+            }
+            if kind.usesRange {
+                FilterChips(items: DateRangePreset.allCases.map(\.rawValue), selection: Binding(
+                    get: { DateRangePreset.allCases.firstIndex(of: preset) ?? 0 },
+                    set: { preset = DateRangePreset.allCases[$0] })).padding(.vertical, 8)
+            }
+            if kind == .time { FilterChips(items: periods.map(\.1), selection: $periodIndex).padding(.vertical, 8) }
+            LoadView(loader: loader, retry: load) { doc in
+                ScrollView {
+                    VStack(spacing: 12) { ForEach(Array(doc.sections.enumerated()), id: \.offset) { _, s in sectionView(s) } }.padding(.vertical, 8)
+                }.refreshable { await load() }
+            }
+        }
+        .background(Palette.background.ignoresSafeArea())
+        .navigationTitle(kind.title).navigationBarTitleDisplayMode(.inline)
+        .task(id: Key(year: year, preset: preset, period: periodIndex)) { await load() }
+    }
+
+    @ViewBuilder private func sectionView(_ s: ReportSection) -> some View {
+        switch s {
+        case .kpis(let items):
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                ForEach(items, id: \.label) { k in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(k.value).font(.title3.weight(.bold)); Text(k.label).font(.caption).foregroundColor(Palette.label2)
+                    }.frame(maxWidth: .infinity, alignment: .leading).card(padding: 12)
+                }
+            }.padding(.horizontal, 16)
+        case .bars(let title, let bars):
+            if !bars.isEmpty {
+                let peak = max(bars.map(\.value).max() ?? 0, 1)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(title).font(.caption.weight(.semibold)).foregroundColor(Palette.label2)
+                    ForEach(bars, id: \.label) { b in
+                        HStack(spacing: 8) {
+                            Text(b.label).font(.caption).frame(width: 64, alignment: .leading).lineLimit(1)
+                            GeometryReader { g in
+                                RoundedRectangle(cornerRadius: 4).fill(Palette.brand).frame(width: max(2, g.size.width * CGFloat(b.value / peak)))
+                            }.frame(height: 14)
+                            Text(b.display).font(.caption.weight(.semibold)).frame(minWidth: 40, alignment: .trailing)
+                        }
+                    }
+                }.frame(maxWidth: .infinity, alignment: .leading).card().padding(.horizontal, 16)
+            }
+        case .rows(let title, let rows, let empty):
+            VStack(alignment: .leading, spacing: 10) {
+                Text(title).font(.caption.weight(.semibold)).foregroundColor(Palette.label2)
+                if rows.isEmpty { Text(empty).font(.footnote).foregroundColor(Palette.label2) }
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(r.title).font(.subheadline.weight(.medium))
+                            if !r.detail.isEmpty { Text(r.detail).font(.caption).foregroundColor(Palette.label2) }
+                        }
+                        Spacer(minLength: 8)
+                        Text(r.trailing).font(.subheadline.weight(.bold)).multilineTextAlignment(.trailing)
+                    }
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading).card().padding(.horizontal, 16)
+        case .note(let text):
+            Text(text).font(.footnote).foregroundColor(Palette.label2).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20)
+        }
+    }
+
+    private func load() async {
+        guard let api = session.api else { return }
+        let range = preset.range()
+        let period = periods[periodIndex].0
+        let y = year
+        await loader.load { try await api.reportDocument(kind, year: y, range: range, period: period) }
+    }
+}
+
+/// Shown for a report the app does not know.
 @MainActor struct ReportUnavailableView: View {
     let title: String
     var body: some View {
