@@ -1,0 +1,73 @@
+# Generates RivetMSP.xcodeproj:  brew install xcodegen && xcodegen generate
+name: RivetMSP
+options:
+  bundleIdPrefix: com.foleyit
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+packages:
+  RivetCore:
+    path: .
+targets:
+  RivetMSP:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    dependencies:
+      - package: RivetCore
+        product: RivetCore
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: RivetMSP
+        UILaunchScreen: {}
+        UIApplicationShortcutItems:
+          - UIApplicationShortcutItemType: com.foleyit.rivetmsp.ios.newTicket
+            UIApplicationShortcutItemTitle: New ticket
+            UIApplicationShortcutItemIconSymbolName: plus.circle
+          - UIApplicationShortcutItemType: com.foleyit.rivetmsp.ios.scan
+            UIApplicationShortcutItemTitle: Scan barcode
+            UIApplicationShortcutItemIconSymbolName: qrcode.viewfinder
+          - UIApplicationShortcutItemType: com.foleyit.rivetmsp.ios.myTickets
+            UIApplicationShortcutItemTitle: My tickets
+            UIApplicationShortcutItemIconSymbolName: person.crop.circle
+          - UIApplicationShortcutItemType: com.foleyit.rivetmsp.ios.search
+            UIApplicationShortcutItemTitle: Search
+            UIApplicationShortcutItemIconSymbolName: magnifyingglass
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSFaceIDUsageDescription: RivetMSP uses Face ID to unlock the app and to show stored credentials.
+        NSCameraUsageDescription: RivetMSP uses the camera to scan asset barcodes and QR codes.
+        ITSAppUsesNonExemptEncryption: false
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.foleyit.rivetmsp.ios
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: NO
+schemes:
+  RivetMSP:
+    build:
+      targets:
+        RivetMSP: all
+    run:
+      config: Debug
