@@ -43,8 +43,14 @@ struct RivetMSPApp: App {
             session.pendingDeepLink = parts.joined(separator: "/")
         }
         .onReceive(NotificationCenter.default.publisher(for: QuickActionInbox.received)) { _ in takeShortcut() }
+        .onReceive(NotificationCenter.default.publisher(for: AlertLinkInbox.received)) { _ in takeAlertLink() }
+        .onChange(of: session.phase) { phase in
+            if phase == .main { Task { await BackgroundAlerts.enable() } } else { BackgroundAlerts.cancel() }
+        }
         .onAppear {
             takeShortcut()
+            takeAlertLink()
+            if session.phase == .main { Task { await BackgroundAlerts.enable() } }
             if !launchChecked {
                 launchChecked = true
                 if session.biometricLock && session.phase == .main { locked = true }
@@ -55,12 +61,18 @@ struct RivetMSPApp: App {
             case .background: backgroundedAt = Date()
             case .active:
                 takeShortcut()
+                takeAlertLink()
                 Task { await session.loadBranding() }
+                if session.phase == .main { Task { await BackgroundAlerts.check(notify: false) } }
                 if session.biometricLock, session.phase == .main, let t = backgroundedAt, Date().timeIntervalSince(t) > 300 { locked = true }
                 backgroundedAt = nil
             default: break
             }
         }
+    }
+
+    private func takeAlertLink() {
+        if let link = AlertLinkInbox.shared.take() { session.pendingDeepLink = link }
     }
 
     private func takeShortcut() {
