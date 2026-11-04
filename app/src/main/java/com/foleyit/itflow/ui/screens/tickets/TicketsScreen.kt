@@ -226,7 +226,8 @@ fun TicketsScreen(navController: NavController) {
                 val tickets = ls.items
                 val statusOrder = tickets.map { it.status ?: "Unknown" }.distinct()
                 val grouped = tickets.groupBy { it.status ?: "Unknown" }
-                LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
+                // bottom inset keeps the last card clear of the floating + button
+                LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp)) {
                     statusOrder.forEach { status ->
                         val group = grouped[status] ?: return@forEach
                         val color = group.firstOrNull()?.statusColor
