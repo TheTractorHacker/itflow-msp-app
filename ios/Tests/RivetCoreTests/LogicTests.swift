@@ -290,3 +290,29 @@ final class QuickActionAndCredentialTests: XCTestCase {
         XCTAssertEqual(c.challenge, "abc"); XCTAssertEqual(c.challengeToken, "tok")
     }
 }
+
+final class AlertDigestTests: XCTestCase {
+    private func n(_ id: Int) -> AppNotification {
+        try! APIClient.decoder.decode(AppNotification.self, from: Data(#"{"id":\#(id),"type":"Backup","message":"m\#(id)","action":null,"timestamp":null}"#.utf8))
+    }
+    func testFirstCheckOnlySetsABaseline() {
+        let d = AlertDigest(items: [n(1), n(5), n(3)], lastSeen: nil)
+        XCTAssertTrue(d.fresh.isEmpty); XCTAssertEqual(d.overflow, 0); XCTAssertEqual(d.highWater, 5)
+    }
+    func testOnlyIdsAboveTheMarkAreNewOldestFirst() {
+        let d = AlertDigest(items: [n(9), n(4), n(7), n(2)], lastSeen: 4)
+        XCTAssertEqual(d.fresh.map(\.id), [7, 9]); XCTAssertEqual(d.highWater, 9)
+    }
+    func testNothingNewKeepsTheMark() {
+        let d = AlertDigest(items: [n(2)], lastSeen: 6)
+        XCTAssertTrue(d.fresh.isEmpty); XCTAssertEqual(d.highWater, 6)
+    }
+    func testEmptyListNeverMovesTheMarkBackwards() {
+        XCTAssertEqual(AlertDigest(items: [], lastSeen: 8).highWater, 8)
+        XCTAssertEqual(AlertDigest(items: [], lastSeen: nil).highWater, 0)
+    }
+    func testCapKeepsNewestAndCountsTheRest() {
+        let d = AlertDigest(items: (1...10).map(n), lastSeen: 2, limit: 3)
+        XCTAssertEqual(d.fresh.map(\.id), [8, 9, 10]); XCTAssertEqual(d.overflow, 5); XCTAssertEqual(d.highWater, 10)
+    }
+}

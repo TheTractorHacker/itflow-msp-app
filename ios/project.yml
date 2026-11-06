@@ -41,6 +41,10 @@ targets:
           - UIApplicationShortcutItemType: com.foleyit.rivetmsp.ios.search
             UIApplicationShortcutItemTitle: Search
             UIApplicationShortcutItemIconSymbolName: magnifyingglass
+        UIBackgroundModes:
+          - fetch
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.foleyit.rivetmsp.ios.alerts
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:

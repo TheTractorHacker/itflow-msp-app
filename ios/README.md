@@ -52,7 +52,7 @@ Added for RivetMSP:
 
 ## Not in this build
 
-- Push notifications (APNs) and the `pendingDeepLink` push path.
+- Real push (APNs), which needs a paid Apple Developer membership. Instead the app raises local alerts from background refresh (`App/Core/BackgroundAlerts.swift`): iOS wakes it every so often, it polls `/api/v1/notifications` and shows anything new. Not instant, and not after a force-quit. Compiled by CI, not exercised on a device.
 - Passkey sign-in (the button is hidden).
 - iPad-specific split layouts.
 - Crash-report upload, accent colour choice (Android-only), the home-screen widget.

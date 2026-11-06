@@ -65,7 +65,7 @@ final class Session: ObservableObject {
     private(set) var api: APIClient?
     private var trustedFingerprint: String?
 
-    private enum Keys {
+    enum Keys {
         static let server = "serverURL", fingerprint = "trustedFingerprint", theme = "themeMode"
         static let biometricLock = "biometricLock", token = "apiToken"
     }

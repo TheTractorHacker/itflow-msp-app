@@ -1,4 +1,5 @@
 import UIKit
+import UserNotifications
 
 /// Hands a Home Screen quick action (touch and hold the app icon) from UIKit to the SwiftUI app. The action waits here
 /// until the signed-in main screen is showing, then `MainView` follows it.
@@ -15,6 +16,13 @@ final class QuickActionInbox {
 }
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        BackgroundAlerts.register()
+        UNUserNotificationCenter.current().delegate = self
+        return true
+    }
+
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
         if let item = options.shortcutItem { QuickActionInbox.shared.set(item.type) }       // cold launch from an action

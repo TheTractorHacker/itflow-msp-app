@@ -246,7 +246,7 @@ import RivetCore
                     settingRow("server.rack", "Server", session.serverDisplay) {
                         Button("Change") { Task { await session.changeServer() } }.font(.subheadline)
                     }
-                    settingRow("bell.badge", "Notifications", "Manage push notification settings") {
+                    settingRow("bell.badge", "Notifications", "New-notification alerts and badge; manage in Settings") {
                         Button { if let u = URL(string: UIApplication.openSettingsURLString) { openURL(u) } } label: {
                             Image(systemName: "arrow.up.forward.square").foregroundColor(Palette.label3)
                         }
