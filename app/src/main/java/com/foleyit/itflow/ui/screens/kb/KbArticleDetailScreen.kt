@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -70,6 +71,10 @@ fun KbArticleDetailScreen(id: Int, navController: NavController) {
 private fun ArticleContent(article: KbArticleDetail, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val baseUrl = ApiClient.serverUrl
+    val scheme = MaterialTheme.colorScheme
+    fun css(c: androidx.compose.ui.graphics.Color) = "#%06X".format(0xFFFFFF and c.toArgb())
+    val text = css(scheme.onSurface); val bg = css(scheme.surface); val muted = css(scheme.onSurfaceVariant)
+    val link = css(scheme.primary); val line = css(scheme.outlineVariant); val codeBg = css(scheme.surfaceVariant)
 
     Column(modifier) {
         article.categoryName?.let { category ->
@@ -93,8 +98,12 @@ private fun ArticleContent(article: KbArticleDetail, modifier: Modifier = Modifi
             factory = {
                 WebView(context).apply {
                     settings.javaScriptEnabled = false
-                    settings.loadWithOverviewMode = true
-                    settings.useWideViewPort = true
+                    // Reflow to the screen width instead of zooming a desktop-width page out; wide tables and code scroll sideways inside themselves.
+                    settings.loadWithOverviewMode = false
+                    settings.useWideViewPort = false
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    overScrollMode = android.view.View.OVER_SCROLL_NEVER
+                    isVerticalScrollBarEnabled = false
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                             openExternalUrl(context, request.url)
@@ -108,10 +117,22 @@ private fun ArticleContent(article: KbArticleDetail, modifier: Modifier = Modifi
                     <html><head>
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <style>
-                        body { font-family: sans-serif; padding: 16px; line-height: 1.5; font-size: 16px; }
-                        img { max-width: 100%; height: auto; }
-                        table { width: 100%; border-collapse: collapse; }
-                        td, th { border: 1px solid #ccc; padding: 4px; }
+                        html { -webkit-text-size-adjust: 100%; }
+                        body { margin: 0; padding: 4px 18px 40px; background: $bg; color: $text;
+                               font: 16px/1.65 -apple-system, Roboto, 'Segoe UI', sans-serif; word-wrap: break-word; overflow-wrap: anywhere; }
+                        h1, h2, h3, h4 { line-height: 1.25; margin: 1.4em 0 .5em; font-weight: 650; }
+                        h1 { font-size: 1.55em; } h2 { font-size: 1.3em; } h3 { font-size: 1.1em; }
+                        p { margin: 0 0 1em; } ul, ol { padding-left: 1.4em; margin: 0 0 1em; } li { margin: .25em 0; }
+                        a { color: $link; }
+                        img, video, iframe { max-width: 100%; height: auto; border-radius: 8px; }
+                        blockquote { margin: 1em 0; padding: .1em 1em; border-left: 3px solid $line; color: $muted; }
+                        hr { border: 0; border-top: 1px solid $line; margin: 1.5em 0; }
+                        pre, code { background: $codeBg; border-radius: 6px; font-family: monospace; font-size: .9em; }
+                        code { padding: .1em .35em; }
+                        pre { padding: 12px; overflow-x: auto; white-space: pre; } pre code { padding: 0; background: none; }
+                        table { display: block; overflow-x: auto; border-collapse: collapse; max-width: 100%; margin: 0 0 1em; }
+                        td, th { border: 1px solid $line; padding: 6px 10px; text-align: left; }
+                        th { background: $codeBg; }
                     </style>
                     </head><body>${article.content ?: ""}</body></html>
                 """.trimIndent()

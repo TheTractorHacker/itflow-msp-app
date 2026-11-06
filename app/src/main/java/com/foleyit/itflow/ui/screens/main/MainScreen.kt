@@ -209,6 +209,9 @@ fun MainScreen(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        // Edge-swipe opens the drawer only on top-level screens; on detail screens (articles, tickets) it
+        // competes with scrolling and horizontal swipes, and Back is the way out there anyway.
+        gesturesEnabled = isRootScreen || drawerState.isOpen,
         drawerContent = {
             AppDrawerContent(
                 userName = userName,
