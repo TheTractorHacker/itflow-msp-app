@@ -37,7 +37,10 @@ sealed class Screen(val route: String) {
     object Appointments  : Screen("appointments")
     object FillWorksheet : Screen("worksheets/{id}/fill") { fun go(id: Int) = "worksheets/$id/fill" }
     object OuttakeSign   : Screen("outtakes/{id}/sign")   { fun go(id: Int) = "outtakes/$id/sign" }
-    object CreateTicket  : Screen("tickets/create")
+    /** `assetId` is optional: set when the ticket is raised from an asset. */
+    object CreateTicket  : Screen("tickets/create?assetId={assetId}") {
+        fun go(assetId: Int? = null) = if (assetId != null) "tickets/create?assetId=$assetId" else "tickets/create"
+    }
     object Search        : Screen("search")
     object TimeReport    : Screen("reports/time")
     object ReportsHub    : Screen("reports")

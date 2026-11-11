@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
+import com.foleyit.itflow.data.api.AssetSummary
 import com.foleyit.itflow.data.api.ClientsResponse
 import com.foleyit.itflow.data.api.CreateTicketRequest
 import com.foleyit.itflow.data.api.TicketCategory
@@ -34,7 +35,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateTicketScreen(navController: NavController) {
+fun CreateTicketScreen(navController: NavController, assetId: Int? = null) {
     var subject by rememberSaveable { mutableStateOf("") }
     var details by rememberSaveable { mutableStateOf("") }
     var priority by rememberSaveable { mutableStateOf("low") }
@@ -45,6 +46,11 @@ fun CreateTicketScreen(navController: NavController) {
     var categories by remember { mutableStateOf<List<TicketCategory>>(emptyList()) }
     var selectedCategoryId by rememberSaveable { mutableStateOf<Int?>(null) }
     var showCategoryPicker by rememberSaveable { mutableStateOf(false) }
+    var selectedAssetId by rememberSaveable { mutableStateOf(assetId) }
+    var selectedAssetName by rememberSaveable { mutableStateOf("") }
+    var assets by remember { mutableStateOf<List<AssetSummary>>(emptyList()) }
+    var assetsLoading by remember { mutableStateOf(false) }
+    var showAssetPicker by rememberSaveable { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -54,6 +60,23 @@ fun CreateTicketScreen(navController: NavController) {
         // Load all pages until we have enough clients for the picker
         clients = runCatching { ApiClient.service().getClients(search = "", page = 1) }.getOrNull()
         categories = runCatching { ApiClient.service().getTicketCategories() }.getOrDefault(emptyList())
+    }
+
+    // Raised from an asset: show the asset and its client; the server takes the client from the asset.
+    LaunchedEffect(assetId) {
+        if (assetId == null) return@LaunchedEffect
+        runCatching { ApiClient.service().getAsset(assetId) }.onSuccess {
+            selectedAssetName = it.name
+            if (selectedClientId == null) selectedClientName = it.client.orEmpty()
+        }.onFailure { error = userMessage(it); selectedAssetId = null }
+    }
+
+    // The asset list follows the chosen client.
+    LaunchedEffect(showAssetPicker, selectedClientId) {
+        if (!showAssetPicker || selectedClientId == null) return@LaunchedEffect
+        assetsLoading = true
+        assets = runCatching { ApiClient.service().getAssets(clientId = selectedClientId) }.getOrNull()?.data.orEmpty()
+        assetsLoading = false
     }
 
     fun submit() {
@@ -67,7 +90,8 @@ fun CreateTicketScreen(navController: NavController) {
                         details = details.trim(),
                         clientId = selectedClientId,
                         priority = priority,
-                        categoryId = selectedCategoryId
+                        categoryId = selectedCategoryId,
+                        assetId = selectedAssetId
                     )
                 )
                 // Open the new ticket in place of this form (Back then returns to where the
@@ -90,7 +114,10 @@ fun CreateTicketScreen(navController: NavController) {
                 Text("Select Client", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
-                Surface(onClick = { selectedClientId = null; selectedClientName = ""; showClientPicker = false },
+                Surface(onClick = {
+                    selectedClientId = null; selectedClientName = ""; selectedAssetId = null; selectedAssetName = ""
+                    showClientPicker = false
+                },
                     modifier = Modifier.fillMaxWidth()) {
                     Text("— No Client —", Modifier.padding(16.dp),
                         color = MaterialTheme.colorScheme.outline)
@@ -98,9 +125,42 @@ fun CreateTicketScreen(navController: NavController) {
                 HorizontalDivider()
                 clients?.data?.forEach { c ->
                     Surface(onClick = {
+                        if (selectedClientId != c.id) { selectedAssetId = null; selectedAssetName = "" }
                         selectedClientId = c.id; selectedClientName = c.name; showClientPicker = false
                     }, modifier = Modifier.fillMaxWidth()) {
                         Text(c.name, Modifier.padding(16.dp))
+                    }
+                    HorizontalDivider()
+                }
+            }
+        }
+    }
+
+    if (showAssetPicker) {
+        ModalBottomSheet(onDismissRequest = { showAssetPicker = false }) {
+            Column(Modifier.padding(16.dp).navigationBarsPadding()) {
+                Text("Select Asset", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(8.dp))
+                Surface(onClick = { selectedAssetId = null; selectedAssetName = ""; showAssetPicker = false },
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text("— No Asset —", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.outline)
+                }
+                HorizontalDivider()
+                if (assetsLoading) {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                } else if (assets.isEmpty()) {
+                    Text("This client has no assets.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.outline)
+                }
+                assets.forEach { a ->
+                    Surface(onClick = {
+                        selectedAssetId = a.id; selectedAssetName = a.name; showAssetPicker = false
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(a.name)
+                            listOfNotNull(a.type, a.tag).filter { it.isNotBlank() }.joinToString(" · ").takeIf { it.isNotEmpty() }?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
                     HorizontalDivider()
                 }
@@ -262,6 +322,34 @@ fun CreateTicketScreen(navController: NavController) {
                                     modifier = Modifier.weight(1f)
                                 )
                                 Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.outline)
+                            }
+                        }
+                    }
+                    // Asset: shown once a client is chosen (or when raised from an asset page).
+                    if (selectedClientId != null || selectedAssetId != null) {
+                        Column(
+                            Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            SectionLabel("Asset")
+                            Surface(
+                                // From an asset page the asset is fixed; change the client to pick another.
+                                onClick = { if (selectedClientId != null) showAssetPicker = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.medium,
+                                color = MaterialTheme.colorScheme.surfaceContainerHighest
+                            ) {
+                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Outlined.Devices, null, tint = MaterialTheme.colorScheme.outline)
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(
+                                        selectedAssetName.ifBlank { "Select asset (optional)" },
+                                        color = if (selectedAssetId == null) MaterialTheme.colorScheme.outline
+                                                else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (selectedClientId != null) Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.outline)
+                                }
                             }
                         }
                     }

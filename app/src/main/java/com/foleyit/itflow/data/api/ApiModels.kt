@@ -434,7 +434,8 @@ data class CreateTicketRequest(
     @SerializedName("client_id") val clientId: Int? = null,
     val priority: String = "low",
     @SerializedName("assigned_to") val assignedTo: Int? = null,
-    @SerializedName("category_id") val categoryId: Int? = null
+    @SerializedName("category_id") val categoryId: Int? = null,
+    @SerializedName("asset_id") val assetId: Int? = null
 )
 
 // ── Search ───────────────────────────────────────────────────────────────────
