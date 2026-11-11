@@ -246,9 +246,10 @@ public struct CreateTicketRequest: Encodable {
     public var assignedTo: Int?
     public var categoryId: Int?
     public var contactId: Int?
+    public var assetId: Int?
     public init(subject: String, details: String = "", clientId: Int? = nil, priority: String = "low",
-                assignedTo: Int? = nil, categoryId: Int? = nil, contactId: Int? = nil) {
-        self.contactId = contactId
+                assignedTo: Int? = nil, categoryId: Int? = nil, contactId: Int? = nil, assetId: Int? = nil) {
+        self.contactId = contactId; self.assetId = assetId
         self.subject = subject; self.details = details; self.clientId = clientId; self.priority = priority
         self.assignedTo = assignedTo; self.categoryId = categoryId
     }

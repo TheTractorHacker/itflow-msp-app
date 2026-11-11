@@ -94,6 +94,7 @@ private func assetSymbol(_ type: String?) -> String {
 @MainActor struct AssetDetailView: View {
     let id: Int
     @EnvironmentObject var session: Session
+    @EnvironmentObject var router: Router
     @StateObject private var loader = Loader<AssetDetail>()
     @State private var copied = false
 
@@ -111,6 +112,10 @@ private func assetSymbol(_ type: String?) -> String {
                         }
                         if let s = a.status { Pill(text: s, tone: .cyan) }
                     }.frame(maxWidth: .infinity, alignment: .leading).card().padding(.horizontal, 16)
+
+                    Button { router.push(.createTicketForAsset(a.id)) } label: {
+                        Label("Create ticket for this asset", systemImage: "ticket")
+                    }.buttonStyle(PrimaryButtonStyle()).padding(.horizontal, 16)
 
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Details").font(.caption.weight(.semibold)).foregroundColor(Palette.label2).padding(.bottom, 4)

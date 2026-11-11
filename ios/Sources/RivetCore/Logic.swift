@@ -103,6 +103,8 @@ public enum AppRoute: Equatable, Hashable {
     case report(String)
     /// In-app only (the new-ticket form); never produced by `DeepLinks.resolve`.
     case createTicket
+    /// In-app only: the new-ticket form opened from an asset.
+    case createTicketForAsset(Int)
 }
 
 public enum DeepLinks {

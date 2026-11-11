@@ -290,3 +290,16 @@ final class QuickActionAndCredentialTests: XCTestCase {
         XCTAssertEqual(c.challenge, "abc"); XCTAssertEqual(c.challengeToken, "tok")
     }
 }
+
+final class CreateTicketForAssetTests: XCTestCase {
+    private func json(_ r: CreateTicketRequest) throws -> [String: Any] {
+        try JSONSerialization.jsonObject(with: APIClient.encoder.encode(r)) as! [String: Any]
+    }
+    func testAssetIdIsSentSnakeCased() throws {
+        let j = try json(CreateTicketRequest(subject: "s", assetId: 42))
+        XCTAssertEqual(j["asset_id"] as? Int, 42)
+    }
+    func testNoAssetMeansNoKey() throws {
+        XCTAssertNil(try json(CreateTicketRequest(subject: "s"))["asset_id"])
+    }
+}

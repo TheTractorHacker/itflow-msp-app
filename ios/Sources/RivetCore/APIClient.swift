@@ -196,8 +196,10 @@ public extension APIClient {
     func clientContracts(_ id: Int) async throws -> [ClientContract] { try await get("clients/\(id)/contracts") }
 
     // Assets
-    func assets(search: String = "", page: Int = 1, type: String = "") async throws -> Paged<AssetSummary> {
-        try await get("assets", query: ["search": search, "page": String(page), "type": type])
+    func assets(search: String = "", page: Int = 1, type: String = "", clientId: Int? = nil) async throws -> Paged<AssetSummary> {
+        var q = ["search": search, "page": String(page), "type": type]
+        if let clientId { q["client_id"] = String(clientId) }
+        return try await get("assets", query: q)
     }
     func assetTypes() async throws -> [String] { try await get("assets/types") }
     func asset(_ id: Int) async throws -> AssetDetail { try await get("assets/\(id)") }

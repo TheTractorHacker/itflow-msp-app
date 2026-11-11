@@ -2,6 +2,8 @@ import SwiftUI
 import RivetCore
 
 @MainActor struct CreateTicketView: View {
+    /// Set when the form is opened from an asset page.
+    var assetId: Int? = nil
     @EnvironmentObject var session: Session
     @EnvironmentObject var router: Router
     @State private var subject = ""
@@ -13,6 +15,9 @@ import RivetCore
     @State private var showContacts = false
     @State private var showDepartments = false
     @State private var showCategories = false
+    @State private var asset: AssetSummary?
+    @State private var assetFromPage: AssetDetail?
+    @State private var showAssets = false
     @State private var saving = false
     @State private var error: String?
 
@@ -39,7 +44,14 @@ import RivetCore
 
                 SectionLabel(text: "Client · Contact · Category")
                 VStack(spacing: 0) {
-                    pickRow("building.2", department?.name ?? "Select client (optional)", set: department != nil) { showDepartments = true }
+                    pickRow("building.2", department?.name ?? assetFromPage?.client ?? "Select client (optional)",
+                            set: department != nil || assetFromPage != nil) { showDepartments = true }
+                    if department != nil || assetFromPage != nil {
+                        Divider().padding(.leading, 46)
+                        // From an asset page the asset (and so the client) is fixed; pick another client to change it.
+                        pickRow("desktopcomputer", asset?.name ?? assetFromPage?.name ?? "Select asset (optional)",
+                                set: asset != nil || assetFromPage != nil) { if department != nil { showAssets = true } }
+                    }
                     Divider().padding(.leading, 46)
                     pickRow("person", contact?.name ?? (department != nil ? "Primary contact (tap to search)" : "Search contacts (optional)"), set: contact != nil) { showContacts = true }
                     Divider().padding(.leading, 46)
@@ -63,9 +75,20 @@ import RivetCore
         }
         .sheet(isPresented: $showDepartments) {
             DepartmentPicker { picked in
-                if department?.id != picked.id { contact = nil }
+                if department?.id != picked.id { contact = nil; asset = nil; assetFromPage = nil }
                 department = picked; showDepartments = false
             }.presentationDetents([.large])
+        }
+        .sheet(isPresented: $showAssets) {
+            if let department {
+                AssetPicker(clientId: department.id, selected: asset) { asset = $0; showAssets = false }
+                    .presentationDetents([.medium, .large])
+            }
+        }
+        .task {
+            // Opened from an asset: show it and its client; the server takes the client from the asset.
+            guard let assetId, assetFromPage == nil, let api = session.api else { return }
+            do { assetFromPage = try await api.asset(assetId) } catch { self.error = userMessage(for: error) }
         }
         .sheet(isPresented: $showContacts) {
             ContactPicker(clientId: department?.id) { picked in
@@ -95,7 +118,7 @@ import RivetCore
         saving = true; error = nil
         let body = CreateTicketRequest(subject: subject.trimmingCharacters(in: .whitespaces), details: details,
                                        clientId: department?.id, priority: priority, categoryId: category?.id,
-                                       contactId: contact?.id)
+                                       contactId: contact?.id, assetId: asset?.id ?? assetFromPage?.id)
         Task {
             defer { saving = false }
             do {
@@ -230,5 +253,47 @@ import RivetCore
     private func load() async {
         guard let api = session.api else { return }
         await loader.load { try await api.categories() }
+    }
+}
+
+/// Assets of the chosen client.
+@MainActor struct AssetPicker: View {
+    let clientId: Int
+    let selected: AssetSummary?
+    var onPick: (AssetSummary?) -> Void
+    @EnvironmentObject var session: Session
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var loader = Loader<[AssetSummary]>()
+
+    var body: some View {
+        NavigationStack {
+            LoadView(loader: loader, retry: load) { items in
+                List {
+                    Button("No asset") { onPick(nil) }.foregroundColor(Palette.label2)
+                    if items.isEmpty { Text("This client has no assets").foregroundColor(Palette.label2) }
+                    ForEach(items) { a in
+                        Button { onPick(a) } label: {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(a.name)
+                                    let sub = [a.type, a.tag].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+                                    if !sub.isEmpty { Text(sub).font(.caption).foregroundColor(Palette.label2) }
+                                }
+                                Spacer()
+                                if a.id == selected?.id { Image(systemName: "checkmark") }
+                            }
+                        }.buttonStyle(.plain)
+                    }
+                }.listStyle(.plain)
+            }
+            .navigationTitle("Asset").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .task { await load() }
+        }
+    }
+
+    private func load() async {
+        guard let api = session.api else { return }
+        await loader.load { try await api.assets(clientId: clientId).data }
     }
 }
