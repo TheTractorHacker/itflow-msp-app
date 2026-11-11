@@ -92,7 +92,7 @@ fun TicketsScreen(navController: NavController) {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate(Screen.CreateTicket.route) },
+                onClick = { navController.navigate(Screen.CreateTicket.go()) },
                 modifier = Modifier.pressScale(0.90f),
             ) {
                 Icon(Icons.Outlined.Add, "New Ticket")

@@ -18,6 +18,7 @@ import androidx.navigation.NavController
 import com.foleyit.itflow.data.api.ApiClient
 import com.foleyit.itflow.data.api.AssetDetail
 import com.foleyit.itflow.ui.util.fmtDate
+import com.foleyit.itflow.ui.navigation.Screen
 import com.foleyit.itflow.ui.components.ErrorScreen
 import com.foleyit.itflow.ui.components.LoadingScreen
 import kotlinx.coroutines.launch
@@ -90,6 +91,18 @@ fun AssetDetailScreen(id: Int, navController: NavController) {
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    item {
+                        Button(
+                            onClick = { navController.navigate(Screen.CreateTicket.go(a.id)) },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = MaterialTheme.shapes.extraLarge,
+                        ) {
+                            Icon(Icons.Outlined.ConfirmationNumber, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Create ticket for this asset", fontWeight = FontWeight.SemiBold)
                         }
                     }
 

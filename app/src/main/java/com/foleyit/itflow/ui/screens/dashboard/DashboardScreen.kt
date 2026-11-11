@@ -268,7 +268,7 @@ private fun QuickActionsRow(navController: NavController) {
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Surface(
-            onClick = { navController.navigate(Screen.CreateTicket.route) },
+            onClick = { navController.navigate(Screen.CreateTicket.go()) },
             modifier = Modifier
                 .weight(1f)
                 .pressScale()
